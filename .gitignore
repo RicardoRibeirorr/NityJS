@@ -1,3 +1,4 @@
 /.github
 /.vscode
-/v0.zip
+node_modules
+/node_modules

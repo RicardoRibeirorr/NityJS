@@ -7,10 +7,14 @@
     "build": "esbuild src/index.js --bundle --minify --format=iife --global-name=Nity --outfile=dist/nity.min.js && esbuild src/index.js --bundle --minify --format=esm --outfile=dist/nity.module.min.js",
     "start": "node dist/nity.min.js"
   },
-  "keywords": ["game", "engine", "javascript"],
+  "keywords": [
+    "game",
+    "engine",
+    "javascript"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "esbuild": "^0.20.0"
+    "esbuild": "^0.25.5"
   }
 }
