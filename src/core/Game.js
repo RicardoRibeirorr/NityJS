@@ -115,3 +115,4 @@ export class Game {
     }
 
 }
+Game.instance = null; // Static property to hold the singleton instance

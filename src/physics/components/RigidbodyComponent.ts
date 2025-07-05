@@ -1,6 +1,19 @@
-import { Component } from "../../common/Component.js";
-import { CollisionSystem } from "../../bin/CollisionSystem.js";
-import { AbstractColliderComponent } from "../AbstractColliderComponent.js";
+import {
+    Component
+} from "../../common/Component.js";
+import {
+    CollisionSystem
+} from "../../bin/CollisionSystem.js";
+Game
+import {
+    AbstractColliderComponent
+} from "../AbstractColliderComponent.js";
+import {
+    Game
+} from "../../core/Game.js";
+import {
+    GameObject
+} from "../../common/GameObject.js";
 
 // === RigidbodyComponent.js ===
 export class RigidbodyComponent extends Component {
@@ -8,7 +21,6 @@ export class RigidbodyComponent extends Component {
     #_lastCollisions = new Set();
     #_lastX: 0;
     #_lastY: 0;
-    #_shouldResolve = false;
 
 
     constructor() {
@@ -18,69 +30,122 @@ export class RigidbodyComponent extends Component {
     start() {
         this.#_collider = this.gameObject.getComponent(AbstractColliderComponent);
         if (!this.#_collider) {
-            console.warn("RigidbodyComponent requires a Collider component to function properly.");
+            console.warn("RigidbodyComponent requires a collider.");
         }
     }
 
     move(dx, dy) {
-        this.#_lastX = this.gameObject.x;
-        this.#_lastY = this.gameObject.y;
+        if (!this.#_collider) return true;
 
-        this.gameObject.x += dx;
-        this.gameObject.y += dy;
+        this.#saveLastPosition();
 
-        this.#_shouldResolve = true;
-    }
+        const steps = Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / 1);
+        const stepX = dx / steps;
+        const stepY = dy / steps;
 
-    onCollisionEnter(other) {
-        if (!this.#_shouldResolve || !this.#_collider || other === this.#_collider) return;
+        let currentCollisions = new Set();
+        let resolved = false;
 
-            const otherCollider = other.getComponent(AbstractColliderComponent);
+        for (let i = 0; i < steps; i++) {
+            this.#step(stepX, stepY);
 
-            if (!otherCollider.isTrigger() &&
-                !this.#_collider.isTrigger() &&
-                !otherCollider.isTrigger() &&
-                this.#_collider.checkCollisionWith(otherCollider)
-            ) {
-                // Restore to last safe position
-                this.gameObject.x = this.#_lastX;
-                this.gameObject.y = this.#_lastY;
-                return;
+            for (const other of CollisionSystem.instance.colliders) {
+                if (other === this.#_collider) continue;
+                if (!this.#_collider.checkCollisionWith(other)) continue;
+
+                const otherObj = other.gameObject;
+                currentCollisions.add(otherObj);
+
+                this.#handleEnterOrStay(other, otherObj);
+
+                if (!this.#shouldResolve(other)) continue;
+
+                this.#rollbackStep(stepX, stepY);
+                resolved = true;
+                break;
             }
 
-        this.#_shouldResolve = false;
+            if (resolved) break;
+        }
+
+        this.#handleExit(currentCollisions);
+        this.#_lastCollisions = currentCollisions;
+
+        return true;
     }
 
 
-
-
-    #triggerCollisionEnter(object, other) {
-            object.onCollisionEnter?.(other.gameObject);
+    #saveLastPosition() {
+        this.#_lastX = this.gameObject.x;
+        this.#_lastY = this.gameObject.y;
     }
 
+    #step(dx, dy) {
+        this.gameObject.x += dx;
+        this.gameObject.y += dy;
+    }
 
+    #rollbackStep(dx, dy) {
+        this.gameObject.x -= dx;
+        this.gameObject.y -= dy;
+    }
 
-    // update(deltaTime) {
-    //     if (!this.#_collider) return;
+    #shouldResolve(other) {
+        return !this.#_collider.isTrigger() && !other.isTrigger();
+    }
 
-    //     const oldX = this.gameObject.x;
-    //     const oldY = this.gameObject.y;
+    #handleEnterOrStay(other, otherObj) {
+        const wasColliding = this.#_lastCollisions.has(otherObj);
+        const isTrigger = this.#_collider.isTrigger() || other.isTrigger();
 
-    //     // Move object
-    //     this.gameObject.x += this.velocity.x * deltaTime;
-    //     this.gameObject.y += this.velocity.y * deltaTime;
+        if (!wasColliding) {
+            this.#eventEnter(this.gameObject, otherObj);
+            if (!otherObj?.hasComponent?.(RigidbodyComponent))
+                this.#eventEnter(otherObj, this.gameObject);
+        } else {
+            this.#eventStay(this.gameObject, otherObj);
+            if (!otherObj?.hasComponent?.(RigidbodyComponent))
+                this.#eventStay(otherObj, this.gameObject);
+        }
+    }
 
-    //     // Handle solid collision resolution
-    //     for (const other of CollisionSystem.instance.colliders) {
-    //         if (other === this.#_collider) continue;
-    //         if (!this.#_collider.checkCollisionWith(other)) continue;
+    #handleExit(currentCollisions) {
+        for (const obj of this.#_lastCollisions) {
+            if (!currentCollisions.has(obj)) {
+                const otherCol = (obj as GameObject).getComponent?.(AbstractColliderComponent);
+                const isTrigger = this.#_collider.isTrigger() || otherCol?.isTrigger();
+                this.#eventExit(this.gameObject, obj);
+                if (!otherCol?.hasComponent?.(RigidbodyComponent))
+                    this.#eventExit(obj, this.gameObject);
+            }
+        }
+    }
 
-    //         // Resolve only if both are non-trigger
-    //         if (!this.#_collider.trigger && !other.trigger) {
-    //             this.gameObject.x = oldX;
-    //             this.gameObject.y = oldY;
-    //             break;
-    //         }
-    //     }
-    // }
+    #eventEnter(gameObject, otherGameObject) {
+        const selfCol = gameObject?.getComponent?.(AbstractColliderComponent);
+
+        if (selfCol?.isTrigger()) {
+            gameObject?.onTriggerEnter?.(otherGameObject);
+        } else {
+            gameObject?.onCollisionEnter?.(otherGameObject);
+        }
+    }
+    #eventStay(gameObject, otherGameObject) {
+        const selfCol = gameObject?.getComponent?.(AbstractColliderComponent);
+
+        if (selfCol?.isTrigger()) {
+            gameObject?.onTriggerStay?.(otherGameObject);
+        } else {
+            gameObject?.onCollisionStay?.(otherGameObject);
+        }
+    }
+    #eventExit(gameObject, otherGameObject) {
+        const selfCol = gameObject?.getComponent?.(AbstractColliderComponent);
+
+        if (selfCol?.isTrigger()) {
+            gameObject?.onTriggerExit?.(otherGameObject);
+        } else {
+            gameObject?.onCollisionExit?.(otherGameObject);
+        }
+    }
 }

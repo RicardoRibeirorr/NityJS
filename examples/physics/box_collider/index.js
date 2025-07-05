@@ -27,6 +27,13 @@ const scene = new Scene({
       obj.addComponent(new BoxColliderComponent(30, 30));
       scene.add(obj);
 
+
+    obj.addComponent(new class extends Component {
+      onCollisionEnter(other) {
+        console.log('Someone collided with me the static object');;
+      }
+    });
+
     const player = new GameObject(100, 100);
     player.addComponent(new ShapeComponent("square", {
       width: 10,
@@ -44,7 +51,14 @@ const scene = new Scene({
 
     player.addComponent(new class extends Component {
       onCollisionEnter(other) {
-        other.getComponent(ShapeComponent).color = 'green';
+        console.log('Collision Enter:', other);
+      }
+      onCollisionStay(other) {
+        other.getComponent(ShapeComponent).color = 'orange';
+      }
+      onCollisionExit(other) {
+        console.log('Collision Exit:', other);
+        other.getComponent(ShapeComponent).color = 'blue';
       }
     });
 

@@ -18,42 +18,42 @@ export class CollisionSystem {
     }
 
     update() {
-        for (let a of this.colliders) {
-            for (let b of this.colliders) {
-                if (a === b) continue;
-                if (this.intersects(a, b)) {
+        // for (let a of this.colliders) {
+        //     for (let b of this.colliders) {
+        //         if (a === b) continue;
+        //         if (this.intersects(a, b)) {
 
-                    //ON TRIGGER ENTER or ON COLLISION ENTER:
-                    if (!a._lastCollisions.has(b)) {
-                        a._lastCollisions.add(b);
+        //             //ON TRIGGER ENTER or ON COLLISION ENTER:
+        //             if (!a._lastCollisions.has(b)) {
+        //                 a._lastCollisions.add(b);
 
-                        if (a.isTrigger()) a.gameObject.onTriggerEnter?.(b.gameObject);
-                        else a.gameObject.onCollisionEnter?.(b.gameObject);
+        //                 if (a.isTrigger()) a.gameObject.onTriggerEnter?.(b.gameObject);
+        //                 else a.gameObject.onCollisionEnter?.(b.gameObject);
 
-                        if (b.isTrigger()) b.gameObject.onTriggerEnter?.(a.gameObject);
-                        else b.gameObject.onCollisionEnter?.(a.gameObject);
+        //                 if (b.isTrigger()) b.gameObject.onTriggerEnter?.(a.gameObject);
+        //                 else b.gameObject.onCollisionEnter?.(a.gameObject);
 
-                        //ON TRIGGER STAY or ON COLLISION STAY:
-                    } else {
-                        if (a.isTrigger()) a.gameObject.onTriggerStay?.(b.gameObject);
-                        else a.gameObject.onCollisionStay?.(b.gameObject);
+        //                 //ON TRIGGER STAY or ON COLLISION STAY:
+        //             } else {
+        //                 if (a.isTrigger()) a.gameObject.onTriggerStay?.(b.gameObject);
+        //                 else a.gameObject.onCollisionStay?.(b.gameObject);
 
-                        if (b.isTrigger()) b.gameObject.onTriggerStay?.(a.gameObject);
-                        else b.gameObject.onCollisionStay?.(a.gameObject);
-                    }
+        //                 if (b.isTrigger()) b.gameObject.onTriggerStay?.(a.gameObject);
+        //                 else b.gameObject.onCollisionStay?.(a.gameObject);
+        //             }
 
-                    //ON TRIGGER EXIT or ON COLLISION EXIT:
-                } else if (a._lastCollisions.has(b)) {
-                    a._lastCollisions.delete(b);
+        //             //ON TRIGGER EXIT or ON COLLISION EXIT:
+        //         } else if (a._lastCollisions.has(b)) {
+        //             a._lastCollisions.delete(b);
 
-                    if (a.isTrigger()) a.gameObject.onTriggerExit?.(b.gameObject);
-                    else a.gameObject.onCollisionExit?.(b.gameObject);
+        //             if (a.isTrigger()) a.gameObject.onTriggerExit?.(b.gameObject);
+        //             else a.gameObject.onCollisionExit?.(b.gameObject);
 
-                    if (b.isTrigger()) b.gameObject.onTriggerExit?.(a.gameObject);
-                    else b.gameObject.onCollisionExit?.(a.gameObject);
-                }
-            }
-        }
+        //             if (b.isTrigger()) b.gameObject.onTriggerExit?.(a.gameObject);
+        //             else b.gameObject.onCollisionExit?.(a.gameObject);
+        //         }
+        //     }
+        // }
     }
 
     intersects(a, b) {

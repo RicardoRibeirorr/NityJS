@@ -8,7 +8,6 @@ import {
   BoxColliderComponent,
   ShapeComponent,
   RigidbodyComponent,
-  CircleColliderComponent,
   MovementComponent
 } from '../../../dist/nity.module.min.js';
 
@@ -19,25 +18,33 @@ const scene = new Scene({
   create(scene) {
 
     //GENERATE STATIC OBJECT
-      const obj = new GameObject(100, 20);
-      obj.addComponent(new ShapeComponent("circle", {
-        radius: 50,
+      const obj = new GameObject(90, 50);
+      obj.addComponent(new ShapeComponent("square", {
+        width: 30,
+        height: 30,
         color: 'blue'
       }));
-      obj.addComponent(new CircleColliderComponent(50, false));
+      obj.addComponent(new BoxColliderComponent(30, 30));
       scene.add(obj);
 
-      // GENERATE PLAYER
+
+    obj.addComponent(new class extends Component {
+      onCollisionEnter(other) {
+        console.log('Someone collided with me the static object');;
+      }
+    });
+
     const player = new GameObject(100, 100);
-    player.addComponent(new ShapeComponent("circle", {
-      radius: 10,
+    player.addComponent(new ShapeComponent("square", {
+      width: 10,
+      height: 10,
       color: 'red'
     }));
-    player.addComponent(new CircleColliderComponent(10, false));
+    player.addComponent(new BoxColliderComponent(10, 10));
     player.addComponent(new RigidbodyComponent());
-    player.addComponent(new MovementComponent(50));
+    player.addComponent(new MovementComponent(1000));
 
-    // ADD CAMERA FOLLOWING THE PLAYER
+    // Add camera following the player
     const cameraObject = new GameObject(0, 0);
     cameraObject.addComponent(new CameraComponent(game.canvas, 2));
     player.addChild(cameraObject);
