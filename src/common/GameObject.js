@@ -1,3 +1,5 @@
+import { Component } from './Component.js';
+
 // === GameObject.js ===
 export class GameObject {
     constructor(x = 0, y = 0) {
@@ -12,6 +14,10 @@ export class GameObject {
     }
 
     addComponent(component) {
+        if (!(component instanceof Component)) {
+            throw new Error('addComponent: property "component" must be an instance of Component');
+        }
+
         const existing = this.getComponent(component.constructor);
         if (existing) throw new Error(`Component of type ${component.constructor.name} already exists on this GameObject.`);
         component.gameObject = this;
@@ -20,10 +26,17 @@ export class GameObject {
     }
 
     getComponent(type) {
+        if (typeof type !== 'function' || !type.prototype) {
+            throw new Error('getComponent: property "type" must be a class');
+        }
         return this.components.find(c => c instanceof type);
     }
 
     hasComponent(type) {
+        if (typeof type !== 'function' || !type.prototype) {
+            throw new Error('hasComponent: property "type" must be a class');
+        }
+
         return !!this.getComponent(type);
     }
 

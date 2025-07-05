@@ -7,6 +7,27 @@ export class ShapeComponent extends Component {
         this.shape = shape;
         this.options = options;
     }
+    
+    get color() { return this.options.color || 'black'; }
+    set color(color) { this.options.color = color; }
+    get width() { return this.options.width || 10; }
+    set width(width) { this.options.width = width; }
+    get height() { return this.options.height || 10; }
+    set height(height) { this.options.height = height; }
+    get radius() { return this.options.radius || 10; }
+    set radius(radius) { this.options.radius = radius; }
+    get radiusX() { return this.options.radiusX || 10; }
+    set radiusX(radiusX) { this.options.radiusX = radiusX; }
+    get radiusY() { return this.options.radiusY || 5; }
+    set radiusY(radiusY) { this.options.radiusY = radiusY; }
+    get points() { return this.options.points || []; }
+    set points(points) { this.options.points = points; }
+    get x2() { return this.options.x2 || this.gameObject.getGlobalX() + 10; }
+    set x2(x2) { this.options.x2 = x2; }
+    get y2() { return this.options.y2 || this.gameObject.getGlobalY(); }
+    set y2(y2) { this.options.y2 = y2; }
+    get size() { return this.options.size || 20; }
+    set size(size) { this.options.size = size; }
 
     draw(ctx) {
         const x = this.gameObject.getGlobalX();

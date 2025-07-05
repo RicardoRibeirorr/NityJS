@@ -17,6 +17,8 @@ export * from './renderer/components/ImageComponent.js';
 export * from './renderer/components/ShapeComponent.js';
 export * from './renderer/components/SpriteRendererComponent.js';
 export * from './physics/components/BoxColliderComponent.js';
+export * from './physics/components/CircleColliderComponent.js';
+export * from './physics/components/RigidbodyComponent.js';
 
 // Entry point for the Nity game engine
 export function helloNity() {

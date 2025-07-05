@@ -1,3 +1,6 @@
+import {
+    AbstractColliderComponent
+} from '../physics/AbstractColliderComponent.js';
 
 // === CollisionSystem.js ===
 export class CollisionSystem {
@@ -18,31 +21,49 @@ export class CollisionSystem {
         for (let a of this.colliders) {
             for (let b of this.colliders) {
                 if (a === b) continue;
+                if (this.intersects(a, b)) {
 
-                const boundsA = a.getBounds();
-                const boundsB = b.getBounds();
-
-                if (this.intersects(boundsA, boundsB)) {
+                    //ON TRIGGER ENTER or ON COLLISION ENTER:
                     if (!a._lastCollisions.has(b)) {
                         a._lastCollisions.add(b);
-                        a.gameObject.onCollisionEnter?.(b.gameObject);
+
+                        if (a.isTrigger()) a.gameObject.onTriggerEnter?.(b.gameObject);
+                        else a.gameObject.onCollisionEnter?.(b.gameObject);
+
+                        if (b.isTrigger()) b.gameObject.onTriggerEnter?.(a.gameObject);
+                        else b.gameObject.onCollisionEnter?.(a.gameObject);
+
+                        //ON TRIGGER STAY or ON COLLISION STAY:
                     } else {
-                        a.gameObject.onCollisionStay?.(b.gameObject);
+                        if (a.isTrigger()) a.gameObject.onTriggerStay?.(b.gameObject);
+                        else a.gameObject.onCollisionStay?.(b.gameObject);
+
+                        if (b.isTrigger()) b.gameObject.onTriggerStay?.(a.gameObject);
+                        else b.gameObject.onCollisionStay?.(a.gameObject);
                     }
+
+                    //ON TRIGGER EXIT or ON COLLISION EXIT:
                 } else if (a._lastCollisions.has(b)) {
                     a._lastCollisions.delete(b);
-                    a.gameObject.onCollisionExit?.(b.gameObject);
+
+                    if (a.isTrigger()) a.gameObject.onTriggerExit?.(b.gameObject);
+                    else a.gameObject.onCollisionExit?.(b.gameObject);
+
+                    if (b.isTrigger()) b.gameObject.onTriggerExit?.(a.gameObject);
+                    else b.gameObject.onCollisionExit?.(a.gameObject);
                 }
             }
         }
     }
 
     intersects(a, b) {
-        return (
-            a.x < b.x + b.width &&
-            a.x + a.width > b.x &&
-            a.y < b.y + b.height &&
-            a.y + a.height > b.y
-        );
+        if (a instanceof AbstractColliderComponent && b instanceof AbstractColliderComponent) {
+            return a.checkCollisionWith(b);
+        }
+
+        console.warn("INTERNAL_ERROR:At least one object is not an collider component:", a, b);
+        return false;
     }
 }
+
+CollisionSystem.instance = undefined;

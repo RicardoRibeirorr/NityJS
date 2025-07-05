@@ -41,12 +41,14 @@ export class Game {
         }
         await this.spriteRegistry.preload();
         await this.scene.preload();
+        await this.scene.start();
         this.start();
     }
 
     start() {
         Input.initialize();
         this.#_initEventListeners();
+        
         requestAnimationFrame(this.loop.bind(this));
     }
 

@@ -32,6 +32,14 @@ export class Scene {
         await Promise.all(preloadPromises);
     }
 
+    async start() {
+        for (let obj of this.objects) {
+            if (typeof obj.start === 'function') {
+                obj.start();
+            }
+        }
+    }
+
     update(deltaTime) {
         for (let obj of this.objects) {
             if (typeof obj.update === 'function') {
