@@ -15,18 +15,33 @@ import {
     GameObject
 } from "../../common/GameObject.js";
 
+import {
+    GravityComponent
+} from "./GravityComponent.js";
+
 // === RigidbodyComponent.js ===
-export class RigidbodyComponent extends Component {
+export class RigidbodyComponent extends GravityComponent {
     #_collider;
     #_lastCollisions = new Set();
-    #_lastX: 0;
-    #_lastY: 0;
+    bounciness = 0; // 0 = no bounce, 1 = full bounce
+    gravity= false;
+    gravityScale= 300;
 
 
-    constructor() {
-        super();
+    constructor(options = {
+        gravity: false,
+        gravityScale: 300,
+        bounciness: 0
+    }) {
+        super(options);
+        this.gravity = options.gravity!=null ? options.gravity : false;
+        this.bounciness = options.bounciness || 0;
     }
 
+    /**
+     * Initializes the RigidbodyComponent, ensuring it has a collider.
+     * @returns {void}
+     */
     start() {
         this.#_collider = this.gameObject.getComponent(AbstractColliderComponent);
         if (!this.#_collider) {
@@ -34,10 +49,23 @@ export class RigidbodyComponent extends Component {
         }
     }
 
-    move(dx, dy) {
-        if (!this.#_collider) return true;
+    /**
+     * Updates the RigidbodyComponent, applying gravity and moving the GameObject.
+     * @param {number} deltaTime - The time since the last update.
+     */
+    update(deltaTime) {
+        super.update(deltaTime); // apply gravity
+        this.move(this.velocity.x * deltaTime, this.velocity.y * deltaTime);
+    }
 
-        this.#saveLastPosition();
+    /**
+     * Moves the GameObject and handles collision resolution.
+     * @param {number} dx - The change in x position.
+     * @param {number} dy - The change in y position.
+     * @returns {boolean} - Returns true if the movement was successful.
+     */
+     move(dx, dy) {
+        if (!this.#_collider) return true;
 
         const steps = Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / 1);
         const stepX = dx / steps;
@@ -47,7 +75,7 @@ export class RigidbodyComponent extends Component {
         let resolved = false;
 
         for (let i = 0; i < steps; i++) {
-            this.#step(stepX, stepY);
+            this._doMove(stepX, stepY);
 
             for (const other of CollisionSystem.instance.colliders) {
                 if (other === this.#_collider) continue;
@@ -56,28 +84,47 @@ export class RigidbodyComponent extends Component {
                 const otherObj = other.gameObject;
                 currentCollisions.add(otherObj);
 
-                this.#handleEnterOrStay(other, otherObj);
+                const wasColliding = this.#_lastCollisions.has(otherObj);
+                const isTrigger = this.#_collider.isTrigger() || other.isTrigger();
 
-                if (!this.#shouldResolve(other)) continue;
+                if (!wasColliding) {
+                    this.#eventEnter(this.gameObject, otherObj);
+                    if (!otherObj.hasComponent?.(RigidbodyComponent))
+                        this.#eventEnter(otherObj, this.gameObject);
+                } else {
+                    this.#eventStay(this.gameObject, otherObj);
+                    if (!otherObj.hasComponent?.(RigidbodyComponent))
+                        this.#eventStay(otherObj, this.gameObject);
+                }
 
-                this.#rollbackStep(stepX, stepY);
-                resolved = true;
-                break;
+                if (!isTrigger && !resolved) {
+                    // Bounce logic based on movement direction
+                    if (Math.abs(stepY) > Math.abs(stepX)) {
+                        this.velocity.y *= -this.bounciness;
+                    } else {
+                        this.velocity.x *= -this.bounciness;
+                    }
+
+                    this._doMove(-stepX, -stepY);
+                    resolved = true;
+                    break;
+                }
             }
 
             if (resolved) break;
         }
 
-        this.#handleExit(currentCollisions);
+        // Handle collision exit
+        for (const obj of this.#_lastCollisions) {
+            if (!currentCollisions.has(obj)) {
+                this.#eventExit(this.gameObject, obj);
+                if (!(obj as any)?.hasComponent?.(RigidbodyComponent))
+                    this.#eventExit(obj, this.gameObject);
+            }
+        }
+
         this.#_lastCollisions = currentCollisions;
-
         return true;
-    }
-
-
-    #saveLastPosition() {
-        this.#_lastX = this.gameObject.x;
-        this.#_lastY = this.gameObject.y;
     }
 
     #step(dx, dy) {
@@ -112,7 +159,7 @@ export class RigidbodyComponent extends Component {
     #handleExit(currentCollisions) {
         for (const obj of this.#_lastCollisions) {
             if (!currentCollisions.has(obj)) {
-                const otherCol = (obj as GameObject).getComponent?.(AbstractColliderComponent);
+                const otherCol = (obj as any).getComponent?.(AbstractColliderComponent);
                 const isTrigger = this.#_collider.isTrigger() || otherCol?.isTrigger();
                 this.#eventExit(this.gameObject, obj);
                 if (!otherCol?.hasComponent?.(RigidbodyComponent))

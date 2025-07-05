@@ -20,7 +20,12 @@ export * from './physics/components/BoxColliderComponent.js';
 export * from './physics/components/CircleColliderComponent.js';
 export * from './physics/components/RigidbodyComponent.js';
 
-// Entry point for the Nity game engine
-export function helloNity() {
-  console.log('Hello from Nity Game Engine!');
+export * from './extensions/movement/FollowTarget.js';
+export * from './extensions/movement/MovementController.js';
+
+/* * @deprecated Use MovementController instead
+ */
+export const plugins = {
+  FollowTarget:FollowTarget,
+ MovementComponent:MovementComponent,
 }
