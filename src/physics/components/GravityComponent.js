@@ -1,4 +1,5 @@
 import { Component } from '../../common/Component.js';
+import { Time } from '../../core/Time.js';
 
 export class GravityComponent extends Component {
 
@@ -16,9 +17,9 @@ export class GravityComponent extends Component {
         this.velocity = { x: 0, y: 0 };
     }
 
-    update(deltaTime) {
+    update() {
         if (this.gravity) {
-            this.velocity.y += this.gravityScale * deltaTime;
+            this.velocity.y += this.gravityScale * Time.deltaTime();
         }
     }
 

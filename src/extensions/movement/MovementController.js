@@ -1,4 +1,5 @@
 import { Component } from '../../common/Component.js';
+import { Time } from '../../core/Time.js';
 import { Input } from '../../input/Input.js';
 import { RigidbodyComponent } from '../../physics/components/RigidbodyComponent.js';
 
@@ -17,13 +18,13 @@ export class MovementComponent extends Component {
         }
     }
 
-    update(deltaTime) {
+    update() {
         let dx = 0, dy = 0;
 
-        if (Input.isKeyDown('ArrowRight')) dx += this.speed * deltaTime;
-        if (Input.isKeyDown('ArrowLeft'))  dx -= this.speed * deltaTime;
-        if (Input.isKeyDown('ArrowDown'))  dy += this.speed * deltaTime;
-        if (Input.isKeyDown('ArrowUp'))    dy -= this.speed * deltaTime;
+        if (Input.isKeyDown('ArrowRight')) dx += this.speed * Time.deltaTime();
+        if (Input.isKeyDown('ArrowLeft'))  dx -= this.speed * Time.deltaTime();
+        if (Input.isKeyDown('ArrowDown'))  dy += this.speed * Time.deltaTime();
+        if (Input.isKeyDown('ArrowUp'))    dy -= this.speed * Time.deltaTime();
 
         if (dx !== 0 || dy !== 0) {
             this.rigidbody.move(dx, dy);

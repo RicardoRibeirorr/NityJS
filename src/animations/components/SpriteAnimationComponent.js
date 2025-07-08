@@ -1,6 +1,7 @@
 import { Game } from '../../index.js';
 import { Component } from '../../common/Component.js';
 import { SpriteRendererComponent } from '../../renderer/components/SpriteRendererComponent.js';
+import { Time } from '../../core/Time.js';
 
 // === SpriteAnimationComponent.js ===
 export class SpriteAnimationComponent extends Component {
@@ -37,10 +38,10 @@ export class SpriteAnimationComponent extends Component {
         this._applyFrame();
     }
 
-    update(deltaTime) {
+    update() {
         if (!this.currentClip) return;
 
-        this.time += deltaTime;
+        this.time += Time.deltaTime();
         const frameDuration = 1 / this.currentClip.fps;
 
         if (this.time >= frameDuration) {

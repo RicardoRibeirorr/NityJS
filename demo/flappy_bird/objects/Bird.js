@@ -3,8 +3,6 @@ import {
   ShapeComponent,
   RigidbodyComponent,
   CircleColliderComponent,
-  Component,
-  Input
 } from "../../../dist/nity.module.min.js";
 
 export class Bird extends GameObject {
@@ -12,12 +10,15 @@ export class Bird extends GameObject {
   constructor(x, y) {
     super(x, y);
 
+    this.x = x;
+    this.y = y;
+
     this.addComponent(new ShapeComponent("circle", {
-      radius: 10,
+      radius: 20,
       color: "yellow",
     }));
 
-    this.addComponent(new CircleColliderComponent(10));
+    this.addComponent(new CircleColliderComponent(20));
 
     this.rigidbody = new RigidbodyComponent({
       gravity: true,
@@ -28,22 +29,13 @@ export class Bird extends GameObject {
     });
     this.addComponent(this.rigidbody);
 
-    this.addComponent(new BirdControlComponent());
+    // this.addComponent(new BirdControlComponent());
   }
- 
-  update(time){
-    super.update(time);
-      this.rigidbody.velocity.x = 100; // constant horizontal movement
+
+  onCollisionEnter(other){
+    console.log("GAME OVER");
+    // Game.instance.pause();
   }
 }
 
-class BirdControlComponent extends Component {
-  update(dt) {
-    if (Input.isKeyDown(" ")) {
-      console.log("Flap!");
-      // Apply an upward force to the bird
-      const rb = this.gameObject.getComponent(RigidbodyComponent);
-      rb.velocity.y = -250;
-    }
-  }
-}
+

@@ -6,10 +6,20 @@ export class Component {
         this._started = false;
     }
 
+    
+    __lateStart(){}
+    __update(){}
+    __draw(ctx) {
+        if (this.enabled && typeof this.draw === 'function') {
+            this.draw(ctx);
+        }
+    }
+    __preload() {}
+
     start() {}
-    update(deltaTime) {}
+    update() {}
     draw(ctx) {}
     async preload() {}
     destroy() {}
-    lateUpdate(deltaTime) {}
+    lateUpdate() {}
 }

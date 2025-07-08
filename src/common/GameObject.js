@@ -54,7 +54,7 @@ export class GameObject {
         if (existing) throw new Error(`Component of type ${component.constructor.name} already exists on this GameObject.`);
         component.gameObject = this;
         this.components.push(component);
-        component.start?.();
+        // component.start?.();
         return component;
     }
 
@@ -99,6 +99,17 @@ export class GameObject {
         }
     }
 
+    // TODO: ADD ALL THE CHILD OPTIONS
+
+    getComponentInChildren(type) {
+        if (typeof type !== 'function' || !type.prototype) {
+            throw new Error('hasComponent: property "type" must be a class');
+        }
+
+        return this.children.find(c => c.hasComponent(type)).getComponent(type);
+        // return !!this.getComponent(type);
+    }
+
     /**
      * Checks if the GameObject has a specific tag.
      * @param {string} tag - The tag to check.
@@ -117,14 +128,18 @@ export class GameObject {
         this.tags.add(tag);
     }
 
-    /**
-     * Removes a tag from the GameObject.
-     * If the tag does not exist, it will not throw an error.
-     * @param {string} tag - The tag to remove.
-     */
     addChild(child) {
         this.children.push(child);
         child.parent = this;
+    }
+
+    addChildren(children) {
+        if(!Array.isArray(children)) throw new Error(`Nity2D: method 'addChildren' only accepts array '${typeof children}' provided`)
+        
+            children.forEach(child => {
+            this.children.push(child);
+            child.parent = this;
+        });
     }
 
     /**
@@ -171,20 +186,28 @@ export class GameObject {
         await Promise.all(promises);
     }
 
+    start() {
+        for (const c of this.components) {
+            if (c.enabled && typeof c.start === 'function') c.start();
+        }
+        for (const child of this.children) {
+            child.start();
+        }
+    }
+
     /** * Updates the GameObject and its components.
      * This method will call the update method of each
      * component that is enabled.
      * It will also recursively call the update method of each child GameObject.
-     * @param {number} deltaTime - The time since the last update.
      */
-    update(deltaTime) {
+    update() {
         if (this.paused) return;
 
         for (const c of this.components) {
-            if (c.enabled && typeof c.update === 'function') c.update(deltaTime);
+            if (c.enabled && typeof c.update === 'function') c.update();
         }
         for (const child of this.children) {
-            child.update(deltaTime);
+            child.update();
         }
     }
 
@@ -192,16 +215,15 @@ export class GameObject {
      * This method will call the lateUpdate method of each
      * component that is enabled.
      * It will also recursively call the lateUpdate method of each child GameObject.
-     * @param {number} deltaTime - The time since the last update.
      */
-    lateUpdate(deltaTime) {
+    lateUpdate() {
         if (this.paused) return;
 
         for (const c of this.components) {
-            if (c.enabled && typeof c.lateUpdate === 'function') c.lateUpdate(deltaTime);
+            if (c.enabled && typeof c.lateUpdate === 'function') c.lateUpdate();
         }
         for (const child of this.children) {
-            child.lateUpdate(deltaTime);
+            child.lateUpdate();
         }
     }
 
@@ -252,14 +274,14 @@ export class GameObject {
      * It will also recursively call the draw method of each child GameObject.
      * @param {CanvasRenderingContext2D} ctx - The canvas rendering context to draw on.
      */
-    draw(ctx) {
+    __draw(ctx) {
         if (this.paused) return;
 
         for (const c of this.components) {
-            if (c.enabled && typeof c.draw === 'function') c.draw(ctx);
+            c.__draw(ctx);
         }
         for (const child of this.children) {
-            child.draw(ctx);
+            child.__draw(ctx);
         }
     }
 }

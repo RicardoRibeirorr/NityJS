@@ -1,4 +1,4 @@
-import { Component } from '../../../dist/nity.module.min.js';
+import { Component } from '../../common/Component.js';
 
 export class FollowTarget extends Component {
   constructor(target) {

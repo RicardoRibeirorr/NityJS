@@ -18,6 +18,7 @@ import {
 import {
     GravityComponent
 } from "./GravityComponent.js";
+import { Time } from "../../core/Time.js";
 
 // === RigidbodyComponent.js ===
 export class RigidbodyComponent extends GravityComponent {
@@ -51,11 +52,10 @@ export class RigidbodyComponent extends GravityComponent {
 
     /**
      * Updates the RigidbodyComponent, applying gravity and moving the GameObject.
-     * @param {number} deltaTime - The time since the last update.
      */
-    update(deltaTime) {
-        super.update(deltaTime); // apply gravity
-        this.move(this.velocity.x * deltaTime, this.velocity.y * deltaTime);
+    update() {
+        super.update(); // apply gravity
+        this.move(this.velocity.x * Time.deltaTime(), this.velocity.y * Time.deltaTime());
     }
 
     /**
@@ -118,7 +118,7 @@ export class RigidbodyComponent extends GravityComponent {
         for (const obj of this.#_lastCollisions) {
             if (!currentCollisions.has(obj)) {
                 this.#eventExit(this.gameObject, obj);
-                if (!(obj as any)?.hasComponent?.(RigidbodyComponent))
+                if (!obj?.hasComponent?.(RigidbodyComponent))
                     this.#eventExit(obj, this.gameObject);
             }
         }
@@ -159,7 +159,7 @@ export class RigidbodyComponent extends GravityComponent {
     #handleExit(currentCollisions) {
         for (const obj of this.#_lastCollisions) {
             if (!currentCollisions.has(obj)) {
-                const otherCol = (obj as any).getComponent?.(AbstractColliderComponent);
+                const otherCol = obj.getComponent?.(AbstractColliderComponent);
                 const isTrigger = this.#_collider.isTrigger() || otherCol?.isTrigger();
                 this.#eventExit(this.gameObject, obj);
                 if (!otherCol?.hasComponent?.(RigidbodyComponent))

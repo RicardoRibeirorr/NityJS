@@ -3,7 +3,7 @@ import { Sprite } from './Sprite.js';
 
 // === Spritesheet.js ===
 export class Spritesheet {
-    constructor(name, src, frameWidth, frameHeight, cols, rows) {
+    constructor(name, src, frameWidth = null, frameHeight = null, cols = 1, rows = 1) {
         this.name = name;
         this.src = src;
         this.image = null;

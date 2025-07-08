@@ -1,4 +1,5 @@
 import { CollisionSystem } from "../bin/CollisionSystem";
+import { GameObject } from "./GameObject";
 
 
 // === Scene.js ===
@@ -9,6 +10,7 @@ export class Scene {
     }
 
     add(obj) {
+        if(!(obj instanceof GameObject)) throw new Error(`[Nity] Forbidden object '${obj ? obj.constructor.name : null}' added to the scene. Accepts only 'GameObject'.`);
         this.objects.push(obj);
     }
 
@@ -28,37 +30,48 @@ export class Scene {
             console.log("Empty scene loaded");
         }
 
-        const preloadPromises = this.objects.map(obj => obj.preload?.());
+        const preloadPromises = this.objects.map(obj => obj?.preload?.());
         await Promise.all(preloadPromises);
     }
 
     async start() {
         for (let obj of this.objects) {
-            if (typeof obj.start === 'function') {
-                obj.start();
+            if (typeof obj?.start === 'function') {
+                obj?.start();
             }
         }
+
+        setTimeout(()=>{},500)
     }
 
-    update(deltaTime) {
+    update() {}
+    lateUpdate() {}
+
+    __update(){
         for (let obj of this.objects) {
-            if (typeof obj.update === 'function') {
-                obj.update(deltaTime);
+            if (typeof obj?.update === 'function') {
+                obj?.update();
             }
         }
 
         CollisionSystem.instance?.update();
 
-        for (let obj of this.objects) {
-            if (typeof obj.lateUpdate === 'function') {
-                obj.lateUpdate(deltaTime);
-            }
-        }
+        this?.update();
     }
 
-    draw(ctx) {
+    __lateUpdate(){
         for (let obj of this.objects) {
-            obj.draw(ctx);
+            if (typeof obj.lateUpdate === 'function') {
+                obj?.lateUpdate();
+            }
+        }
+
+        this?.lateUpdate();
+    }
+
+    __draw(ctx) {
+        for (let obj of this.objects) {
+            obj.__draw(ctx);
         }
     }
 }

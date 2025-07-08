@@ -1,5 +1,4 @@
 import { Component } from '../../common/Component.js';
-
 /**
  * ImageComponent is a component that allows a GameObject to display an image.
  * It loads the image from a given source URL and draws it on the canvas.
@@ -7,21 +6,20 @@ import { Component } from '../../common/Component.js';
  */
 export class ImageComponent extends Component {
     /**
-     * ImageComponent is used to render an image on the GameObject.
-     * It loads the image from the provided source URL and draws it on the canvas.
-     * 
      * @param {string} src - The source URL of the image to be loaded.
+     * @param {number} [width] - Optional width to draw the image.
+     * @param {number} [height] - Optional height to draw the image.
      */
-    constructor(src) {
+    constructor(src, width = null, height = null) {
         super();
         this.src = src;
         this.image = null;
+        this.width = width;
+        this.height = height;
     }
 
     /**
      * Preloads the image from the source URL.
-     * This method returns a promise that resolves when the image is loaded.
-     * It should be called before the image is drawn to ensure it is available.
      * 
      * @returns {Promise<void>} A promise that resolves when the image is loaded.
      */
@@ -31,6 +29,9 @@ export class ImageComponent extends Component {
             img.src = this.src;
             img.onload = () => {
                 this.image = img;
+                // Fallback to natural size if width/height not provided
+                if (this.width === null) this.width = img.width;
+                if (this.height === null) this.height = img.height;
                 resolve();
             };
         });
@@ -38,7 +39,6 @@ export class ImageComponent extends Component {
 
     /**
      * Draws the image on the canvas at the GameObject's global position.
-     * This method should be called during the rendering phase to display the image.
      * 
      * @param {CanvasRenderingContext2D} ctx - The canvas rendering context to draw on.
      */
@@ -46,7 +46,8 @@ export class ImageComponent extends Component {
         if (this.image) {
             const x = this.gameObject.getGlobalX();
             const y = this.gameObject.getGlobalY();
-            ctx.drawImage(this.image, x, y);
+            ctx.drawImage(this.image, x, y, this.width, this.height);
         }
     }
 }
+3

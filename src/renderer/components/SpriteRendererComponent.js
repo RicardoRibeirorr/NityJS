@@ -17,7 +17,7 @@ export class SpriteRendererComponent extends Component {
         if (!this.sprite) throw new Error(`Sprite '${this.spriteName}' not found in sheet '${this.sheetName}'.`);
     }
 
-    draw(ctx) {
+    __draw(ctx) {
         if (!this.sprite) return;
         const x = this.gameObject.getGlobalX();
         const y = this.gameObject.getGlobalY();

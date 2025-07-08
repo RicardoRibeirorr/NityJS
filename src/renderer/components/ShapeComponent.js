@@ -29,7 +29,7 @@ export class ShapeComponent extends Component {
     get size() { return this.options.size || 20; }
     set size(size) { this.options.size = size; }
 
-    draw(ctx) {
+    __draw(ctx) {
         const x = this.gameObject.getGlobalX();
         const y = this.gameObject.getGlobalY();
         switch (this.shape) {
