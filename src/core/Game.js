@@ -2,6 +2,7 @@ import { SpriteRegistry } from '../asset/SpriteRegistry.js';
 import { CameraComponent } from '../common/components/CameraComponent.js';
 import { Input } from '../input/Input.js';
 import { CollisionSystem } from '../bin/CollisionSystem.js';
+import { Instantiate } from './Instantiate.js';
 
 // === Game.js ===
 export class Game {
@@ -22,6 +23,8 @@ export class Game {
         this._deltaTime = 0;
         //internal systems
         new CollisionSystem();
+        // Register any pending colliders that were created before CollisionSystem
+        Instantiate.registerPendingColliders();
     }
 
     launch(scene) {

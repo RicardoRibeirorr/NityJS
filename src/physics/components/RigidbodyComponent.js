@@ -4,7 +4,6 @@ import {
 import {
     CollisionSystem
 } from "../../bin/CollisionSystem.js";
-Game
 import {
     AbstractColliderComponent
 } from "../AbstractColliderComponent.js";
@@ -127,47 +126,6 @@ export class RigidbodyComponent extends GravityComponent {
         return true;
     }
 
-    #step(dx, dy) {
-        this.gameObject.x += dx;
-        this.gameObject.y += dy;
-    }
-
-    #rollbackStep(dx, dy) {
-        this.gameObject.x -= dx;
-        this.gameObject.y -= dy;
-    }
-
-    #shouldResolve(other) {
-        return !this.#_collider.isTrigger() && !other.isTrigger();
-    }
-
-    #handleEnterOrStay(other, otherObj) {
-        const wasColliding = this.#_lastCollisions.has(otherObj);
-        const isTrigger = this.#_collider.isTrigger() || other.isTrigger();
-
-        if (!wasColliding) {
-            this.#eventEnter(this.gameObject, otherObj);
-            if (!otherObj?.hasComponent?.(RigidbodyComponent))
-                this.#eventEnter(otherObj, this.gameObject);
-        } else {
-            this.#eventStay(this.gameObject, otherObj);
-            if (!otherObj?.hasComponent?.(RigidbodyComponent))
-                this.#eventStay(otherObj, this.gameObject);
-        }
-    }
-
-    #handleExit(currentCollisions) {
-        for (const obj of this.#_lastCollisions) {
-            if (!currentCollisions.has(obj)) {
-                const otherCol = obj.getComponent?.(AbstractColliderComponent);
-                const isTrigger = this.#_collider.isTrigger() || otherCol?.isTrigger();
-                this.#eventExit(this.gameObject, obj);
-                if (!otherCol?.hasComponent?.(RigidbodyComponent))
-                    this.#eventExit(obj, this.gameObject);
-            }
-        }
-    }
-
     #eventEnter(gameObject, otherGameObject) {
         const selfCol = gameObject?.getComponent?.(AbstractColliderComponent);
 
@@ -194,5 +152,15 @@ export class RigidbodyComponent extends GravityComponent {
         } else {
             gameObject?.onCollisionExit?.(otherGameObject);
         }
+    }
+
+    /**
+     * Directly moves the GameObject without collision checking.
+     * @param {number} dx - The change in x position.
+     * @param {number} dy - The change in y position.
+     */
+    _doMove(dx, dy) {
+        this.gameObject.x += dx;
+        this.gameObject.y += dy;
     }
 }

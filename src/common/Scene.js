@@ -1,5 +1,5 @@
-import { CollisionSystem } from "../bin/CollisionSystem";
-import { GameObject } from "./GameObject";
+import { CollisionSystem } from "../bin/CollisionSystem.js";
+import { GameObject } from "./GameObject.js";
 
 
 // === Scene.js ===
@@ -48,13 +48,19 @@ export class Scene {
     lateUpdate() {}
 
     __update(){
+        // Update all game objects first (movement, etc.)
         for (let obj of this.objects) {
             if (typeof obj?.update === 'function') {
                 obj?.update();
             }
         }
 
-        CollisionSystem.instance?.update();
+        // Then run collision detection and fire events
+        if (CollisionSystem.instance) {
+            CollisionSystem.instance?.update();
+        } else {
+            console.warn('Scene: CollisionSystem.instance is null!');
+        }
 
         this?.update();
     }

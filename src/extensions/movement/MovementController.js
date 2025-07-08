@@ -21,10 +21,10 @@ export class MovementComponent extends Component {
     update() {
         let dx = 0, dy = 0;
 
-        if (Input.isKeyDown('ArrowRight')) dx += this.speed * Time.deltaTime();
-        if (Input.isKeyDown('ArrowLeft'))  dx -= this.speed * Time.deltaTime();
-        if (Input.isKeyDown('ArrowDown'))  dy += this.speed * Time.deltaTime();
-        if (Input.isKeyDown('ArrowUp'))    dy -= this.speed * Time.deltaTime();
+        if (Input.isKeyDown('ArrowRight') || Input.isKeyDown('d') || Input.isKeyDown('D')) dx += this.speed * Time.deltaTime();
+        if (Input.isKeyDown('ArrowLeft') || Input.isKeyDown('a') || Input.isKeyDown('A'))  dx -= this.speed * Time.deltaTime();
+        if (Input.isKeyDown('ArrowDown') || Input.isKeyDown('s') || Input.isKeyDown('S'))  dy += this.speed * Time.deltaTime();
+        if (Input.isKeyDown('ArrowUp') || Input.isKeyDown('w') || Input.isKeyDown('W'))    dy -= this.speed * Time.deltaTime();
 
         if (dx !== 0 || dy !== 0) {
             this.rigidbody.move(dx, dy);
