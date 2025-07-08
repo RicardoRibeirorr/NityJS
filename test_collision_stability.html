@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collision Stability Test</title>
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+        canvas { border: 1px solid #ccc; }
+        .controls { margin-top: 10px; }
+        .log { 
+            height: 200px; 
+            overflow-y: scroll; 
+            border: 1px solid #ddd; 
+            padding: 10px; 
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Collision Stability Test</h1>
+    <p>Use WASD to move the red square. Watch for stable collision events when hitting edges/vertices.</p>
+    
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    
+    <div class="controls">
+        <button onclick="clearLog()">Clear Log</button>
+        <button onclick="toggleVerbose()">Toggle Verbose</button>
+    </div>
+    
+    <div id="log" class="log"></div>
+
+    <script type="module">
+        import {
+            Game,
+            Scene,
+            GameObject,
+            BoxColliderComponent,
+            ShapeComponent,
+            RigidbodyComponent,
+            Input,
+            Instantiate
+        } from './dist/nity.module.min.js';
+
+        let verbose = false;
+        let eventCounter = {};
+
+        function log(message) {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `[${timestamp}] ${message}<br>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            eventCounter = {};
+        }
+
+        function toggleVerbose() {
+            verbose = !verbose;
+            log(`Verbose logging: ${verbose ? 'ON' : 'OFF'}`);
+        }
+
+        function countEvent(eventType, objName) {
+            const key = `${eventType}-${objName}`;
+            eventCounter[key] = (eventCounter[key] || 0) + 1;
+            return eventCounter[key];
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const game = new Game(canvas);
+
+        // Movement Component for player control
+        class PlayerMovement extends Component {
+            speed = 200;
+
+            update() {
+                const rb = this.gameObject.getComponent(RigidbodyComponent);
+                if (!rb) return;
+
+                const moveX = (Input.isKeyPressed('d') ? 1 : 0) - (Input.isKeyPressed('a') ? 1 : 0);
+                const moveY = (Input.isKeyPressed('s') ? 1 : 0) - (Input.isKeyPressed('w') ? 1 : 0);
+
+                rb.velocity.x = moveX * this.speed;
+                rb.velocity.y = moveY * this.speed;
+            }
+        }
+
+        const scene = new Scene({
+            create(scene) {
+                log('Creating collision stability test scene...');
+
+                // Player (red square)
+                const player = Instantiate.create(GameObject, { x: 100, y: 100 });
+                player.name = "Player";
+                
+                player.addComponent(new BoxColliderComponent(40, 40, false));
+                player.addComponent(new ShapeComponent(40, 40, '#ff4444'));
+                player.addComponent(new RigidbodyComponent({ gravity: false }));
+                player.addComponent(new PlayerMovement());
+
+                // Collision event handlers
+                player.onCollisionEnter = (other) => {
+                    const count = countEvent('enter', other.name);
+                    if (verbose || count <= 3) {
+                        log(`🔴 Player ENTER with ${other.name} (count: ${count})`);
+                    }
+                };
+                
+                player.onCollisionStay = (other) => {
+                    const count = countEvent('stay', other.name);
+                    if (verbose && count <= 10) {
+                        log(`🟡 Player STAY with ${other.name} (count: ${count})`);
+                    }
+                };
+                
+                player.onCollisionExit = (other) => {
+                    const count = countEvent('exit', other.name);
+                    if (verbose || count <= 3) {
+                        log(`🔵 Player EXIT from ${other.name} (count: ${count})`);
+                    }
+                };
+
+                scene.add(player);
+
+                // Static obstacles to test edge/vertex collisions
+                const obstacles = [
+                    // Large wall on the right
+                    { x: 400, y: 100, w: 20, h: 300, name: "RightWall" },
+                    // Small square for vertex testing
+                    { x: 200, y: 300, w: 50, h: 50, name: "SmallBox" },
+                    // Thin horizontal bar
+                    { x: 500, y: 200, w: 150, h: 15, name: "ThinBar" },
+                    // Corner piece for complex edge testing
+                    { x: 300, y: 450, w: 80, h: 30, name: "CornerPiece" },
+                    // Another corner piece
+                    { x: 380, y: 420, w: 30, h: 80, name: "CornerPiece2" }
+                ];
+
+                obstacles.forEach(obs => {
+                    const obstacle = Instantiate.create(GameObject, { x: obs.x, y: obs.y });
+                    obstacle.name = obs.name;
+                    obstacle.addComponent(new BoxColliderComponent(obs.w, obs.h, false));
+                    obstacle.addComponent(new ShapeComponent(obs.w, obs.h, '#444444'));
+                    scene.add(obstacle);
+                });
+
+                log('Scene created. Use WASD to move the red player square.');
+                log('Watch for stable collision events at edges and vertices.');
+            }
+        });
+
+        game.load(scene);
+        game.start();
+
+        // Make functions globally available
+        window.clearLog = clearLog;
+        window.toggleVerbose = toggleVerbose;
+    </script>
+</body>
+</html>
