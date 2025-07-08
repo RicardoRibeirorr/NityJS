@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics + Collision System Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #222;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 2px solid #555;
+            background-color: #111;
+        }
+        .info {
+            margin-top: 10px;
+            max-width: 800px;
+        }
+        .feature {
+            background: #333;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Physics + Collision System Test</h1>
+    <p>This demonstrates the separation between collision detection (CollisionSystem) and physics resolution (RigidbodyComponent).</p>
+    <canvas id="game" width="800" height="600"></canvas>
+    <div class="info">
+        <h3>Controls:</h3>
+        <p>Use WASD or Arrow keys to move the red player.</p>
+        
+        <h3>Objects:</h3>
+        <div class="feature">
+            <strong>Red Player:</strong> Has RigidbodyComponent with 50% bounce. Will bounce off solid objects.
+        </div>
+        <div class="feature">
+            <strong>Blue Wall:</strong> Solid obstacle. Player will bounce off it.
+        </div>
+        <div class="feature">
+            <strong>Green Trigger Zone:</strong> Trigger collider only - no physics, just collision events.
+        </div>
+        <div class="feature">
+            <strong>Purple Moving Obstacle:</strong> Has gravity and 80% bounce. Can collide with other objects.
+        </div>
+        
+        <h3>System Architecture:</h3>
+        <div class="feature">
+            <strong>CollisionSystem:</strong> Handles all collision detection and fires onCollisionEnter/Stay/Exit events.
+        </div>
+        <div class="feature">
+            <strong>RigidbodyComponent:</strong> Only handles physics resolution (bouncing, movement blocking) for non-trigger collisions.
+        </div>
+        <div class="feature">
+            <strong>Instantiate System:</strong> Automatically registers colliders and manages object creation.
+        </div>
+        
+        <p><strong>Check the browser console for collision event logs!</strong></p>
+    </div>
+    <script type="module" src="physics_test.js"></script>
+</body>
+</html>

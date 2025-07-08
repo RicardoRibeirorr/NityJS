@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instantiate System Example</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #222;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 2px solid #555;
+            background-color: #111;
+        }
+        .info {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Instantiate System Example</h1>
+    <p>This example demonstrates the Unity-like Instantiate system that automatically registers colliders and manages parent-child relationships.</p>
+    <canvas id="game" width="800" height="600"></canvas>
+    <div class="info">
+        <p>Use WASD or Arrow keys to move the red player. Collisions with colored objects will be automatically detected!</p>
+        <p>Objects are created using Instantiate.create() which automatically:</p>
+        <ul>
+            <li>Registers colliders with the CollisionSystem</li>
+            <li>Handles parent-child relationships</li>
+            <li>Adds objects to the current scene</li>
+            <li>Calls component start methods</li>
+        </ul>
+    </div>
+    <script type="module" src="index.js"></script>
+</body>
+</html>
