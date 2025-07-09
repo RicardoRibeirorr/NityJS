@@ -52,7 +52,7 @@ export class Game {
     }
 
     start() {
-        Input.initialize();
+        Input.initialize(this.canvas);
         this.#_initEventListeners();
         
         requestAnimationFrame(this.loop.bind(this));
@@ -68,6 +68,7 @@ export class Game {
 
         if (!this.#_forcedpaused) {
             if(!this.paused){
+                Input.update(); // Update input state each frame
                 this.scene.__update();
                 if (this.mainCamera) {
                     const cam = this.mainCamera.getComponent(CameraComponent);

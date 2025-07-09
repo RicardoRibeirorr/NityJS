@@ -1,3 +1,4 @@
+import { Instantiate } from '../core/Instantiate.js';
 import {
     Component
 } from './Component.js';
@@ -128,18 +129,29 @@ export class GameObject {
         this.tags.add(tag);
     }
 
-    addChild(child) {
+    __addChild(child) {
+        if (!(child instanceof GameObject)) {
+            throw new Error(`Nity2D: method 'addChild' only accepts GameObject, '${typeof child}' provided`);
+        }
+        
         this.children.push(child);
         child.parent = this;
+    }
+
+
+    addChild(child) {
+        Instantiate.create(child, {
+            x: this.x,
+            y: this.y,
+            parent: this,
+            addToScene: true // Don't add to scene automatically
+        });
     }
 
     addChildren(children) {
         if(!Array.isArray(children)) throw new Error(`Nity2D: method 'addChildren' only accepts array '${typeof children}' provided`)
         
-            children.forEach(child => {
-            this.children.push(child);
-            child.parent = this;
-        });
+            children.forEach(child => this.addChild(child));
     }
 
     /**

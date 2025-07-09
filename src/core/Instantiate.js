@@ -48,7 +48,7 @@ export class Instantiate {
             if (!(parent instanceof GameObject)) {
                 throw new Error('Instantiate.create: parent must be a GameObject instance');
             }
-            parent.addChild(gameObject);
+            parent.__addChild(gameObject);
         }
 
         // Add to current scene if requested and no parent
@@ -211,7 +211,7 @@ export class Instantiate {
         // Clone children recursively
         for (const child of original.children) {
             const childClone = Instantiate.clone(child, { addToScene: false });
-            clone.addChild(childClone);
+            clone.__addChild(childClone);
         }
 
         // Apply options and register
@@ -226,7 +226,7 @@ export class Instantiate {
         clone.y = y;
 
         if (parent) {
-            parent.addChild(clone);
+            parent.__addChild(clone);
         }
 
         if (addToScene && !parent && Game.instance?.scene) {
