@@ -1,4 +1,5 @@
 import { CollisionSystem } from "../bin/CollisionSystem.js";
+import { Instantiate } from "../core/Instantiate.js";
 import { GameObject } from "./GameObject.js";
 
 
@@ -9,7 +10,19 @@ export class Scene {
         this._create = create;
     }
 
-    add(obj) {
+    
+    /**
+     * @deprecated Use {@link Instantiate.create} instead.
+     * Adds an object to the scene.
+     * 
+     * @param {Object} obj - The object to add to the scene.
+     */
+    add(obj){
+        Instantiate.create(obj);
+    }
+
+
+    __addObjectToScene(obj) {
         if(!(obj instanceof GameObject)) throw new Error(`[Nity] Forbidden object '${obj ? obj.constructor.name : null}' added to the scene. Accepts only 'GameObject'.`);
         this.objects.push(obj);
     }

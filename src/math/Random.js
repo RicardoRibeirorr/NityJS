@@ -1,3 +1,11 @@
+/**
+ * Random provides utility methods for generating random numbers and values.
+ * This class contains static methods for common randomization needs in game development.
+ * 
+ * @example
+ * // Generate a random number between 1 and 6 (like a dice roll)
+ * const diceRoll = Random.range(1, 6);
+ */
 export class Random{
 
     /**

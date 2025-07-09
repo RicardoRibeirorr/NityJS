@@ -53,7 +53,7 @@ export class Instantiate {
 
         // Add to current scene if requested and no parent
         if (addToScene && !parent && Game.instance?.scene) {
-            Game.instance.scene.add(gameObject);
+            Game.instance.scene.__addObjectToScene(gameObject);
         }
 
         // Register the GameObject and its components
@@ -230,7 +230,7 @@ export class Instantiate {
         }
 
         if (addToScene && !parent && Game.instance?.scene) {
-            Game.instance.scene.add(clone);
+            Game.instance.scene.__addObjectToScene(clone);
         }
 
         Instantiate._registerGameObject(clone);

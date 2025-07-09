@@ -1,74 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhanced Input System Test</title>
-    <style>
-        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
-        canvas { border: 1px solid #ccc; }
-        .controls { margin-top: 10px; }
-        .log { 
-            height: 300px; 
-            overflow-y: scroll; 
-            border: 1px solid #ddd; 
-            padding: 10px; 
-            margin-top: 10px;
-            font-family: monospace;
-            font-size: 12px;
-            background: #f8f8f8;
-        }
-        .instructions {
-            background: #e8f4fd;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-        }
-        .status {
-            background: #f0f0f0;
-            padding: 10px;
-            border-radius: 3px;
-            margin-top: 10px;
-            font-family: monospace;
-        }
-    </style>
-</head>
-<body>
-    <h1>Enhanced Input System Test</h1>
-    
-    <div class="instructions">
-        <h3>Test Instructions:</h3>
-        <ul>
-            <li><strong>WASD/Arrow Keys:</strong> Move the red square (continuous movement)</li>
-            <li><strong>Space:</strong> Test click-like press (fires only once per press)</li>
-            <li><strong>Enter:</strong> Test event callbacks</li>
-            <li><strong>Shift:</strong> Test hold/stay detection</li>
-            <li><strong>Left Click:</strong> Test mouse click (fires only once per click)</li>
-            <li><strong>Right Click:</strong> Test right mouse button</li>
-            <li><strong>Mouse Movement:</strong> Test mouse position and movement tracking</li>
-            <li><strong>Click and Drag:</strong> Test mouse click stay (hold button while moving)</li>
-            <li>Watch the log below to see the different input event types</li>
-        </ul>
-    </div>
-    
-    <canvas id="gameCanvas" width="800" height="400"></canvas>
-    
-    <div class="status" id="status">
-        Current Keys: <span id="currentKeys">None</span><br>
-        Mouse Position: <span id="mousePos">0, 0</span><br>
-        Mouse Buttons: <span id="mouseButtons">None</span>
-    </div>
-    
-    <div class="controls">
-        <button onclick="clearLog()">Clear Log</button>
-        <button onclick="testCallbacks()">Test Event Callbacks</button>
-        <button onclick="testMouseCallbacks()">Test Mouse Callbacks</button>
-    </div>
-    
-    <div id="log" class="log"></div>
-
-    <script type="module">
-        import {
+import {
             Game,
             Scene,
             GameObject,
@@ -78,7 +8,7 @@
             RigidbodyComponent,
             Input,
             Instantiate
-        } from './dist/nity.module.min.js';
+        } from '../../../dist/nity.module.min.js';
 
         function log(message) {
             const logElement = document.getElementById('log');
@@ -260,7 +190,11 @@
                 player.name = "Player";
                 
                 player.addComponent(new BoxColliderComponent(40, 40, false));
-                player.addComponent(new ShapeComponent(40, 40, '#ff4444'));
+                player.addComponent(new ShapeComponent("square",{
+                    width:40,
+                    height:40,
+                    color: "red"
+                }));
                 player.addComponent(new RigidbodyComponent({ gravity: false }));
                 player.addComponent(new PlayerMovement());
 
@@ -282,6 +216,3 @@
         window.clearLog = clearLog;
         window.testCallbacks = testCallbacks;
         window.testMouseCallbacks = testMouseCallbacks;
-    </script>
-</body>
-</html>
