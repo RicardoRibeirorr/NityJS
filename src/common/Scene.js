@@ -1,4 +1,6 @@
-import { CollisionSystem } from "../bin/CollisionSystem";
+import { CollisionSystem } from "../bin/CollisionSystem.js";
+import { Instantiate } from "../core/Instantiate.js";
+import { GameObject } from "./GameObject.js";
 
 
 // === Scene.js ===
@@ -8,7 +10,20 @@ export class Scene {
         this._create = create;
     }
 
-    add(obj) {
+    
+    /**
+     * @deprecated Use {@link Instantiate.create} instead.
+     * Adds an object to the scene.
+     * 
+     * @param {Object} obj - The object to add to the scene.
+     */
+    add(obj){
+        Instantiate.create(obj);
+    }
+
+
+    __addObjectToScene(obj) {
+        if(!(obj instanceof GameObject)) throw new Error(`[Nity] Forbidden object '${obj ? obj.constructor.name : null}' added to the scene. Accepts only 'GameObject'.`);
         this.objects.push(obj);
     }
 
@@ -28,37 +43,54 @@ export class Scene {
             console.log("Empty scene loaded");
         }
 
-        const preloadPromises = this.objects.map(obj => obj.preload?.());
+        const preloadPromises = this.objects.map(obj => obj?.preload?.());
         await Promise.all(preloadPromises);
     }
 
     async start() {
         for (let obj of this.objects) {
-            if (typeof obj.start === 'function') {
-                obj.start();
+            if (typeof obj?.start === 'function') {
+                obj?.start();
             }
         }
+
+        setTimeout(()=>{},500)
     }
 
-    update(deltaTime) {
+    update() {}
+    lateUpdate() {}
+
+    __update(){
+        // Update all game objects first (movement, etc.)
         for (let obj of this.objects) {
-            if (typeof obj.update === 'function') {
-                obj.update(deltaTime);
+            if (typeof obj?.update === 'function') {
+                obj?.update();
             }
         }
 
-        CollisionSystem.instance?.update();
+        // Then run collision detection and fire events
+        if (CollisionSystem.instance) {
+            CollisionSystem.instance?.update();
+        } else {
+            console.warn('Scene: CollisionSystem.instance is null!');
+        }
 
+        this?.update();
+    }
+
+    __lateUpdate(){
         for (let obj of this.objects) {
             if (typeof obj.lateUpdate === 'function') {
-                obj.lateUpdate(deltaTime);
+                obj?.lateUpdate();
             }
         }
+
+        this?.lateUpdate();
     }
 
-    draw(ctx) {
+    __draw(ctx) {
         for (let obj of this.objects) {
-            obj.draw(ctx);
+            obj.__draw(ctx);
         }
     }
 }

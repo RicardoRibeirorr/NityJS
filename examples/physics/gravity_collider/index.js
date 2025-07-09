@@ -5,9 +5,9 @@ import {
   GameObject,
   Component,
   CameraComponent,
-  BoxColliderComponent,
   ShapeComponent,
-  MovementComponent
+  RigidbodyComponent,
+  CircleColliderComponent,
 } from '../../../dist/nity.module.min.js';
 
 const canvas = document.getElementById('game');
@@ -16,30 +16,26 @@ const game = new Game(canvas);
 const scene = new Scene({
   create(scene) {
 
-    //generate random objects
-    for (let i = 0; i < 30; i++) {
-      const x = Math.random() * game.canvas.width;
-      const y = Math.random() * game.canvas.height;
-      const obj = new GameObject(x, y);
-      obj.addComponent(new ShapeComponent("square", {
-        width: 10,
-        height: 10,
+    //FLOORING OBJECT
+      const obj = new GameObject(50, 200);
+      obj.addComponent(new ShapeComponent("circle", {
+        radius: 50,
         color: 'blue'
       }));
-      obj.addComponent(new BoxColliderComponent(10, 10));
+      obj.addComponent(new CircleColliderComponent(50, false));
       scene.add(obj);
-    }
 
+      // GENERATE PLAYER
     const player = new GameObject(100, 100);
-    player.addComponent(new ShapeComponent("square", {
-      width: 10,
-      height: 10,
+    player.addComponent(new ShapeComponent("circle", {
+      radius: 10,
       color: 'red'
     }));
-    player.addComponent(new BoxColliderComponent(10, 10));
-    player.addComponent(new MovementComponent(50));
+    player.addComponent(new CircleColliderComponent(10, false));
+    player.addComponent(new RigidbodyComponent({gravity: true, gravityScale: 300}));
+    // player.addComponent(new MovementComponent(50));
 
-    // Add camera following the player
+    // ADD CAMERA FOLLOWING THE PLAYER
     const cameraObject = new GameObject(0, 0);
     cameraObject.addComponent(new CameraComponent(game.canvas, 2));
     player.addChild(cameraObject);

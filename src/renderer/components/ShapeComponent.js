@@ -1,13 +1,40 @@
 import { Component } from '../../common/Component.js';
 
+/**
+ * ShapeComponent renders various geometric shapes on GameObjects.
+ * It provides a simple way to display basic shapes like rectangles, circles, and lines
+ * without requiring image assets, making it useful for prototyping and simple graphics.
+ * 
+ * @example
+ * // Create a red rectangle
+ * const shape = new ShapeComponent("rectangle", { width: 50, height: 30, color: "red" });
+ * gameObject.addComponent(shape);
+ */
 // === ShapeComponent.js ===
 export class ShapeComponent extends Component {
+    /**
+     * Creates a new ShapeComponent.
+     * 
+     * @param {string} shape - Type of shape to render ("rectangle", "circle", "ellipse", "line", "triangle", "polygon")
+     * @param {Object} [options={ width:10, height:10, color:'white' }] - Shape-specific rendering options
+     * @param {number} [options.width=10] - Width for rectangles
+     * @param {number} [options.height=10] - Height for rectangles
+     * @param {string} [options.color='white'] - Fill color for the shape
+     * @param {number} [options.radius=10] - Radius for circles
+     * @param {number} [options.radiusX=10] - X radius for ellipses
+     * @param {number} [options.radiusY=5] - Y radius for ellipses
+     * @param {number} [options.x2] - End X coordinate for lines
+     * @param {number} [options.y2] - End Y coordinate for lines
+     * @param {number} [options.size=20] - Size for triangles
+     * @param {Array<{x: number, y: number}>} [options.points=[]] - Points for polygons
+     */
     constructor(shape, options = { width:10, height:10, color:'white' }) {
         super();
         this.shape = shape;
         this.options = options;
     }
     
+    // Getter and setter methods for easy property access
     get color() { return this.options.color || 'black'; }
     set color(color) { this.options.color = color; }
     get width() { return this.options.width || 10; }
@@ -29,7 +56,12 @@ export class ShapeComponent extends Component {
     get size() { return this.options.size || 20; }
     set size(size) { this.options.size = size; }
 
-    draw(ctx) {
+    /**
+     * Draws the shape on the canvas. Called automatically during the render phase.
+     * 
+     * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
+     */
+    __draw(ctx) {
         const x = this.gameObject.getGlobalX();
         const y = this.gameObject.getGlobalY();
         switch (this.shape) {
@@ -58,12 +90,20 @@ export class ShapeComponent extends Component {
         }
     }
 
+    /**
+     * Draws a rectangle.
+     * @private
+     */
     drawRect(ctx, x, y) {
         const { width = 10, height = 10, color = 'black' } = this.options;
         ctx.fillStyle = color;
         ctx.fillRect(x, y, width, height);
     }
 
+    /**
+     * Draws a circle.
+     * @private
+     */
     drawCircle(ctx, x, y) {
         const { radius = 10, color = 'black' } = this.options;
         ctx.beginPath();
@@ -72,6 +112,10 @@ export class ShapeComponent extends Component {
         ctx.fill();
     }
 
+    /**
+     * Draws an ellipse.
+     * @private
+     */
     drawEllipse(ctx, x, y) {
         const { radiusX = 10, radiusY = 5, color = 'black' } = this.options;
         ctx.beginPath();
@@ -80,6 +124,10 @@ export class ShapeComponent extends Component {
         ctx.fill();
     }
 
+    /**
+     * Draws a line.
+     * @private
+     */
     drawLine(ctx, x, y) {
         const { x2 = x + 10, y2 = y, color = 'black', width = 2 } = this.options;
         ctx.strokeStyle = color;
@@ -90,6 +138,10 @@ export class ShapeComponent extends Component {
         ctx.stroke();
     }
 
+    /**
+     * Draws a triangle.
+     * @private
+     */
     drawTriangle(ctx, x, y) {
         const { size = 20, color = 'black' } = this.options;
         ctx.fillStyle = color;
@@ -101,6 +153,10 @@ export class ShapeComponent extends Component {
         ctx.fill();
     }
 
+    /**
+     * Draws a polygon from an array of points.
+     * @private
+     */
     drawPolygon(ctx, x, y) {
         const { points = [], color = 'black' } = this.options;
         if (points.length < 3) return;
