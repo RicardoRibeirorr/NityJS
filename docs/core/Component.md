@@ -1,6 +1,6 @@
 # Component Class Documentation
 
-The `Component` class is the base class for all functionality in NityJS. Components provide modular behavior that can be attached to GameObjects.
+The `Component` class is the base class for all functionality in NityJS, equivalent to Unity's **MonoBehaviour**. Components provide modular behavior that can be attached to GameObjects using Unity-familiar patterns.
 
 ## Overview
 
@@ -16,6 +16,114 @@ class MyCustomComponent extends Component {
     // Component logic here
   }
 }
+```
+
+## Unity Equivalents
+
+- **Component** = Unity's **MonoBehaviour** - Base class for all game logic
+- **start()** = Unity's **Start()** - Initialization method
+- **update()** = Unity's **Update()** - Per-frame logic
+- **lateUpdate()** = Unity's **LateUpdate()** - Post-update logic
+- **gameObject** = Unity's **gameObject** - Reference to parent GameObject
+
+> **⚠️ Important:** `lateUpdate()` runs independently and does **NOT** pause when the game is in pause mode.
+
+## Component Usage Patterns
+
+NityJS supports multiple ways to create and use components, offering flexibility for different coding styles:
+
+### 1. Class Extension (Recommended)
+**Unity-style component classes** - Most similar to Unity MonoBehaviour scripts:
+
+```javascript
+class PlayerController extends Component {
+    constructor() {
+        super();
+        this.speed = 200;
+        this.jumpForce = 400;
+    }
+    
+    start() {
+        this.rigidbody = this.gameObject.getComponent(RigidbodyComponent);
+        this.collider = this.gameObject.getComponent(BoxColliderComponent);
+    }
+    
+    update() {
+        this.handleMovement();
+        this.handleJumping();
+    }
+    
+    handleMovement() {
+        const moveX = Input.isKeyDown('d') ? 1 : 0 - Input.isKeyDown('a') ? 1 : 0;
+        this.rigidbody.velocity.x = moveX * this.speed;
+    }
+    
+    handleJumping() {
+        if (Input.isKeyPressed('Space') && this.isGrounded()) {
+            this.rigidbody.velocity.y = -this.jumpForce;
+        }
+    }
+    
+    isGrounded() {
+        return this.gameObject.y >= 400;
+    }
+}
+
+// Usage
+const player = new GameObject("Player");
+player.addComponent(new PlayerController());
+```
+
+### 2. Inline Anonymous Components
+**Quick behavior** - For simple, one-off behaviors:
+
+```javascript
+const enemy = new GameObject("Enemy");
+
+// Simple patrol behavior
+enemy.addComponent(new class extends Component {
+    constructor() {
+        super();
+        this.speed = 50;
+        this.direction = 1;
+        this.leftBound = 100;
+        this.rightBound = 300;
+    }
+    
+    update() {
+        this.gameObject.x += this.speed * this.direction * Time.deltaTime();
+        
+        if (this.gameObject.x <= this.leftBound || this.gameObject.x >= this.rightBound) {
+            this.direction *= -1;
+        }
+    }
+});
+```
+
+### 3. Factory Pattern
+**Component factories** - For configurable, reusable components:
+
+```javascript
+class ComponentFactory {
+    static createMover(speed, direction) {
+        return new class extends Component {
+            constructor() {
+                super();
+                this.speed = speed;
+                this.direction = direction;
+            }
+            
+            update() {
+                this.gameObject.x += Math.cos(this.direction) * this.speed * Time.deltaTime();
+                this.gameObject.y += Math.sin(this.direction) * this.speed * Time.deltaTime();
+            }
+        };
+    }
+}
+
+// Usage
+const bullet = new GameObject("Bullet");
+bullet.addComponent(ComponentFactory.createMover(300, Math.PI / 4));
 ```
 
 ## Base Component Class
@@ -91,6 +199,8 @@ class EnemyAI extends Component {
 
 ### `lateUpdate()`
 Called after all update() methods have been called.
+
+> **⚠️ Important:** `lateUpdate()` runs independently and does **NOT** pause when the game is in pause mode. Use this for critical systems that need to continue running during pauses (like UI updates, debug systems, or essential background processes).
 
 ```javascript
 class CameraFollow extends Component {

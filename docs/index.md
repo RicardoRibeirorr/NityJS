@@ -8,9 +8,11 @@ This is a complete index of all available documentation for the NityJS game engi
 - [Game](core/Game.md) - Main game engine, canvas management, and game loop
 - [Scene](core/Scene.md) - Scene management, object lifecycle, and game state
 - [GameObject](core/GameObject.md) - Base entity class with transform and component system
-- [Component](core/Component.md) - Base class for all modular functionality
+- [Component](core/Component.md) - Base class for all modular functionality (Unity's MonoBehaviour equivalent)
 - [Instantiate](Instantiate.md) - Object creation, destruction, and scene management
 - [Time](core/Time.md) - Delta time, frame-rate independent calculations
+
+> **Unity Developers:** Component = MonoBehaviour, GameObject = GameObject, Scene = Scene. Note that `lateUpdate()` runs independently and does NOT pause when game is in pause mode.
 
 ## Input System
 
@@ -57,7 +59,14 @@ This is a complete index of all available documentation for the NityJS game engi
 1. Start with [Game](core/Game.md) to understand the engine basics
 2. Learn about [Scene](core/Scene.md) for game state management
 3. Understand [GameObject](core/GameObject.md) for creating entities
-4. Explore [Component](core/Component.md) for modular functionality
+4. Explore [Component](core/Component.md) for modular functionality (includes multiple usage patterns)
+
+**Component Usage Patterns:**
+- **Class Extension** - `class PlayerController extends Component { ... }` (Unity-style)
+- **Inline Anonymous** - `gameObject.addComponent(new class extends Component { ... })`
+- **Factory Pattern** - Configurable, reusable component creation
+- **Mixin Pattern** - Shared functionality across components
+- **Functional Components** - Simple function-based behaviors
 
 **For Visuals:**
 1. Use [Renderer Components](renderer/RendererComponents.md) for basic graphics

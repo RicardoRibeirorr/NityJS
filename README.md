@@ -45,6 +45,8 @@ class Player extends GameObject {
     }
 }
 
+
+// Component - the new MonoBehavior but with more style! 😊
 class PlayerController extends Component {
     start() {
         this.speed = 200;
