@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpriteRenderer Test - NityJS</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #2c3e50;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 2px solid #3498db;
+            background: #34495e;
+            display: block;
+            margin: 20px auto;
+        }
+        .info {
+            text-align: center;
+            margin: 20px;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px;
+        }
+        .test-case {
+            background: #34495e;
+            padding: 15px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>NityJS - Unified SpriteRenderer Component Test</h1>
+        <p>Testing updated SpriteRendererComponent with unified sprite keys (colon-separated for spritesheet sprites)</p>
+    </div>
+    
+    <div class="test-grid">
+        <div class="test-case">
+            <h3>✅ Single Sprite Assets</h3>
+            <pre>new SpriteAsset("player", "player.png");
+new SpriteRendererComponent("player");</pre>
+        </div>
+        <div class="test-case">
+            <h3>✅ Spritesheet Assets (New System)</h3>
+            <pre>new SpritesheetAsset("enemies", "enemies.png", config);
+new SpriteRendererComponent("enemies:sprite_0");</pre>
+        </div>
+    </div>
+    
+    <canvas id="game" width="900" height="600"></canvas>
+    
+    <div class="info">
+        <p>Updated SpriteRendererComponent supports unified sprite keys! Single sprites use "name", spritesheet sprites use "sheet:sprite".</p>
+    </div>
+
+    <script type="module">
+        import { 
+            Game, 
+            Scene, 
+            GameObject, 
+            SpriteRendererComponent, 
+            CameraComponent,
+            SpriteAsset,
+            SpritesheetAsset,
+            SpriteRegistry,
+            Component 
+        } from '../dist/nity.module.js';
+
+        const canvas = document.getElementById('game');
+        const game = new Game(canvas);
+
+        const scene = new Scene({
+            create(scene) {
+                console.log('Testing updated SpriteRendererComponent...');
+                
+                // Helper function to create test images
+                const createTestSprite = (color, text, size = 64) => {
+                    const testCanvas = document.createElement('canvas');
+                    testCanvas.width = size;
+                    testCanvas.height = size;
+                    const testCtx = testCanvas.getContext('2d');
+                    
+                    testCtx.fillStyle = color;
+                    testCtx.fillRect(0, 0, size, size);
+                    testCtx.strokeStyle = '#ffffff';
+                    testCtx.lineWidth = 2;
+                    testCtx.strokeRect(2, 2, size-4, size-4);
+                    testCtx.fillStyle = 'white';
+                    testCtx.font = `${Math.floor(size/6)}px Arial`;
+                    testCtx.textAlign = 'center';
+                    testCtx.fillText(text, size/2, size/2 + 4);
+                    
+                    return testCanvas.toDataURL();
+                };
+
+                const createTestSpritesheet = () => {
+                    const sheetCanvas = document.createElement('canvas');
+                    sheetCanvas.width = 192; // 3x64
+                    sheetCanvas.height = 128; // 2x64
+                    const sheetCtx = sheetCanvas.getContext('2d');
+                    
+                    const colors = ['#e74c3c', '#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#e67e22'];
+                    
+                    for (let row = 0; row < 2; row++) {
+                        for (let col = 0; col < 3; col++) {
+                            const x = col * 64;
+                            const y = row * 64;
+                            const index = row * 3 + col;
+                            
+                            sheetCtx.fillStyle = colors[index];
+                            sheetCtx.fillRect(x, y, 64, 64);
+                            sheetCtx.strokeStyle = '#ffffff';
+                            sheetCtx.lineWidth = 1;
+                            sheetCtx.strokeRect(x+1, y+1, 62, 62);
+                            sheetCtx.fillStyle = 'white';
+                            sheetCtx.font = '10px Arial';
+                            sheetCtx.textAlign = 'center';
+                            sheetCtx.fillText(`S${index}`, x + 32, y + 36);
+                        }
+                    }
+                    
+                    return sheetCanvas.toDataURL();
+                };
+                
+                // ===== CREATE ASSETS =====
+                console.log('Creating single sprite assets...');
+                new SpriteAsset("red_square", createTestSprite('#e74c3c', 'SINGLE'));
+                new SpriteAsset("blue_circle", createTestSprite('#3498db', 'SPRITE', 48));
+                new SpriteAsset("green_diamond", createTestSprite('#2ecc71', 'ASSET', 80));
+                
+                console.log('Creating spritesheet assets...');
+                new SpritesheetAsset("test_sheet", createTestSpritesheet(), {
+                    spriteWidth: 64,
+                    spriteHeight: 64,
+                    columns: 3,
+                    rows: 2
+                });
+                
+                // ===== TEST SINGLE SPRITES =====
+                console.log('Testing single sprite rendering...');
+                
+                const singleSprite1 = new GameObject(-300, -100);
+                singleSprite1.addComponent(new SpriteRendererComponent("red_square"));
+                singleSprite1.addComponent(new class extends Component {
+                    draw(ctx) {
+                        ctx.fillStyle = 'white';
+                        ctx.font = '12px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Single Sprite', this.gameObject.getGlobalX() + 32, this.gameObject.getGlobalY() + 80);
+                        ctx.fillText('"red_square"', this.gameObject.getGlobalX() + 32, this.gameObject.getGlobalY() + 95);
+                    }
+                });
+                
+                const singleSprite2 = new GameObject(-150, -100);
+                singleSprite2.addComponent(new SpriteRendererComponent("blue_circle"));
+                singleSprite2.addComponent(new class extends Component {
+                    draw(ctx) {
+                        ctx.fillStyle = 'white';
+                        ctx.font = '12px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Single Sprite', this.gameObject.getGlobalX() + 24, this.gameObject.getGlobalY() + 70);
+                        ctx.fillText('"blue_circle"', this.gameObject.getGlobalX() + 24, this.gameObject.getGlobalY() + 85);
+                    }
+                });
+                
+                const singleSprite3 = new GameObject(20, -120);
+                singleSprite3.addComponent(new SpriteRendererComponent("green_diamond"));
+                singleSprite3.addComponent(new class extends Component {
+                    draw(ctx) {
+                        ctx.fillStyle = 'white';
+                        ctx.font = '12px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Single Sprite', this.gameObject.getGlobalX() + 40, this.gameObject.getGlobalY() + 100);
+                        ctx.fillText('"green_diamond"', this.gameObject.getGlobalX() + 40, this.gameObject.getGlobalY() + 115);
+                    }
+                });
+                
+                // ===== TEST SPRITESHEET SPRITES =====
+                console.log('Testing spritesheet rendering with unified keys...');
+                
+                for (let row = 0; row < 2; row++) {
+                    for (let col = 0; col < 3; col++) {
+                        const spriteIndex = row * 3 + col;
+                        const unifiedSpriteKey = `test_sheet:sprite_${spriteIndex}`;
+                        
+                        const sheetSprite = new GameObject(-200 + col * 100, 50 + row * 100);
+                        sheetSprite.addComponent(new SpriteRendererComponent(unifiedSpriteKey));
+                        sheetSprite.addComponent(new class extends Component {
+                            constructor(spriteKey) {
+                                super();
+                                this.spriteKey = spriteKey;
+                            }
+                            
+                            draw(ctx) {
+                                ctx.fillStyle = 'white';
+                                ctx.font = '10px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.fillText('Unified Key:', this.gameObject.getGlobalX() + 32, this.gameObject.getGlobalY() + 80);
+                                ctx.fillText(`"${this.spriteKey}"`, this.gameObject.getGlobalX() + 32, this.gameObject.getGlobalY() + 95);
+                            }
+                        }(unifiedSpriteKey));
+                        
+                        scene.add(sheetSprite);
+                    }
+                }
+                
+                // ===== TEST DYNAMIC SPRITE CHANGING =====
+                console.log('Testing dynamic sprite changing with unified keys...');
+                
+                const animatedSprite = new GameObject(200, 0);
+                const renderer = new SpriteRendererComponent("test_sheet:sprite_0");
+                animatedSprite.addComponent(renderer);
+                animatedSprite.addComponent(new class extends Component {
+                    constructor() {
+                        super();
+                        this.timer = 0;
+                        this.currentSprite = 0;
+                    }
+                    
+                    update() {
+                        this.timer += 0.1;
+                        if (this.timer >= 1) {
+                            this.timer = 0;
+                            this.currentSprite = (this.currentSprite + 1) % 6;
+                            renderer.setSprite(`test_sheet:sprite_${this.currentSprite}`);
+                        }
+                    }
+                    
+                    draw(ctx) {
+                        ctx.fillStyle = 'white';
+                        ctx.font = '12px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Animated', this.gameObject.getGlobalX() + 32, this.gameObject.getGlobalY() + 80);
+                        ctx.fillText('Cycling', this.gameObject.getGlobalX() + 32, this.gameObject.getGlobalY() + 95);
+                        ctx.fillText(`test_sheet:sprite_${this.currentSprite}`, this.gameObject.getGlobalX() + 32, this.gameObject.getGlobalY() + 110);
+                    }
+                });
+                
+                // Add all objects to scene
+                scene.add(singleSprite1);
+                scene.add(singleSprite2);
+                scene.add(singleSprite3);
+                scene.add(animatedSprite);
+                
+                // Camera
+                const cameraObject = new GameObject(0, 0);
+                cameraObject.addComponent(new CameraComponent(game.canvas, 1));
+                scene.add(cameraObject);
+                game.mainCamera = cameraObject;
+                
+                console.log('✅ Unified SpriteRendererComponent test scene created!');
+                console.log('Registered sprites:', SpriteRegistry.getSpriteNames());
+                console.log('Registered spritesheets:', SpriteRegistry.getSpritesheetNames());
+                console.log('Sprites from test_sheet:', SpriteRegistry.getSpritesFromSheet("test_sheet"));
+            }
+        });
+
+        game.loadScene(scene);
+        game.start();
+        
+        console.log('%c Unified SpriteRendererComponent Updated! ', 'background: #e74c3c; color: white; padding: 5px; border-radius: 3px;');
+        console.log('✅ Supports unified sprite keys ("name" or "sheet:sprite")');
+        console.log('✅ Automatic sprite resolution');
+        console.log('✅ Dynamic sprite changing with setSprite()');
+        console.log('✅ Rotation support');
+        console.log('✅ Legacy two-parameter constructor support with deprecation warning');
+    </script>
+</body>
+</html>

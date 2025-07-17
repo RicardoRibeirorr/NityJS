@@ -1,52 +1,266 @@
 # SpriteRegistry Class
 
-The `SpriteRegistry` class manages the loading and storage of spritesheets for the game. It provides a centralized way to register spritesheets and preload them before the game starts.
+The `SpriteRegistry` class manages the unified storage of all sprites and spritesheets for the game. It provides a centralized way to access both single sprites and sprites from spritesheets using a unified key system.
 
 ## Overview
 
-The SpriteRegistry acts as a central repository for all spritesheets in your game. It automatically handles the registration of spritesheets when they are created and provides methods to retrieve them by name throughout your game.
+The SpriteRegistry acts as a central repository for all sprites in your game, whether they come from single `SpriteAsset` files or `SpritesheetAsset` collections. It uses a colon-separated key system to unify access:
 
-## Methods
+- **Single sprites**: accessed by name (e.g., `"player"`)
+- **Spritesheet sprites**: accessed by `"sheetName:spriteName"` (e.g., `"enemies:sprite_0"`)
 
-### add(sheet)
+Assets are automatically registered when created using the `SpriteAsset` or `SpritesheetAsset` constructors.
 
-Adds a spritesheet to the registry. This is automatically called when creating a new Spritesheet.
+## Key Features
+
+- **Unified Access**: Single method `getSprite()` for all sprite types
+- **Auto-Registration**: Assets register themselves when created
+- **Colon Notation**: Clear separation between sheet and sprite names
+- **Static Methods**: No need to instantiate registry objects
+- **Name Validation**: Prevents conflicts by rejecting colons in asset names
+
+## Static Methods
+
+### getSprite(name)
+
+Retrieves any sprite (single or from spritesheet) using unified key system.
 
 **Parameters:**
-- `sheet` (Spritesheet) - The spritesheet to add
+- `name` (string) - Sprite key: `"spriteName"` for single sprites or `"sheetName:spriteName"` for spritesheet sprites
 
-### async preload()
+**Returns:** `SpriteAsset|Object|null` - The sprite asset or sprite wrapper, or null if not found
 
-Preloads all registered spritesheets. This method is called during the game's preload phase.
+**Examples:**
+```javascript
+// Get single sprite
+const player = SpriteRegistry.getSprite("player");
 
-**Returns:** `Promise<void>` - Promise that resolves when all spritesheets are loaded
+// Get sprite from spritesheet
+const enemy = SpriteRegistry.getSprite("enemies:sprite_0");
+```
 
-### getSheet(name)
+### getSpritesheet(name)
 
-Retrieves a spritesheet by name.
+Retrieves a spritesheet asset by name.
 
 **Parameters:**
-- `name` (string) - The name of the spritesheet
+- `name` (string) - Name of the spritesheet
 
-**Returns:** `Spritesheet` - The requested spritesheet
+**Returns:** `SpritesheetAsset|null` - The spritesheet asset or null if not found
+
+### preloadAll()
+
+Preloads all registered sprites and spritesheets.
+
+**Returns:** `Promise<void>` - Promise that resolves when all assets are loaded
+
+### hasSprite(name)
+
+Checks if a sprite is registered using unified key system.
+
+**Parameters:**
+- `name` (string) - Sprite key to check
+
+**Returns:** `boolean` - True if sprite exists
+
+### hasSpritesheet(name)
+
+Checks if a spritesheet is registered.
+
+**Parameters:**
+- `name` (string) - Name of the spritesheet
+
+**Returns:** `boolean` - True if spritesheet exists
+
+### getSpriteNames()
+
+Gets all registered sprite keys (includes both single sprites and spritesheet sprites).
+
+**Returns:** `Array<string>` - Array of all sprite keys
+
+### getSpritesheetNames()
+
+Gets all registered spritesheet names.
+
+**Returns:** `Array<string>` - Array of spritesheet names
+
+### getSpritesFromSheet(sheetName)
+
+Gets all sprite keys from a specific spritesheet.
+
+**Parameters:**
+- `sheetName` (string) - Name of the spritesheet
+
+**Returns:** `Array<string>` - Array of sprite keys with colon notation
+
+### removeSprite(name)
+
+Removes a sprite from the registry.
+
+**Parameters:**
+- `name` (string) - Sprite key to remove
+
+**Returns:** `boolean` - True if sprite was removed
+
+### removeSpritesheet(name)
+
+Removes a spritesheet from the registry.
+
+**Parameters:**
+- `name` (string) - Name of the spritesheet to remove
+
+**Returns:** `boolean` - True if spritesheet was removed
+
+### clear()
+
+Clears all registered sprites and spritesheets.
+
+## Internal Methods
+
+### _addSprite(name, spriteAsset)
+
+**Private method** used by `SpriteAsset` and `SpritesheetAsset` constructors to register sprites.
+
+### _addSpritesheet(name, spritesheetAsset)
+
+**Private method** used by `SpritesheetAsset` constructor to register spritesheets.
 
 ## Usage Examples
 
-### Basic Usage
+### Basic Asset Creation and Registration
 
 ```javascript
-import { Spritesheet } from './src/renderer/Spritesheet.js';
-import { Game } from './src/core/Game.js';
+import { SpriteAsset, SpritesheetAsset, SpriteRegistry } from 'nity-engine';
 
-// Spritesheets are automatically registered when created
-const playerSheet = new Spritesheet("player", "assets/player.png", 32, 32, 4, 2);
-const enemySheet = new Spritesheet("enemy", "assets/enemy.png", 24, 24, 3, 3);
-const uiSheet = new Spritesheet("ui", "assets/ui.png", 64, 64, 2, 2);
+// Single sprites - automatically registered
+const playerSprite = new SpriteAsset("player", "assets/player.png");
+const bulletSprite = new SpriteAsset("bullet", "assets/bullet.png");
 
-// Later, retrieve spritesheets by name
-const registry = Game.instance.spriteRegistry;
-const playerSprites = registry.getSheet("player");
-const enemySprites = registry.getSheet("enemy");
+// Spritesheets - automatically registered (individual sprites accessible via colon notation)
+const enemySheet = new SpritesheetAsset("enemies", "assets/enemies.png", {
+    spriteWidth: 32,
+    spriteHeight: 32,
+    columns: 4,
+    rows: 2
+});
+
+const uiSheet = new SpritesheetAsset("ui", "assets/ui.png", {
+    spriteWidth: 64,
+    spriteHeight: 64,
+    columns: 3,
+    rows: 3,
+    sprites: {
+        "button": { x: 0, y: 0, width: 64, height: 64 },
+        "panel": { x: 64, y: 0, width: 64, height: 64 }
+    }
+});
+```
+
+### Unified Sprite Access
+
+```javascript
+// Access single sprites
+const player = SpriteRegistry.getSprite("player");
+const bullet = SpriteRegistry.getSprite("bullet");
+
+// Access sprites from spritesheets using colon notation
+const enemy1 = SpriteRegistry.getSprite("enemies:sprite_0");
+const enemy2 = SpriteRegistry.getSprite("enemies:sprite_1");
+const uiButton = SpriteRegistry.getSprite("ui:button");
+const uiPanel = SpriteRegistry.getSprite("ui:panel");
+
+// Check if sprites exist
+if (SpriteRegistry.hasSprite("player")) {
+    console.log("Player sprite is loaded!");
+}
+
+if (SpriteRegistry.hasSprite("enemies:sprite_5")) {
+    console.log("Enemy sprite 5 is available!");
+}
+```
+
+### Using with SpriteRendererComponent
+
+```javascript
+import { GameObject, SpriteRendererComponent } from 'nity-engine';
+
+// Create game objects with unified sprite keys
+const playerObj = new GameObject(100, 100);
+playerObj.addComponent(new SpriteRendererComponent("player"));
+
+const enemyObj = new GameObject(200, 100);
+enemyObj.addComponent(new SpriteRendererComponent("enemies:sprite_0"));
+
+// Legacy support (with deprecation warning)
+const legacyObj = new GameObject(300, 100);
+legacyObj.addComponent(new SpriteRendererComponent("enemies", "sprite_1"));
+```
+
+### Using with SpriteAnimationComponent
+
+```javascript
+import { SpriteAnimationComponent, SpriteAnimationClip } from 'nity-engine';
+
+// Create animations using unified sprite keys
+const animator = new SpriteAnimationComponent("walk");
+animator.addClip(new SpriteAnimationClip("walk", [
+    "player:walk_0",
+    "player:walk_1", 
+    "player:walk_2",
+    "player:walk_3"
+], 8, true));
+
+animator.addClip(new SpriteAnimationClip("idle", [
+    "player:idle_0",
+    "player:idle_1"
+], 2, true));
+
+playerObj.addComponent(animator);
+```
+
+### Registry Management
+
+```javascript
+// Get registry information
+console.log("All sprites:", SpriteRegistry.getSpriteNames());
+console.log("All spritesheets:", SpriteRegistry.getSpritesheetNames());
+console.log("Sprites from enemies sheet:", SpriteRegistry.getSpritesFromSheet("enemies"));
+
+// Preload all assets
+await SpriteRegistry.preloadAll();
+
+// Remove specific sprites or sheets
+SpriteRegistry.removeSprite("old_sprite");
+SpriteRegistry.removeSpritesheet("unused_sheet");
+
+// Clear everything (useful for scene transitions)
+SpriteRegistry.clear();
+```
+
+### Error Handling and Validation
+
+```javascript
+try {
+    // This will throw an error - colons are not allowed in asset names
+    new SpriteAsset("invalid:name", "sprite.png");
+} catch (error) {
+    console.error("Asset name validation failed:", error.message);
+}
+
+try {
+    // This will also throw an error
+    new SpritesheetAsset("invalid:sheet", "sheet.png", config);
+} catch (error) {
+    console.error("Spritesheet name validation failed:", error.message);
+}
+
+// Safe sprite access
+const sprite = SpriteRegistry.getSprite("might_not_exist");
+if (sprite) {
+    // Use sprite
+} else {
+    console.warn("Sprite not found");
+}
 ```
 
 ### Dynamic Spritesheet Loading

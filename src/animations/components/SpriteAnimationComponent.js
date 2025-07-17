@@ -1,4 +1,3 @@
-import { Game } from '../../index.js';
 import { Component } from '../../common/Component.js';
 import { SpriteRendererComponent } from '../../renderer/components/SpriteRendererComponent.js';
 import { Time } from '../../core/Time.js';
@@ -6,25 +5,22 @@ import { Time } from '../../core/Time.js';
 /**
  * SpriteAnimationComponent handles sprite-based animations for GameObjects.
  * It manages multiple animation clips and provides smooth playback with timing control.
- * This component works with SpriteRendererComponent to display animated sprites.
+ * This component works with SpriteRendererComponent to display animated sprites using the unified sprite system.
  * 
  * @example
- * // Create an animated character
+ * // Create an animated character with unified sprite keys
  * const animator = new SpriteAnimationComponent("character", "idle");
- * animator.addClip(new SpriteAnimationClip("idle", ["sprite_0_0", "sprite_1_0"], 4, true));
- * animator.addClip(new SpriteAnimationClip("walk", ["sprite_0_1", "sprite_1_1", "sprite_2_1"], 8, true));
+ * animator.addClip(new SpriteAnimationClip("idle", ["character:sprite_0", "character:sprite_1"], 4, true));
+ * animator.addClip(new SpriteAnimationClip("walk", ["character:sprite_2", "character:sprite_3", "character:sprite_4"], 8, true));
  */
-// === SpriteAnimationComponent.js ===
 export class SpriteAnimationComponent extends Component {
     /**
      * Creates a new SpriteAnimationComponent.
      * 
-     * @param {string} sheetName - Name of the spritesheet to use for animations
      * @param {string} [defaultClipName=null] - Name of the default animation clip to play on start
      */
-    constructor(sheetName, defaultClipName = null) {
+    constructor(defaultClipName = null) {
         super();
-        this.sheetName = sheetName;
         this.clips = new Map();
         this.currentClip = null;
         this.currentFrame = 0;
@@ -96,14 +92,15 @@ export class SpriteAnimationComponent extends Component {
     }
 
     /**
-     * Applies the current frame's sprite to the SpriteRendererComponent.
+     * Applies the current frame's sprite to the SpriteRendererComponent using unified sprite keys.
      * @private
      */
     _applyFrame() {
-        const spriteName = this.currentClip.spriteNames[this.currentFrame];
+        const spriteKey = this.currentClip.spriteNames[this.currentFrame];
         const spriteRenderer = this.gameObject.getComponent(SpriteRendererComponent);
         if (spriteRenderer) {
-            spriteRenderer.sprite = Game.instance.spriteRegistry.getSheet(this.sheetName).getSprite(spriteName);
+            // Pass the full sprite key (which can be "name" or "sheet:sprite")
+            spriteRenderer.setSprite(spriteKey);
         }
     }
 }

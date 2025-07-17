@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Development Build Test - NityJS</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #2c3e50;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 2px solid #3498db;
+            background: #34495e;
+            display: block;
+            margin: 20px auto;
+        }
+        .info {
+            text-align: center;
+            margin: 20px;
+        }
+        .build-info {
+            background: #34495e;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>NityJS - Development Build Test</h1>
+        <p>Testing with non-minified nity.module.js for easier debugging</p>
+    </div>
+    
+    <div class="build-info">
+        <h3>Available Build Files:</h3>
+        <ul>
+            <li><strong>dist/nity.js</strong> - IIFE format, non-minified (for browser script tags)</li>
+            <li><strong>dist/nity.min.js</strong> - IIFE format, minified (production)</li>
+            <li><strong>dist/nity.module.js</strong> - ES Module format, non-minified (development)</li>
+            <li><strong>dist/nity.module.min.js</strong> - ES Module format, minified (production)</li>
+        </ul>
+    </div>
+    
+    <canvas id="game" width="800" height="600"></canvas>
+    
+    <div class="info">
+        <p>This test uses the development build (nity.module.js) for easier debugging and readable error messages.</p>
+    </div>
+
+    <script type="module">
+        import { 
+            Game, 
+            Scene, 
+            GameObject, 
+            SpriteRendererComponent, 
+            CameraComponent,
+            SpriteRegistry,
+            Component 
+        } from './dist/nity.module.js'; // Using development build
+
+        const canvas = document.getElementById('game');
+        const game = new Game(canvas);
+
+        const scene = new Scene({
+            async create(scene) {
+                console.log('Creating scene with development build...');
+                
+                // Create a simple test sprite
+                const testCanvas = document.createElement('canvas');
+                testCanvas.width = 64;
+                testCanvas.height = 64;
+                const testCtx = testCanvas.getContext('2d');
+                
+                // Create a gradient square
+                const gradient = testCtx.createLinearGradient(0, 0, 64, 64);
+                gradient.addColorStop(0, '#e74c3c');
+                gradient.addColorStop(1, '#8e44ad');
+                testCtx.fillStyle = gradient;
+                testCtx.fillRect(0, 0, 64, 64);
+                
+                // Add some text
+                testCtx.fillStyle = 'white';
+                testCtx.font = '12px Arial';
+                testCtx.textAlign = 'center';
+                testCtx.fillText('DEV', 32, 36);
+                
+                const devSpriteDataURL = testCanvas.toDataURL();
+                
+                // Register the sprite
+                await SpriteRegistry.registerSprite("dev_sprite", devSpriteDataURL, {
+                    pivotX: 0.5,
+                    pivotY: 0.5
+                });
+                
+                console.log('Development sprite registered successfully!');
+                
+                // Create test object
+                const testObj = new GameObject(0, 0);
+                testObj.addComponent(new SpriteRendererComponent("dev_sprite"));
+                
+                // Add rotation animation
+                testObj.addComponent(new class extends Component {
+                    update() {
+                        this.gameObject.rotation += 0.02;
+                    }
+                    
+                    draw(ctx) {
+                        ctx.fillStyle = 'white';
+                        ctx.font = '16px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Development Build Test', this.gameObject.getGlobalX(), this.gameObject.getGlobalY() + 60);
+                        ctx.fillText('Rotating with readable code!', this.gameObject.getGlobalX(), this.gameObject.getGlobalY() + 80);
+                    }
+                });
+                
+                // Camera
+                const cameraObject = new GameObject(0, 0);
+                cameraObject.addComponent(new CameraComponent(game.canvas, 1));
+                
+                console.log('Development build test scene created!');
+            }
+        });
+
+        game.loadScene(scene);
+        game.start();
+        
+        // Log build info
+        console.log('%c NityJS Development Build Active ', 'background: #2ecc71; color: white; padding: 5px; border-radius: 3px;');
+        console.log('Using non-minified code for easier debugging and development.');
+    </script>
+</body>
+</html>

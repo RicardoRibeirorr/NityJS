@@ -15,7 +15,7 @@ export class Game {
         this.scene = null;
         this._lastTime = 0;
         this.mainCamera = null; // GameObject with CameraComponent
-        this.spriteRegistry = new SpriteRegistry();
+        // this.spriteRegistry = new SpriteRegistry();
         this.paused = false;
         //privates
         this.#_forcedpaused = false;
@@ -45,7 +45,7 @@ export class Game {
             scene._create(scene);  // Build the objects
             scene._create = null;
         }
-        await this.spriteRegistry.preload();
+        await SpriteRegistry.preloadAll();
         await this.scene.preload();
         await this.scene.start();
         this.start();

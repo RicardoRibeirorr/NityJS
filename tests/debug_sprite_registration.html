@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Sprite Registration - NityJS</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #2c3e50;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        .debug-info {
+            background: #34495e;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success { border-left: 4px solid #2ecc71; }
+        .error { border-left: 4px solid #e74c3c; }
+        .warning { border-left: 4px solid #f39c12; }
+        pre {
+            background: #2c3e50;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Sprite Registration Debug Test</h1>
+    <p>Testing if spritesheet sprites are properly registered with colon notation</p>
+    
+    <div id="debug-output"></div>
+
+    <script type="module">
+        import { 
+            SpriteAsset,
+            SpritesheetAsset,
+            SpriteRegistry
+        } from '../dist/nity.module.min.js';
+
+        const debugOutput = document.getElementById('debug-output');
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `debug-info ${type}`;
+            div.innerHTML = message;
+            debugOutput.appendChild(div);
+            console.log(message.replace(/<[^>]*>/g, ''));
+        }
+
+        function createTestSpritesheet() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; // 2x64
+            canvas.height = 128; // 2x64
+            const ctx = canvas.getContext('2d');
+            
+            const colors = ['#e74c3c', '#2ecc71', '#3498db', '#f39c12'];
+            
+            for (let row = 0; row < 2; row++) {
+                for (let col = 0; col < 2; col++) {
+                    const x = col * 64;
+                    const y = row * 64;
+                    const index = row * 2 + col;
+                    
+                    ctx.fillStyle = colors[index];
+                    ctx.fillRect(x, y, 64, 64);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x+2, y+2, 60, 60);
+                    ctx.fillStyle = 'white';
+                    ctx.font = '16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${index}`, x + 32, y + 40);
+                }
+            }
+            
+            return canvas.toDataURL();
+        }
+
+        async function runDebugTest() {
+            try {
+                log('<strong>🧪 Starting debug test...</strong>');
+                
+                // Test 1: Create a single sprite
+                log('<strong>Test 1: Creating single sprite...</strong>');
+                const singleSprite = new SpriteAsset("test_single", createTestSpritesheet());
+                
+                // Check if it's registered
+                const retrievedSingle = SpriteRegistry.getSprite("test_single");
+                if (retrievedSingle) {
+                    log('✅ Single sprite registered successfully', 'success');
+                } else {
+                    log('❌ Single sprite NOT registered', 'error');
+                }
+                
+                // Test 2: Create a spritesheet
+                log('<strong>Test 2: Creating spritesheet...</strong>');
+                const testSheet = new SpritesheetAsset("test_sheet", createTestSpritesheet(), {
+                    spriteWidth: 64,
+                    spriteHeight: 64,
+                    columns: 2,
+                    rows: 2
+                });
+                
+                // Wait for image to load
+                await new Promise(resolve => {
+                    if (testSheet.isLoaded) {
+                        resolve();
+                    } else {
+                        const checkLoaded = () => {
+                            if (testSheet.isLoaded) {
+                                resolve();
+                            } else {
+                                setTimeout(checkLoaded, 10);
+                            }
+                        };
+                        checkLoaded();
+                    }
+                });
+                
+                log('✅ Spritesheet created and loaded', 'success');
+                
+                // Test 3: Check registry contents
+                log('<strong>Test 3: Checking registry contents...</strong>');
+                
+                const allSprites = SpriteRegistry.getSpriteNames();
+                const allSheets = SpriteRegistry.getSpritesheetNames();
+                
+                log(`<strong>All sprites in registry (${allSprites.length}):</strong>`, 'info');
+                log(`<pre>${JSON.stringify(allSprites, null, 2)}</pre>`);
+                
+                log(`<strong>All spritesheets in registry (${allSheets.length}):</strong>`, 'info');
+                log(`<pre>${JSON.stringify(allSheets, null, 2)}</pre>`);
+                
+                // Test 4: Check individual sprite access
+                log('<strong>Test 4: Testing individual sprite access...</strong>');
+                
+                const expectedKeys = [
+                    "test_sheet:sprite_0",
+                    "test_sheet:sprite_1", 
+                    "test_sheet:sprite_2",
+                    "test_sheet:sprite_3"
+                ];
+                
+                let successCount = 0;
+                for (const key of expectedKeys) {
+                    const sprite = SpriteRegistry.getSprite(key);
+                    if (sprite) {
+                        log(`✅ Found sprite: ${key}`, 'success');
+                        successCount++;
+                    } else {
+                        log(`❌ Missing sprite: ${key}`, 'error');
+                    }
+                }
+                
+                if (successCount === expectedKeys.length) {
+                    log(`<strong>🎉 SUCCESS: All ${successCount} spritesheet sprites registered correctly!</strong>`, 'success');
+                } else {
+                    log(`<strong>⚠️ PARTIAL: Only ${successCount}/${expectedKeys.length} sprites found</strong>`, 'warning');
+                }
+                
+                // Test 5: Check sprites from sheet method
+                log('<strong>Test 5: Testing getSpritesFromSheet method...</strong>');
+                const sheetSprites = SpriteRegistry.getSpritesFromSheet("test_sheet");
+                log(`Sprites from test_sheet: <pre>${JSON.stringify(sheetSprites, null, 2)}</pre>`);
+                
+                if (sheetSprites.length === 4) {
+                    log('✅ getSpritesFromSheet method working correctly', 'success');
+                } else {
+                    log(`❌ getSpritesFromSheet returned ${sheetSprites.length} sprites, expected 4`, 'error');
+                }
+                
+                // Test 6: Verify sprite properties
+                log('<strong>Test 6: Verifying sprite properties...</strong>');
+                const firstSprite = SpriteRegistry.getSprite("test_sheet:sprite_0");
+                if (firstSprite) {
+                    log(`✅ First sprite has image: ${!!firstSprite.image}`, firstSprite.image ? 'success' : 'error');
+                    log(`✅ First sprite isLoaded: ${firstSprite.isLoaded}`, firstSprite.isLoaded ? 'success' : 'warning');
+                    log(`✅ First sprite dimensions: ${firstSprite.width}x${firstSprite.height}`, 'info');
+                    log(`✅ First sprite source: ${firstSprite.sourceX},${firstSprite.sourceY} ${firstSprite.sourceWidth}x${firstSprite.sourceHeight}`, 'info');
+                } else {
+                    log('❌ Cannot verify sprite properties - sprite not found', 'error');
+                }
+                
+                log('<strong>🔬 Debug test completed!</strong>');
+                
+            } catch (error) {
+                log(`<strong>💥 Test failed with error:</strong><br><pre>${error.stack}</pre>`, 'error');
+            }
+        }
+
+        runDebugTest();
+    </script>
+</body>
+</html>

@@ -116,19 +116,23 @@ class PlayerController extends Component {
 
 ## 🚀 Quick Start
 
-### Installation
+### Build Commands
 ```bash
 npm install
-npm run build
+npm run build        # Build all versions (dev + prod)
+npm run build:dev    # Development builds only (readable code)
+npm run build:prod   # Production builds only (minified)
 ```
 
 ### Build Outputs
-- **`dist/nity.module.min.js`** - ES6 modules (modern apps)
-- **`dist/nity.min.js`** - Global objects (legacy/simple projects)
+- **`dist/nity.js`** - IIFE format, non-minified (development, browser script tags)
+- **`dist/nity.min.js`** - IIFE format, minified (production, browser script tags)
+- **`dist/nity.module.js`** - ES6 modules, non-minified (development, modern apps)
+- **`dist/nity.module.min.js`** - ES6 modules, minified (production, modern apps)
 
 ### Your First Game (Unity Style!)
 ```javascript
-import { Game, Scene, GameObject, ShapeComponent } from './dist/nity.module.min.js';
+import { Game, Scene, GameObject, SpriteAsset, SpritesheetAsset, SpriteRendererComponent } from './dist/nity.module.min.js';
 
 // Create game (like Unity's Game window)
 const canvas = document.getElementById('gameCanvas');
@@ -137,14 +141,28 @@ const game = new Game(canvas);
 // Create scene (like Unity's Scene)
 const gameScene = new Scene({
   create() {
+    // Load assets - they register automatically!
+    new SpriteAsset("player", "assets/player.png");
+    new SpritesheetAsset("enemies", "assets/enemies.png", {
+      spriteWidth: 32,
+      spriteHeight: 32,
+      columns: 4,
+      rows: 2
+    });
+
     // Create player (like Unity's GameObject)
     const player = new GameObject("Player");
     player.x = 100;
     player.y = 100;
     
-    // Add component (like Unity's AddComponent)
-    player.addComponent(new ShapeComponent("rectangle", {
-      width: 50, 
+    // Add sprite component (like Unity's AddComponent)
+    player.addComponent(new SpriteRendererComponent("player"));
+    
+    // Add enemy with spritesheet animation
+    const enemy = new GameObject("Enemy");
+    enemy.x = 200;
+    enemy.y = 100;
+    enemy.addComponent(new SpriteRendererComponent("enemies", "sprite_0")); 
       height: 50, 
       color: "blue"
     }));

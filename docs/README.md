@@ -207,27 +207,42 @@ Input.onLeftClickEvent((button, position) => {
 
 ## Building and Distribution
 
-### Development Build
+### Build Commands
 ```bash
-npm run build
+npm run build        # Build all versions (development + production)
+npm run build:dev    # Development builds only (readable code for debugging)
+npm run build:prod   # Production builds only (minified for deployment)
 ```
 
 ### File Structure
 ```
 dist/
-├── nity.min.js          # Global build (window.Nity)
-└── nity.module.min.js   # ES6 module build
+├── nity.js              # IIFE build, non-minified (development)
+├── nity.min.js          # IIFE build, minified (production)
+├── nity.module.js       # ES6 module, non-minified (development)
+└── nity.module.min.js   # ES6 module, minified (production)
 ```
 
 ### Usage in Projects
 
 ```html
-<!-- ES6 Module (Recommended) -->
+<!-- ES6 Module - Development (readable errors) -->
+<script type="module">
+  import { Game, Scene, GameObject } from './path/to/nity.module.js';
+</script>
+
+<!-- ES6 Module - Production (smaller size) -->
 <script type="module">
   import { Game, Scene, GameObject } from './path/to/nity.module.min.js';
 </script>
 
-<!-- Global (Legacy) -->
+<!-- Global - Development -->
+<script src="./path/to/nity.js"></script>
+<script>
+  const { Game, Scene, GameObject } = Nity;
+</script>
+
+<!-- Global - Production -->
 <script src="./path/to/nity.min.js"></script>
 <script>
   const { Game, Scene, GameObject } = Nity;

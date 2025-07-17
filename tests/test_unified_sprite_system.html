@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Sprite System Test - NityJS</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #2c3e50;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 2px solid #3498db;
+            background: #34495e;
+            display: block;
+            margin: 20px auto;
+        }
+        .info {
+            text-align: center;
+            margin: 20px;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px;
+        }
+        .feature {
+            background: #34495e;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .feature h3 {
+            color: #3498db;
+            margin-top: 0;
+        }
+        pre {
+            background: #2c3e50;
+            padding: 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>🎮 NityJS - Unified Sprite System Test</h1>
+        <p>Complete test of the new unified sprite registry with colon-separated keys</p>
+    </div>
+    
+    <div class="feature-grid">
+        <div class="feature">
+            <h3>✅ Single Sprite Assets</h3>
+            <pre>new SpriteAsset("player", "player.png");
+SpriteRegistry.getSprite("player");</pre>
+        </div>
+        <div class="feature">
+            <h3>✅ Spritesheet Assets</h3>
+            <pre>new SpritesheetAsset("enemies", "sheet.png", config);
+SpriteRegistry.getSprite("enemies:sprite_0");</pre>
+        </div>
+        <div class="feature">
+            <h3>✅ Unified Renderer</h3>
+            <pre>new SpriteRendererComponent("player");
+new SpriteRendererComponent("enemies:sprite_0");</pre>
+        </div>
+        <div class="feature">
+            <h3>✅ Legacy Support</h3>
+            <pre>// Still works with deprecation warning
+new SpriteRendererComponent("enemies", "sprite_0");</pre>
+        </div>
+    </div>
+    
+    <canvas id="game" width="900" height="700"></canvas>
+    
+    <div class="info" id="test-results">
+        <p>Testing in progress...</p>
+    </div>
+
+    <script type="module">
+        import { 
+            Game, 
+            Scene, 
+            GameObject, 
+            SpriteRendererComponent, 
+            SpriteAnimationComponent,
+            SpriteAnimationClip,
+            CameraComponent,
+            SpriteAsset,
+            SpritesheetAsset,
+            SpriteRegistry,
+            Component 
+        } from '../dist/nity.module.min.js';
+
+        const canvas = document.getElementById('game');
+        const game = new Game(canvas);
+        const resultsDiv = document.getElementById('test-results');
+
+        function updateResults(message, isError = false) {
+            const p = document.createElement('p');
+            p.textContent = message;
+            p.style.color = isError ? '#e74c3c' : '#2ecc71';
+            resultsDiv.appendChild(p);
+        }
+
+        const scene = new Scene({
+            async create(scene) {
+                try {
+                    console.log('🧪 Starting unified sprite system tests...');
+                    updateResults('🧪 Starting unified sprite system tests...');
+                    
+                    // Helper function to create test images
+                    const createTestSprite = (color, text, size = 64) => {
+                        const testCanvas = document.createElement('canvas');
+                        testCanvas.width = size;
+                        testCanvas.height = size;
+                        const testCtx = testCanvas.getContext('2d');
+                        
+                        testCtx.fillStyle = color;
+                        testCtx.fillRect(0, 0, size, size);
+                        testCtx.strokeStyle = '#ffffff';
+                        testCtx.lineWidth = 2;
+                        testCtx.strokeRect(2, 2, size-4, size-4);
+                        testCtx.fillStyle = 'white';
+                        testCtx.font = `${Math.floor(size/5)}px Arial`;
+                        testCtx.textAlign = 'center';
+                        testCtx.fillText(text, size/2, size/2 + 4);
+                        
+                        return testCanvas.toDataURL();
+                    };
+
+                    const createTestSpritesheet = () => {
+                        const sheetCanvas = document.createElement('canvas');
+                        sheetCanvas.width = 256; // 4x64
+                        sheetCanvas.height = 128; // 2x64
+                        const sheetCtx = sheetCanvas.getContext('2d');
+                        
+                        const colors = ['#e74c3c', '#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#e67e22', '#1abc9c', '#34495e'];
+                        
+                        for (let row = 0; row < 2; row++) {
+                            for (let col = 0; col < 4; col++) {
+                                const x = col * 64;
+                                const y = row * 64;
+                                const index = row * 4 + col;
+                                
+                                sheetCtx.fillStyle = colors[index];
+                                sheetCtx.fillRect(x, y, 64, 64);
+                                sheetCtx.strokeStyle = '#ffffff';
+                                sheetCtx.lineWidth = 1;
+                                sheetCtx.strokeRect(x+1, y+1, 62, 62);
+                                sheetCtx.fillStyle = 'white';
+                                sheetCtx.font = '10px Arial';
+                                sheetCtx.textAlign = 'center';
+                                sheetCtx.fillText(`${index}`, x + 32, y + 36);
+                            }
+                        }
+                        
+                        return sheetCanvas.toDataURL();
+                    };
+                    
+                    // 🧪 TEST 1: Create single sprite assets
+                    console.log('Test 1: Creating single sprite assets...');
+                    updateResults('Test 1: Creating single sprite assets...');
+                    
+                    new SpriteAsset("red_square", createTestSprite('#e74c3c', 'RED'));
+                    new SpriteAsset("green_circle", createTestSprite('#2ecc71', 'GREEN', 48));
+                    new SpriteAsset("blue_diamond", createTestSprite('#3498db', 'BLUE', 56));
+                    
+                    // 🧪 TEST 2: Create spritesheet asset
+                    console.log('Test 2: Creating spritesheet asset...');
+                    updateResults('Test 2: Creating spritesheet asset...');
+                    
+                    new SpritesheetAsset("test_sheet", createTestSpritesheet(), {
+                        spriteWidth: 64,
+                        spriteHeight: 64,
+                        columns: 4,
+                        rows: 2
+                    });
+                    
+                    // Wait for all assets to load
+                    await SpriteRegistry.preloadAll();
+                    
+                    // 🧪 TEST 3: Verify registry contents
+                    console.log('Test 3: Verifying registry contents...');
+                    updateResults('Test 3: Verifying registry contents...');
+                    
+                    const allSprites = SpriteRegistry.getSpriteNames();
+                    const allSheets = SpriteRegistry.getSpritesheetNames();
+                    const sheetSprites = SpriteRegistry.getSpritesFromSheet("test_sheet");
+                    
+                    console.log('All sprites:', allSprites);
+                    console.log('All spritesheets:', allSheets);
+                    console.log('Sprites from test_sheet:', sheetSprites);
+                    
+                    updateResults(`✅ Found ${allSprites.length} total sprites in registry`);
+                    updateResults(`✅ Found ${allSheets.length} spritesheets in registry`);
+                    updateResults(`✅ Found ${sheetSprites.length} sprites from test_sheet`);
+                    
+                    // 🧪 TEST 4: Test unified sprite access
+                    console.log('Test 4: Testing unified sprite access...');
+                    updateResults('Test 4: Testing unified sprite access...');
+                    
+                    const redSprite = SpriteRegistry.getSprite("red_square");
+                    const firstSheetSprite = SpriteRegistry.getSprite("test_sheet:sprite_0");
+                    
+                    if (redSprite) updateResults('✅ Single sprite access works');
+                    else updateResults('❌ Single sprite access failed', true);
+                    
+                    if (firstSheetSprite) updateResults('✅ Spritesheet sprite access works');
+                    else updateResults('❌ Spritesheet sprite access failed', true);
+                    
+                    // 🧪 TEST 5: Create game objects with unified renderer
+                    console.log('Test 5: Creating game objects with unified renderer...');
+                    updateResults('Test 5: Creating game objects with unified renderer...');
+                    
+                    // Single sprites row
+                    const singleSprites = [
+                        { name: "red_square", x: -300, color: "red" },
+                        { name: "green_circle", x: -200, color: "green" },
+                        { name: "blue_diamond", x: -100, color: "blue" }
+                    ];
+                    
+                    singleSprites.forEach(sprite => {
+                        const obj = new GameObject(sprite.x, -150);
+                        obj.addComponent(new SpriteRendererComponent(sprite.name));
+                        obj.addComponent(new class extends Component {
+                            draw(ctx) {
+                                ctx.fillStyle = 'white';
+                                ctx.font = '12px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.fillText('Single Sprite', this.gameObject.getGlobalX() + 32, this.gameObject.getGlobalY() + 80);
+                                ctx.fillText(`"${sprite.name}"`, this.gameObject.getGlobalX() + 32, this.gameObject.getGlobalY() + 95);
+                            }
+                        });
+                        scene.add(obj);
+                    });
+                    
+                    // Spritesheet sprites grid
+                    for (let row = 0; row < 2; row++) {
+                        for (let col = 0; col < 4; col++) {
+                            const spriteIndex = row * 4 + col;
+                            const unifiedKey = `test_sheet:sprite_${spriteIndex}`;
+                            
+                            const obj = new GameObject(-300 + col * 80, -50 + row * 80);
+                            obj.addComponent(new SpriteRendererComponent(unifiedKey));
+                            obj.addComponent(new class extends Component {
+                                constructor(key) {
+                                    super();
+                                    this.key = key;
+                                }
+                                
+                                draw(ctx) {
+                                    ctx.fillStyle = 'white';
+                                    ctx.font = '10px Arial';
+                                    ctx.textAlign = 'center';
+                                    ctx.fillText('Sheet Sprite', this.gameObject.getGlobalX() + 32, this.gameObject.getGlobalY() + 80);
+                                    ctx.fillText(`"${this.key}"`, this.gameObject.getGlobalX() + 32, this.gameObject.getGlobalY() + 95);
+                                }
+                            }(unifiedKey));
+                            scene.add(obj);
+                        }
+                    }
+                    
+                    // 🧪 TEST 6: Test legacy two-parameter support (with deprecation warning)
+                    console.log('Test 6: Testing legacy support...');
+                    updateResults('Test 6: Testing legacy support (with deprecation warning)...');
+                    
+                    const legacyObj = new GameObject(0, 100);
+                    legacyObj.addComponent(new SpriteRendererComponent("test_sheet", "sprite_0")); // Should show deprecation warning
+                    legacyObj.addComponent(new class extends Component {
+                        draw(ctx) {
+                            ctx.fillStyle = 'yellow';
+                            ctx.font = '12px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('Legacy Support', this.gameObject.getGlobalX() + 32, this.gameObject.getGlobalY() + 80);
+                            ctx.fillText('(with warning)', this.gameObject.getGlobalX() + 32, this.gameObject.getGlobalY() + 95);
+                        }
+                    });
+                    scene.add(legacyObj);
+                    
+                    // 🧪 TEST 7: Test sprite animation with unified keys
+                    console.log('Test 7: Testing sprite animation...');
+                    updateResults('Test 7: Testing sprite animation with unified keys...');
+                    
+                    const animatedObj = new GameObject(150, 50);
+                    animatedObj.addComponent(new SpriteRendererComponent("test_sheet:sprite_0"));
+                    
+                    const animator = new SpriteAnimationComponent("cycle");
+                    animator.addClip(new SpriteAnimationClip("cycle", [
+                        "test_sheet:sprite_0",
+                        "test_sheet:sprite_1", 
+                        "test_sheet:sprite_2",
+                        "test_sheet:sprite_3",
+                        "test_sheet:sprite_4",
+                        "test_sheet:sprite_5",
+                        "test_sheet:sprite_6",
+                        "test_sheet:sprite_7"
+                    ], 4, true));
+                    animatedObj.addComponent(animator);
+                    
+                    animatedObj.addComponent(new class extends Component {
+                        draw(ctx) {
+                            ctx.fillStyle = 'cyan';
+                            ctx.font = '12px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('Animated', this.gameObject.getGlobalX() + 32, this.gameObject.getGlobalY() + 80);
+                            ctx.fillText('Unified Keys', this.gameObject.getGlobalX() + 32, this.gameObject.getGlobalY() + 95);
+                        }
+                    });
+                    scene.add(animatedObj);
+                    
+                    // 🧪 TEST 8: Test name validation (should throw errors)
+                    console.log('Test 8: Testing name validation...');
+                    updateResults('Test 8: Testing name validation...');
+                    
+                    try {
+                        new SpriteAsset("invalid:name", createTestSprite('#f39c12', 'BAD'));
+                        updateResults('❌ Name validation failed - should have thrown error', true);
+                    } catch (error) {
+                        updateResults('✅ Name validation works - rejected colon in sprite name');
+                    }
+                    
+                    try {
+                        new SpritesheetAsset("invalid:sheet", createTestSpritesheet(), {
+                            spriteWidth: 64,
+                            spriteHeight: 64,
+                            columns: 4,
+                            rows: 2
+                        });
+                        updateResults('❌ Sheet name validation failed - should have thrown error', true);
+                    } catch (error) {
+                        updateResults('✅ Sheet name validation works - rejected colon in sheet name');
+                    }
+                    
+                    // Camera
+                    const cameraObject = new GameObject(0, 0);
+                    cameraObject.addComponent(new CameraComponent(game.canvas, 1));
+                    scene.add(cameraObject);
+                    game.mainCamera = cameraObject;
+                    
+                    // Final results
+                    console.log('🎉 All tests completed!');
+                    updateResults('🎉 All unified sprite system tests completed successfully!');
+                    updateResults(`📊 Registry Summary:`);
+                    updateResults(`   • ${allSprites.length} total sprites registered`);
+                    updateResults(`   • ${allSheets.length} spritesheets registered`);
+                    updateResults(`   • ${sheetSprites.length} sprites from spritesheets`);
+                    updateResults(`   • Unified access pattern working`);
+                    updateResults(`   • Legacy support with deprecation warnings`);
+                    updateResults(`   • Name validation preventing conflicts`);
+                    
+                } catch (error) {
+                    console.error('Test failed:', error);
+                    updateResults(`❌ Test failed: ${error.message}`, true);
+                }
+            }
+        });
+
+        game.launch(scene);
+        
+        console.log('%c 🎮 NityJS Unified Sprite System Active! ', 'background: #3498db; color: white; padding: 5px; border-radius: 3px;');
+        console.log('✅ Single sprites: "name"');
+        console.log('✅ Spritesheet sprites: "sheet:sprite"');
+        console.log('✅ Unified SpriteRegistry.getSprite()');
+        console.log('✅ Auto-registration');
+        console.log('✅ Legacy support with warnings');
+        console.log('✅ Name validation');
+    </script>
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Static Registry Demonstration - NityJS</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #2c3e50;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        .demo-section {
+            background: #34495e;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .code {
+            background: #2c3e50;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-line;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .output {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            min-height: 100px;
+            white-space: pre-line;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Static Registry Demonstration</h1>
+    <p>Understanding how SpriteRegistry persists data without instances</p>
+
+    <div class="demo-section">
+        <h3>1. Create Assets (Auto-Registration)</h3>
+        <div class="code">new SpriteAsset("test_sprite", "data:...");
+new SpritesheetAsset("test_sheet", "data:...", config);</div>
+        <button onclick="createAssets()">Create Assets</button>
+    </div>
+
+    <div class="demo-section">
+        <h3>2. Check Registry State</h3>
+        <div class="code">SpriteRegistry.getSpriteNames();
+SpriteRegistry.getSpritesheetNames();</div>
+        <button onclick="checkRegistry()">Check Registry</button>
+    </div>
+
+    <div class="demo-section">
+        <h3>3. Retrieve Assets (From Static Storage)</h3>
+        <div class="code">SpriteRegistry.getSprite("test_sprite");
+SpriteRegistry.getSpritesheet("test_sheet");</div>
+        <button onclick="retrieveAssets()">Retrieve Assets</button>
+    </div>
+
+    <div class="demo-section">
+        <h3>4. Clear Registry</h3>
+        <div class="code">SpriteRegistry.clear();</div>
+        <button onclick="clearRegistry()">Clear Registry</button>
+    </div>
+
+    <div class="output" id="output">Click buttons above to see how static registry works...</div>
+
+    <script type="module">
+        import { SpriteAsset, SpritesheetAsset, SpriteRegistry } from '../dist/nity.module.js';
+
+        // Make functions available globally for button clicks
+        window.createAssets = function() {
+            const output = document.getElementById('output');
+            output.textContent = '';
+            
+            // Create test data
+            const canvas = document.createElement('canvas');
+            canvas.width = 32;
+            canvas.height = 32;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(0, 0, 32, 32);
+            const spriteData = canvas.toDataURL();
+
+            canvas.width = 64;
+            canvas.height = 32;
+            ctx.fillStyle = '#3498db';
+            ctx.fillRect(0, 0, 32, 32);
+            ctx.fillStyle = '#2ecc71';
+            ctx.fillRect(32, 0, 32, 32);
+            const sheetData = canvas.toDataURL();
+
+            output.textContent += '🔨 Creating assets...\n';
+            
+            // Create assets - they auto-register into static Maps
+            new SpriteAsset("test_sprite", spriteData);
+            output.textContent += '✅ SpriteAsset "test_sprite" created and auto-registered\n';
+            
+            new SpritesheetAsset("test_sheet", sheetData, {
+                spriteWidth: 32,
+                spriteHeight: 32,
+                columns: 2,
+                rows: 1
+            });
+            output.textContent += '✅ SpritesheetAsset "test_sheet" created and auto-registered\n';
+            
+            output.textContent += '\n📊 Static Maps now contain:\n';
+            output.textContent += `   - sprites Map: ${SpriteRegistry.sprites.size} entries\n`;
+            output.textContent += `   - spritesheets Map: ${SpriteRegistry.spritesheets.size} entries\n`;
+        };
+
+        window.checkRegistry = function() {
+            const output = document.getElementById('output');
+            output.textContent = '';
+            
+            output.textContent += '🔍 Checking static registry state...\n\n';
+            
+            const spriteNames = SpriteRegistry.getSpriteNames();
+            const sheetNames = SpriteRegistry.getSpritesheetNames();
+            
+            output.textContent += `📋 Registered Sprites (${spriteNames.length}):\n`;
+            spriteNames.forEach(name => {
+                output.textContent += `   - ${name}\n`;
+            });
+            
+            output.textContent += `\n📋 Registered Spritesheets (${sheetNames.length}):\n`;
+            sheetNames.forEach(name => {
+                output.textContent += `   - ${name}\n`;
+            });
+            
+            output.textContent += '\n💡 These are stored in static Map properties:\n';
+            output.textContent += '   - SpriteRegistry.sprites (static Map)\n';
+            output.textContent += '   - SpriteRegistry.spritesheets (static Map)\n';
+            output.textContent += '   - No instance needed - data persists at class level!\n';
+        };
+
+        window.retrieveAssets = function() {
+            const output = document.getElementById('output');
+            output.textContent = '';
+            
+            output.textContent += '📤 Retrieving assets from static storage...\n\n';
+            
+            const sprite = SpriteRegistry.getSprite("test_sprite");
+            if (sprite) {
+                output.textContent += '✅ Retrieved SpriteAsset "test_sprite":\n';
+                output.textContent += `   - Type: ${sprite.constructor.name}\n`;
+                output.textContent += `   - Loaded: ${sprite.isLoaded}\n`;
+                output.textContent += `   - Dimensions: ${sprite.width}x${sprite.height}\n\n`;
+            } else {
+                output.textContent += '❌ SpriteAsset "test_sprite" not found\n\n';
+            }
+            
+            const sheet = SpriteRegistry.getSpritesheet("test_sheet");
+            if (sheet) {
+                output.textContent += '✅ Retrieved SpritesheetAsset "test_sheet":\n';
+                output.textContent += `   - Type: ${sheet.constructor.name}\n`;
+                output.textContent += `   - Loaded: ${sheet.isLoaded}\n`;
+                output.textContent += `   - Sprites: ${sheet.sprites.size} total\n`;
+                output.textContent += `   - Available: ${Array.from(sheet.sprites.keys()).join(', ')}\n\n`;
+            } else {
+                output.textContent += '❌ SpritesheetAsset "test_sheet" not found\n\n';
+            }
+            
+            output.textContent += '🎯 Key Point: Retrieved from static Maps, no instances needed!\n';
+        };
+
+        window.clearRegistry = function() {
+            const output = document.getElementById('output');
+            output.textContent = '';
+            
+            output.textContent += '🧹 Clearing static registry...\n\n';
+            
+            const beforeSprites = SpriteRegistry.sprites.size;
+            const beforeSheets = SpriteRegistry.spritesheets.size;
+            
+            SpriteRegistry.clear();
+            
+            output.textContent += `📊 Before: ${beforeSprites} sprites, ${beforeSheets} spritesheets\n`;
+            output.textContent += `📊 After: ${SpriteRegistry.sprites.size} sprites, ${SpriteRegistry.spritesheets.size} spritesheets\n\n`;
+            
+            output.textContent += '✅ Static Maps cleared!\n';
+            output.textContent += '💡 Data is gone until new assets are created\n';
+        };
+
+        // Initial demonstration
+        document.getElementById('output').textContent = 
+`🚀 SpriteRegistry Static Storage Explanation:
+
+1. static sprites = new Map()     ← Class-level storage
+2. static spritesheets = new Map() ← Persists without instances
+
+When you create assets:
+  new SpriteAsset() → auto-registers in static Map
+  new SpritesheetAsset() → auto-registers in static Map
+
+When you retrieve:
+  SpriteRegistry.getSprite() → reads from static Map
+  SpriteRegistry.getSpritesheet() → reads from static Map
+
+No instances needed - data persists at the CLASS level!
+
+Click buttons above to see it in action...`;
+    </script>
+</body>
+</html>

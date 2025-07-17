@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Registration Test - NityJS</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #2c3e50;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 2px solid #3498db;
+            background: #34495e;
+            display: block;
+            margin: 20px auto;
+        }
+        .info {
+            text-align: center;
+            margin: 20px;
+        }
+        .code-example {
+            background: #34495e;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-line;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>NityJS - Automatic Asset Registration with Unified Sprite System</h1>
+        <p>Assets now register themselves automatically and use unified sprite keys!</p>
+    </div>
+    
+    <div class="code-example">
+<strong>Old Way (manual registration):</strong>
+await SpriteRegistry.registerSprite("player", "player.png");
+await SpriteRegistry.registerSpritesheet("enemies", "enemies.png", config);
+// Then: new SpriteRendererComponent("enemies", "sprite_0");
+
+<strong>New Way (automatic registration with unified keys):</strong>
+new SpriteAsset("player", "player.png");
+new SpritesheetAsset("enemies", "enemies.png", config);
+// Assets are automatically registered!
+// Use: new SpriteRendererComponent("enemies:sprite_0");</div>
+    
+    <canvas id="game" width="800" height="600"></canvas>
+    
+    <div class="info">
+        <p>This test demonstrates automatic registration and unified sprite keys working with both SpriteAsset and SpritesheetAsset.</p>
+    </div>
+
+    <script type="module">
+        import { 
+            Game, 
+            Scene, 
+            GameObject, 
+            SpriteRendererComponent, 
+            CameraComponent,
+            SpriteAsset,
+            SpritesheetAsset,
+            SpriteRegistry,
+            Component 
+        } from '../dist/nity.module.js'; // Using development build
+
+        const canvas = document.getElementById('game');
+        const game = new Game(canvas);
+
+        const scene = new Scene({
+            create(scene) {
+                console.log('Creating scene with automatic registration...');
+                
+                // Create test sprites using canvas for demo
+                const createTestSprite = (color, text) => {
+                    const testCanvas = document.createElement('canvas');
+                    testCanvas.width = 64;
+                    testCanvas.height = 64;
+                    const testCtx = testCanvas.getContext('2d');
+                    
+                    testCtx.fillStyle = color;
+                    testCtx.fillRect(0, 0, 64, 64);
+                    testCtx.fillStyle = 'white';
+                    testCtx.font = '12px Arial';
+                    testCtx.textAlign = 'center';
+                    testCtx.fillText(text, 32, 36);
+                    
+                    return testCanvas.toDataURL();
+                };
+
+                const createTestSpritesheet = () => {
+                    const sheetCanvas = document.createElement('canvas');
+                    sheetCanvas.width = 128;
+                    sheetCanvas.height = 64;
+                    const sheetCtx = sheetCanvas.getContext('2d');
+                    
+                    // Create a 2x1 spritesheet
+                    const colors = ['#e74c3c', '#2ecc71'];
+                    for (let i = 0; i < 2; i++) {
+                        sheetCtx.fillStyle = colors[i];
+                        sheetCtx.fillRect(i * 64, 0, 64, 64);
+                        sheetCtx.fillStyle = 'white';
+                        sheetCtx.font = '10px Arial';
+                        sheetCtx.textAlign = 'center';
+                        sheetCtx.fillText(`S${i}`, i * 64 + 32, 36);
+                    }
+                    
+                    return sheetCanvas.toDataURL();
+                };
+                
+                // ✨ AUTOMATIC REGISTRATION - Just create the assets!
+                
+                // Single sprite - automatically registered as "player_sprite"
+                new SpriteAsset("player_sprite", createTestSprite('#3498db', 'AUTO'));
+                
+                // Spritesheet - automatically registered as "test_sheet"
+                new SpritesheetAsset("test_sheet", createTestSpritesheet(), {
+                    spriteWidth: 64,
+                    spriteHeight: 64,
+                    columns: 2,
+                    rows: 1
+                });
+                
+                console.log('Assets created and automatically registered!');
+                
+                // Create game objects using the automatically registered unified keys
+                const singleSpriteObj = new GameObject(-100, 0);
+                singleSpriteObj.addComponent(new SpriteRendererComponent("player_sprite"));
+                
+                const sheet1Obj = new GameObject(0, 0);
+                sheet1Obj.addComponent(new SpriteRendererComponent("test_sheet:sprite_0"));
+                
+                const sheet2Obj = new GameObject(100, 0);
+                sheet2Obj.addComponent(new SpriteRendererComponent("test_sheet:sprite_1"));
+                
+                // Add labels
+                singleSpriteObj.addComponent(new class extends Component {
+                    draw(ctx) {
+                        ctx.fillStyle = 'white';
+                        ctx.font = '14px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('SpriteAsset', this.gameObject.getGlobalX(), this.gameObject.getGlobalY() + 50);
+                        ctx.fillText('"player_sprite"', this.gameObject.getGlobalX(), this.gameObject.getGlobalY() + 66);
+                    }
+                });
+                
+                sheet1Obj.addComponent(new class extends Component {
+                    draw(ctx) {
+                        ctx.fillStyle = 'white';
+                        ctx.font = '14px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('SpritesheetAsset', this.gameObject.getGlobalX(), this.gameObject.getGlobalY() + 50);
+                        ctx.fillText('"test_sheet:sprite_0"', this.gameObject.getGlobalX(), this.gameObject.getGlobalY() + 66);
+                    }
+                });
+                
+                sheet2Obj.addComponent(new class extends Component {
+                    draw(ctx) {
+                        ctx.fillStyle = 'white';
+                        ctx.font = '14px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Same Sheet', this.gameObject.getGlobalX(), this.gameObject.getGlobalY() + 50);
+                        ctx.fillText('"test_sheet:sprite_1"', this.gameObject.getGlobalX(), this.gameObject.getGlobalY() + 66);
+                    }
+                });
+                
+                // Add all objects to scene
+                scene.add(singleSpriteObj);
+                scene.add(sheet1Obj);
+                scene.add(sheet2Obj);
+                
+                // Camera
+                const cameraObject = new GameObject(0, 0);
+                cameraObject.addComponent(new CameraComponent(game.canvas, 1));
+                scene.add(cameraObject);
+                game.mainCamera = cameraObject;
+                
+                console.log('✅ All assets automatically registered with unified keys!');
+                console.log('Registered sprites:', SpriteRegistry.getSpriteNames());
+                console.log('Registered spritesheets:', SpriteRegistry.getSpritesheetNames());
+                console.log('Sprites from test_sheet:', SpriteRegistry.getSpritesFromSheet("test_sheet"));
+            }
+        });
+
+        game.loadScene(scene);
+        game.start();
+        
+        console.log('%c NityJS Unified Auto-Registration Active! ', 'background: #27ae60; color: white; padding: 5px; border-radius: 3px;');
+        console.log('Assets register themselves automatically with unified sprite keys.');
+        console.log('Single sprites: "name", Spritesheet sprites: "sheet:sprite"');
+    </script>
+</body>
+</html>

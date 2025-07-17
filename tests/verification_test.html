@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprite Registration Verification</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background: #2c3e50; 
+            color: white; 
+            padding: 20px; 
+        }
+        .test-section { 
+            background: #34495e; 
+            margin: 10px 0; 
+            padding: 15px; 
+            border-radius: 5px; 
+        }
+        .success { border-left: 4px solid #2ecc71; }
+        .error { border-left: 4px solid #e74c3c; }
+        .info { border-left: 4px solid #3498db; }
+        pre { background: #2c3e50; padding: 10px; border-radius: 3px; }
+        canvas { border: 1px solid #fff; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Sprite Registration Verification</h1>
+    
+    <div class="test-section info">
+        <h3>Test Setup</h3>
+        <p>This test will verify that SpritesheetAsset properly registers individual sprites with colon notation.</p>
+    </div>
+    
+    <div id="test-results"></div>
+    <canvas id="test-canvas" width="400" height="400"></canvas>
+
+    <script type="module">
+        import { 
+            Game,
+            Scene,
+            GameObject,
+            SpriteRendererComponent,
+            CameraComponent,
+            SpriteAsset,
+            SpritesheetAsset,
+            SpriteRegistry,
+            Component
+        } from '../dist/nity.module.min.js';
+
+        const results = document.getElementById('test-results');
+        const canvas = document.getElementById('test-canvas');
+        
+        function addResult(title, content, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-section ${type}`;
+            div.innerHTML = `<h3>${title}</h3><div>${content}</div>`;
+            results.appendChild(div);
+        }
+
+        function createTestImage(color, text, size = 64) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = color;
+            ctx.fillRect(0, 0, size, size);
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(2, 2, size-4, size-4);
+            ctx.fillStyle = '#fff';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(text, size/2, size/2 + 4);
+            
+            return canvas.toDataURL();
+        }
+
+        function createSpritesheet() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; // 2x64
+            canvas.height = 64;  // 1x64
+            const ctx = canvas.getContext('2d');
+            
+            // Sprite 0 - Red
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(0, 0, 64, 64);
+            ctx.fillStyle = 'white';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('0', 32, 36);
+            
+            // Sprite 1 - Blue
+            ctx.fillStyle = '#3498db';
+            ctx.fillRect(64, 0, 64, 64);
+            ctx.fillStyle = 'white';
+            ctx.fillText('1', 96, 36);
+            
+            return canvas.toDataURL();
+        }
+
+        async function runTest() {
+            addResult('Step 1', 'Creating single sprite asset...', 'info');
+            
+            // Create single sprite
+            const singleSprite = new SpriteAsset("test_single", createTestImage('#2ecc71', 'SINGLE'));
+            
+            // Check immediate registration
+            const foundSingle = SpriteRegistry.getSprite("test_single");
+            if (foundSingle) {
+                addResult('Step 1 Result', '✅ Single sprite registered immediately', 'success');
+            } else {
+                addResult('Step 1 Result', '❌ Single sprite NOT registered', 'error');
+            }
+            
+            addResult('Step 2', 'Creating spritesheet asset...', 'info');
+            
+            // Create spritesheet
+            const spritesheet = new SpritesheetAsset("test_sheet", createSpritesheet(), {
+                spriteWidth: 64,
+                spriteHeight: 64,
+                columns: 2,
+                rows: 1
+            });
+            
+            // Check immediate registration of sheet
+            const foundSheet = SpriteRegistry.getSpritesheet("test_sheet");
+            if (foundSheet) {
+                addResult('Step 2a Result', '✅ Spritesheet registered immediately', 'success');
+            } else {
+                addResult('Step 2a Result', '❌ Spritesheet NOT registered', 'error');
+            }
+            
+            // Check immediate registration of individual sprites
+            addResult('Step 2b', 'Checking individual sprite registration...', 'info');
+            const sprite0 = SpriteRegistry.getSprite("test_sheet:sprite_0");
+            const sprite1 = SpriteRegistry.getSprite("test_sheet:sprite_1");
+            
+            if (sprite0) {
+                addResult('Step 2b Result', '✅ test_sheet:sprite_0 found immediately', 'success');
+            } else {
+                addResult('Step 2b Result', '❌ test_sheet:sprite_0 NOT found', 'error');
+            }
+            
+            if (sprite1) {
+                addResult('Step 2b Result', '✅ test_sheet:sprite_1 found immediately', 'success');
+            } else {
+                addResult('Step 2b Result', '❌ test_sheet:sprite_1 NOT found', 'error');
+            }
+            
+            // Wait for assets to load
+            addResult('Step 3', 'Waiting for assets to load...', 'info');
+            await SpriteRegistry.preloadAll();
+            
+            // Check again after loading
+            addResult('Step 4', 'Checking after preload...', 'info');
+            const sprite0AfterLoad = SpriteRegistry.getSprite("test_sheet:sprite_0");
+            const sprite1AfterLoad = SpriteRegistry.getSprite("test_sheet:sprite_1");
+            
+            if (sprite0AfterLoad && sprite0AfterLoad.isLoaded) {
+                addResult('Step 4 Result', '✅ test_sheet:sprite_0 loaded and ready', 'success');
+            } else {
+                addResult('Step 4 Result', `❌ test_sheet:sprite_0 issue: found=${!!sprite0AfterLoad}, loaded=${sprite0AfterLoad?.isLoaded}`, 'error');
+            }
+            
+            // Registry inspection
+            addResult('Step 5', 'Registry inspection...', 'info');
+            const allSprites = SpriteRegistry.getSpriteNames();
+            const allSheets = SpriteRegistry.getSpritesheetNames();
+            const sheetSprites = SpriteRegistry.getSpritesFromSheet("test_sheet");
+            
+            addResult('Registry Contents', `
+                <strong>All sprites (${allSprites.length}):</strong><pre>${JSON.stringify(allSprites, null, 2)}</pre>
+                <strong>All sheets (${allSheets.length}):</strong><pre>${JSON.stringify(allSheets, null, 2)}</pre>
+                <strong>Sprites from test_sheet (${sheetSprites.length}):</strong><pre>${JSON.stringify(sheetSprites, null, 2)}</pre>
+            `, 'info');
+            
+            // Test rendering
+            addResult('Step 6', 'Testing rendering with NityJS Game...', 'info');
+            
+            const game = new Game(canvas);
+            const scene = new Scene({
+                create(scene) {
+                    try {
+                        // Create game objects
+                        const singleObj = new GameObject(-50, 0);
+                        singleObj.addComponent(new SpriteRendererComponent("test_single"));
+                        
+                        const sheet0Obj = new GameObject(50, -50);
+                        sheet0Obj.addComponent(new SpriteRendererComponent("test_sheet:sprite_0"));
+                        
+                        const sheet1Obj = new GameObject(50, 50);
+                        sheet1Obj.addComponent(new SpriteRendererComponent("test_sheet:sprite_1"));
+                        
+                        // Camera
+                        const camera = new GameObject(0, 0);
+                        camera.addComponent(new CameraComponent(game.canvas, 1));
+                        
+                        scene.add(singleObj);
+                        scene.add(sheet0Obj);
+                        scene.add(sheet1Obj);
+                        scene.add(camera);
+                        game.mainCamera = camera;
+                        
+                        addResult('Step 6 Result', '✅ Game objects created successfully', 'success');
+                        
+                    } catch (error) {
+                        addResult('Step 6 Result', `❌ Error creating game objects: ${error.message}`, 'error');
+                    }
+                }
+            });
+            
+            try {
+                game.launch(scene);
+                addResult('Final Result', '✅ Game launched successfully!', 'success');
+            } catch (error) {
+                addResult('Final Result', `❌ Game launch failed: ${error.message}`, 'error');
+            }
+        }
+
+        runTest();
+    </script>
+</body>
+</html>

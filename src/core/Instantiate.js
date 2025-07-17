@@ -22,8 +22,8 @@ export class Instantiate {
      */
     static create(prefab, options = {}, ...args) {
         const {
-            x = 0,
-            y = 0,
+            x,
+            y,
             parent = null,
             addToScene = true
         } = options;
@@ -33,12 +33,13 @@ export class Instantiate {
         // Handle both GameObject instances and constructor functions
         if (typeof prefab === 'function') {
             // If it's a constructor, create new instance
-            gameObject = new prefab(x, y, ...args);
+            gameObject = new prefab(x ?? 0, y ?? 0, ...args);
         } else if (prefab instanceof GameObject) {
             // If it's already an instance, use it directly
             gameObject = prefab;
-            gameObject.x = x;
-            gameObject.y = y;
+            // Only override coordinates if they were explicitly provided
+            if (x !== undefined) gameObject.x = x;
+            if (y !== undefined) gameObject.y = y;
         } else {
             throw new Error('Instantiate.create: prefab must be a GameObject instance or constructor function');
         }

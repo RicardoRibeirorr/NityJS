@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprite Assets Test - NityJS</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #2c3e50;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 2px solid #3498db;
+            background: #34495e;
+            display: block;
+            margin: 20px auto;
+        }
+        .info {
+            text-align: center;
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>NityJS - Unified Sprite Assets Test</h1>
+        <p>Testing the new unified sprite system with SpriteAsset and SpritesheetAsset using colon-separated keys</p>
+    </div>
+    
+    <canvas id="game" width="800" height="600"></canvas>
+    
+    <div class="info">
+        <p>This test demonstrates the new unified sprite system where all sprites (single and from spritesheets) are accessible via SpriteRegistry.getSprite() using colon-separated keys for spritesheet sprites.</p>
+    </div>
+
+    <script type="module">
+        import { 
+            Game, 
+            Scene, 
+            GameObject, 
+            SpriteRendererComponent, 
+            CameraComponent,
+            SpriteRegistry,
+            SpriteAsset,
+            SpritesheetAsset,
+            Component 
+        } from '../dist/nity.module.min.js';
+
+        const canvas = document.getElementById('game');
+        const game = new Game(canvas);
+
+        const scene = new Scene({
+            async create(scene) {
+                console.log('Creating test scene...');
+                
+                try {
+                    // Create a simple colored rectangle as a test sprite
+                    const testCanvas = document.createElement('canvas');
+                    testCanvas.width = 32;
+                    testCanvas.height = 32;
+                    const testCtx = testCanvas.getContext('2d');
+                    testCtx.fillStyle = '#e74c3c';
+                    testCtx.fillRect(0, 0, 32, 32);
+                    testCtx.fillStyle = '#c0392b';
+                    testCtx.fillRect(4, 4, 24, 24);
+                    
+                    // Convert to data URL for testing
+                    const redSquareDataURL = testCanvas.toDataURL();
+                    
+                    // Register a single sprite using SpriteAsset constructor
+                    const redSquareSprite = new SpriteAsset("red_square", redSquareDataURL, {
+                        pivotX: 0.5,
+                        pivotY: 0.5
+                    });
+                    
+                    console.log('Registered sprite: red_square');
+                    
+                    // Create a test spritesheet
+                    const sheetCanvas = document.createElement('canvas');
+                    sheetCanvas.width = 64;
+                    sheetCanvas.height = 32;
+                    const sheetCtx = sheetCanvas.getContext('2d');
+                    
+                    // Create a 2x1 spritesheet with different colored squares
+                    sheetCtx.fillStyle = '#3498db';
+                    sheetCtx.fillRect(0, 0, 32, 32);
+                    sheetCtx.fillStyle = '#2980b9';
+                    sheetCtx.fillRect(4, 4, 24, 24);
+                    
+                    sheetCtx.fillStyle = '#2ecc71';
+                    sheetCtx.fillRect(32, 0, 32, 32);
+                    sheetCtx.fillStyle = '#27ae60';
+                    sheetCtx.fillRect(36, 4, 24, 24);
+                    
+                    const sheetDataURL = sheetCanvas.toDataURL();
+                    
+                    // Register the spritesheet using SpritesheetAsset constructor
+                    const coloredSquaresSheet = new SpritesheetAsset("colored_squares", sheetDataURL, {
+                        spriteWidth: 32,
+                        spriteHeight: 32,
+                        columns: 2,
+                        rows: 1
+                    });
+                    
+                    console.log('Registered spritesheet: colored_squares');
+                    
+                    // Wait for assets to load
+                    await SpriteRegistry.preloadAll();
+                    
+                    // Create test objects using unified sprite keys
+                    
+                    // Single sprite object
+                    const singleSpriteObj = new GameObject(-100, 0);
+                    singleSpriteObj.addComponent(new SpriteRendererComponent("red_square"));
+                    
+                    // Spritesheet sprite objects using colon notation
+                    const blueSpriteObj = new GameObject(0, 0);
+                    blueSpriteObj.addComponent(new SpriteRendererComponent("colored_squares:sprite_0"));
+                    
+                    const greenSpriteObj = new GameObject(100, 0);
+                    greenSpriteObj.addComponent(new SpriteRendererComponent("colored_squares:sprite_1"));
+                    
+                    // Add text labels
+                    singleSpriteObj.addComponent(new class extends Component {
+                        draw(ctx) {
+                            ctx.fillStyle = 'white';
+                            ctx.font = '14px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('SpriteAsset', this.gameObject.getGlobalX(), this.gameObject.getGlobalY() + 40);
+                            ctx.fillText('("red_square")', this.gameObject.getGlobalX(), this.gameObject.getGlobalY() + 56);
+                        }
+                    });
+                    
+                    blueSpriteObj.addComponent(new class extends Component {
+                        draw(ctx) {
+                            ctx.fillStyle = 'white';
+                            ctx.font = '14px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('SpritesheetAsset', this.gameObject.getGlobalX(), this.gameObject.getGlobalY() + 40);
+                            ctx.fillText('("colored_squares:sprite_0")', this.gameObject.getGlobalX(), this.gameObject.getGlobalY() + 56);
+                        }
+                    });
+                    
+                    greenSpriteObj.addComponent(new class extends Component {
+                        draw(ctx) {
+                            ctx.fillStyle = 'white';
+                            ctx.font = '14px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('SpritesheetAsset', this.gameObject.getGlobalX(), this.gameObject.getGlobalY() + 40);
+                            ctx.fillText('("colored_squares:sprite_1")', this.gameObject.getGlobalX(), this.gameObject.getGlobalY() + 56);
+                        }
+                    });
+                    
+                    // Add all objects to scene
+                    scene.add(singleSpriteObj);
+                    scene.add(blueSpriteObj);
+                    scene.add(greenSpriteObj);
+                    
+                    // Camera
+                    const cameraObject = new GameObject(0, 0);
+                    cameraObject.addComponent(new CameraComponent(game.canvas, 1));
+                    scene.add(cameraObject);
+                    game.mainCamera = cameraObject;
+                    
+                    console.log('Test scene created successfully!');
+                    console.log('Registered sprites:', SpriteRegistry.getSpriteNames());
+                    console.log('Registered spritesheets:', SpriteRegistry.getSpritesheetNames());
+                    console.log('Sprites from colored_squares sheet:', SpriteRegistry.getSpritesFromSheet("colored_squares"));
+                    
+                } catch (error) {
+                    console.error('Error creating test scene:', error);
+                }
+            }
+        });
+
+        game.launch(scene);
+    </script>
+</body>
+</html>
