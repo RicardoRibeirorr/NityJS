@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Animation Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        canvas { border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h1>Simple Animation Test</h1>
+    <canvas id="game" width="400" height="300"></canvas>
+    <p>Check the console for debug output</p>
+
+    <script type="module">
+        import { 
+            Game, 
+            Scene, 
+            GameObject, 
+            SpriteRendererComponent, 
+            CameraComponent, 
+            SpritesheetAsset,
+            SpriteAnimationComponent,
+            SpriteAnimationClip
+        } from './dist/nity.module.min.js';
+
+        const canvas = document.getElementById('game');
+        const game = new Game(canvas);
+
+        const scene = new Scene({
+            create(scene) {
+                // Create a small test image
+                const testImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAJklEQVQIHWPY/+8fAzYwyklJSRkYGP5jM4CmgBhAMyKdVxlQhwAAXUwH8jLbUZAAAAAASUVORK5CYII=';
+                
+                // Load the spritesheet
+                const sheet = new SpritesheetAsset("test", testImage, {
+                    spriteWidth: 2,
+                    spriteHeight: 2,
+                    columns: 2,
+                    rows: 2
+                });
+                
+                // Create player
+                const player = new GameObject(100, 100);
+                
+                // Add sprite renderer
+                const renderer = new SpriteRendererComponent("test:sprite_0");
+                player.addComponent(renderer);
+                
+                // Add animation
+                const anim = new SpriteAnimationComponent("test_anim");
+                anim.addClip(new SpriteAnimationClip("test_anim", [
+                    "test:sprite_0", 
+                    "test:sprite_1", 
+                    "test:sprite_2",
+                    "test:sprite_3"
+                ], 2, true));
+                player.addComponent(anim);
+                
+                scene.add(player);
+                
+                // Camera
+                const camera = new GameObject(0, 0);
+                camera.addComponent(new CameraComponent(game.canvas, 4));
+                scene.add(camera);
+                game.mainCamera = camera;
+                
+                console.log('Scene created');
+            }
+        });
+
+        game.launch(scene);
+    </script>
+</body>
+</html>

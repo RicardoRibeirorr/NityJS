@@ -755,11 +755,9 @@ var Nity = (() => {
     }
     addChild(child) {
       Instantiate.create(child, {
-        x: this.x,
-        y: this.y,
+        // Don't override the child's position - keep it relative to parent
         parent: this,
         addToScene: true
-        // Don't add to scene automatically
       });
     }
     addChildren(children) {
@@ -1339,6 +1337,7 @@ var Nity = (() => {
      * @private
      */
     _applyFrame() {
+      if (!this.currentClip || !this.currentClip.spriteNames[this.currentFrame]) return;
       const spriteKey = this.currentClip.spriteNames[this.currentFrame];
       const spriteRenderer = this.gameObject.getComponent(SpriteRendererComponent);
       if (spriteRenderer) {

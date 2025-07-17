@@ -37,7 +37,7 @@ const scene = new Scene({
     player.addComponent(anim);
 
     const cameraObject = new GameObject(0, 0);
-    cameraObject.addComponent(new CameraComponent(game.canvas, 6));
+        cameraObject.addComponent(new CameraComponent(game.canvas, 6));
     cameraObject.name = 'MainCamera';
     player.addChild(cameraObject);
 

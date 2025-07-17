@@ -141,10 +141,9 @@ export class GameObject {
 
     addChild(child) {
         Instantiate.create(child, {
-            x: this.x,
-            y: this.y,
+            // Don't override the child's position - keep it relative to parent
             parent: this,
-            addToScene: true // Don't add to scene automatically
+            addToScene: true
         });
     }
 

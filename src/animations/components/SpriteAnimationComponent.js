@@ -96,8 +96,11 @@ export class SpriteAnimationComponent extends Component {
      * @private
      */
     _applyFrame() {
+        if (!this.currentClip || !this.currentClip.spriteNames[this.currentFrame]) return;
+        
         const spriteKey = this.currentClip.spriteNames[this.currentFrame];
         const spriteRenderer = this.gameObject.getComponent(SpriteRendererComponent);
+        
         if (spriteRenderer) {
             // Pass the full sprite key (which can be "name" or "sheet:sprite")
             spriteRenderer.setSprite(spriteKey);
