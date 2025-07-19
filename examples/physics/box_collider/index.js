@@ -8,7 +8,8 @@ import {
   BoxColliderComponent,
   ShapeComponent,
   RigidbodyComponent,
-  MovementComponent
+  MovementComponent,
+  Vector2
 } from '../../../dist/nity.module.min.js';
 
 const canvas = document.getElementById('game');
@@ -18,7 +19,7 @@ const scene = new Scene({
   create(scene) {
 
     //GENERATE STATIC OBJECT
-      const obj = new GameObject(90, 50);
+      const obj = new GameObject(new Vector2(90, 50));
       obj.addComponent(new ShapeComponent("square", {
         width: 30,
         height: 30,
@@ -34,7 +35,7 @@ const scene = new Scene({
       }
     });
 
-    const player = new GameObject(100, 100);
+    const player = new GameObject(new Vector2(100, 100));
     player.addComponent(new ShapeComponent("square", {
       width: 10,
       height: 10,
@@ -45,7 +46,7 @@ const scene = new Scene({
     player.addComponent(new MovementComponent(50));
 
     // Add camera following the player
-    const cameraObject = new GameObject(0, 0);
+    const cameraObject = new GameObject(new Vector2(0, 0));
     cameraObject.addComponent(new CameraComponent(game.canvas, 2));
     player.addChild(cameraObject);
 

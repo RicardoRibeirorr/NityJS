@@ -9,7 +9,8 @@ import {
   ShapeComponent,
   RigidbodyComponent,
   MovementComponent,
-  Instantiate
+  Instantiate,
+  Vector2
 } from '../../dist/nity.module.min.js';
 
 const canvas = document.getElementById('game');
@@ -17,8 +18,8 @@ const game = new Game(canvas);
 
 // Create a custom Player class that can be instantiated
 class Player extends GameObject {
-  constructor(x = 0, y = 0) {
-    super(x, y);
+  constructor(position = new Vector2(0, 0)) {
+    super(position);
     this.name = "Player";
     
     // Add visual component
@@ -56,8 +57,8 @@ class Player extends GameObject {
 
 // Create a custom Obstacle class
 class Obstacle extends GameObject {
-  constructor(x = 0, y = 0, width = 30, height = 30, color = 'blue') {
-    super(x, y);
+  constructor(position = new Vector2(0, 0), width = 30, height = 30, color = 'blue') {
+    super(position);
     this.name = "Obstacle";
     
     // Add visual component
@@ -94,14 +95,12 @@ const scene = new Scene({
   create(scene) {
     // Create player using Instantiate system
     const player = Instantiate.create(Player, {
-      x: 100,
-      y: 100
+      position: new Vector2(100, 100)
     });
     
     // Create camera and attach it to player
     const cameraObject = Instantiate.create(GameObject, {
-      x: 0,
-      y: 0,
+      position: new Vector2(0, 0),
       parent: player,  // This will automatically set up parent-child relationship
       addToScene: false  // Don't add camera to scene since it's a child
     });
@@ -110,24 +109,20 @@ const scene = new Scene({
     
     // Create obstacles using Instantiate system
     const obstacle1 = Instantiate.create(Obstacle, {
-      x: 200,
-      y: 150,
+      position: new Vector2(200, 150),
     }, 40, 40, 'blue');  // Additional constructor arguments
     
     const obstacle2 = Instantiate.create(Obstacle, {
-      x: 300,
-      y: 200,
+      position: new Vector2(300, 200),
     }, 50, 30, 'green');
     
     const obstacle3 = Instantiate.create(Obstacle, {
-      x: 150,
-      y: 250,
+      position: new Vector2(150, 250),
     }, 60, 20, 'purple');
     
     // Create a compound object with children
     const parentObject = Instantiate.create(GameObject, {
-      x: 400,
-      y: 300
+      position: new Vector2(400, 300)
     });
     parentObject.name = "ParentObject";
     
@@ -141,15 +136,13 @@ const scene = new Scene({
     
     // Create children using parent parameter
     const child1 = Instantiate.create(Obstacle, {
-      x: -20,  // Relative to parent
-      y: -20,
+      position: new Vector2(-20, -20),  // Relative to parent
       parent: parentObject,
       addToScene: false
     }, 15, 15, 'cyan');
     
     const child2 = Instantiate.create(Obstacle, {
-      x: 20,   // Relative to parent
-      y: 20,
+      position: new Vector2(20, 20),   // Relative to parent
       parent: parentObject,
       addToScene: false
     }, 15, 15, 'magenta');
@@ -172,8 +165,7 @@ const scene = new Scene({
     
     // Demonstrate cloning
     const clonedObstacle = Instantiate.clone(obstacle1, {
-      x: 500,
-      y: 100
+      position: new Vector2(500, 100)
     });
     clonedObstacle.name = "ClonedObstacle";
     clonedObstacle.getComponent(ShapeComponent).color = 'pink';

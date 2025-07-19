@@ -18,6 +18,7 @@ import {
     GravityComponent
 } from "./GravityComponent.js";
 import { Time } from "../../core/Time.js";
+import { Vector2 } from "../../math/Vector2.js";
 
 // === RigidbodyComponent.js ===
 export class RigidbodyComponent extends GravityComponent {
@@ -54,36 +55,45 @@ export class RigidbodyComponent extends GravityComponent {
      */
     update() {
         super.update(); // apply gravity
-        this.move(this.velocity.x * Time.deltaTime(), this.velocity.y * Time.deltaTime());
+        const movement = this.velocity.multiply(Time.deltaTime());
+        this.move(movement.x, movement.y);
     }
 
     /**
      * Moves the GameObject and handles collision resolution.
-     * @param {number} dx - The change in x position.
-     * @param {number} dy - The change in y position.
+     * @param {number|Vector2} dx - The change in x position or Vector2 movement.
+     * @param {number} [dy] - The change in y position (ignored if dx is Vector2).
      * @returns {boolean} - Returns true if the movement was successful.
      */
      move(dx, dy) {
         if (!this.#_collider) return true;
 
+        // Handle Vector2 input
+        let moveX, moveY;
+        if (dx instanceof Vector2) {
+            moveX = dx.x;
+            moveY = dx.y;
+        } else {
+            moveX = dx;
+            moveY = dy;
+        }
+
         // Better step calculation for more accurate collision detection
-        const maxSpeed = Math.max(Math.abs(dx), Math.abs(dy));
+        const maxSpeed = Math.max(Math.abs(moveX), Math.abs(moveY));
         const steps = Math.max(1, Math.ceil(maxSpeed / 0.25)); // Even smaller steps for better precision
-        const stepX = dx / steps;
-        const stepY = dy / steps;
+        const stepX = moveX / steps;
+        const stepY = moveY / steps;
 
         let currentCollisions = new Set();
         let resolved = false;
-        let totalMoved = { x: 0, y: 0 };
+        let totalMoved = new Vector2(0, 0);
 
         for (let i = 0; i < steps; i++) {
             // Store position before move
-            const prevX = this.gameObject.x;
-            const prevY = this.gameObject.y;
+            const prevPos = this.gameObject.position.clone();
             
             this._doMove(stepX, stepY);
-            totalMoved.x += stepX;
-            totalMoved.y += stepY;
+            totalMoved = totalMoved.add(new Vector2(stepX, stepY));
 
             for (const other of CollisionSystem.instance.colliders) {
                 if (other === this.#_collider) continue;
@@ -108,8 +118,7 @@ export class RigidbodyComponent extends GravityComponent {
 
                 if (!isTrigger && !resolved) {
                     // Simple and reliable collision resolution: move back to previous position
-                    this.gameObject.x = prevX;
-                    this.gameObject.y = prevY;
+                    this.gameObject.setPosition(prevPos);
                     
                     // Apply bounce based on movement direction
                     if (Math.abs(stepY) > Math.abs(stepX)) {
@@ -210,11 +219,14 @@ export class RigidbodyComponent extends GravityComponent {
 
     /**
      * Directly moves the GameObject without collision checking.
-     * @param {number} dx - The change in x position.
-     * @param {number} dy - The change in y position.
+     * @param {number|Vector2} dx - The change in x position or Vector2 movement.
+     * @param {number} [dy] - The change in y position (ignored if dx is Vector2).
      */
     _doMove(dx, dy) {
-        this.gameObject.x += dx;
-        this.gameObject.y += dy;
+        if (dx instanceof Vector2) {
+            this.gameObject.translate(dx);
+        } else {
+            this.gameObject.translate(dx, dy);
+        }
     }
 }

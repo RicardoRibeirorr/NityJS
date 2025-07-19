@@ -1,5 +1,6 @@
 import { Component } from '../../common/Component.js';
 import { Time } from '../../core/Time.js';
+import { Vector2 } from '../../math/Vector2.js';
 
 /**
  * GravityComponent applies a gravity effect to GameObjects.
@@ -23,7 +24,7 @@ export class GravityComponent extends Component {
         super();
         this.gravity = true;
         this.gravityScale = options.gravityScale || 300;
-        this.velocity = { x: 0, y: 0 };
+        this.velocity = new Vector2(0, 0);
     }
 
     /**
@@ -40,11 +41,14 @@ export class GravityComponent extends Component {
      * Moves the GameObject by the specified offset.
      * @private
      * 
-     * @param {number} dx - X offset
-     * @param {number} dy - Y offset
+     * @param {number|Vector2} dx - X offset or Vector2 offset
+     * @param {number} [dy] - Y offset (ignored if dx is Vector2)
      */
     _doMove(dx, dy) {
-        this.gameObject.x += dx;
-        this.gameObject.y += dy;
+        if (dx instanceof Vector2) {
+            this.gameObject.translate(dx);
+        } else {
+            this.gameObject.translate(dx, dy);
+        }
     }
 }

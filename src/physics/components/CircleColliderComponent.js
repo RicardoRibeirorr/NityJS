@@ -65,8 +65,8 @@ export class CircleColliderComponent extends AbstractColliderComponent {
      * @returns {Object} Bounds object with x, y, and radius properties
      */
     getBounds() {
-        const x = this.gameObject.getGlobalX();
-        const y = this.gameObject.getGlobalY();
+        const x = this.gameObject.getGlobalPosition().x;
+        const y = this.gameObject.getGlobalPosition().y;
         let r = this.radius;
         const sprite = this.gameObject.getComponent(SpriteRendererComponent)?.sprite;
         if (r === null && sprite) {

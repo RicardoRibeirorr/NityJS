@@ -1,5 +1,6 @@
 import { Component } from '../../common/Component.js';
 import { SpriteRegistry } from '../../asset/SpriteRegistry.js';
+import { Vector2 } from '../../math/Vector2.js';
 
 /**
  * SpriteRendererComponent renders sprites from both single sprites and spritesheets on GameObjects.
@@ -61,11 +62,10 @@ export class SpriteRendererComponent extends Component {
     __draw(ctx) {
         if (!this.sprite || !this.sprite.image || !this.sprite.isLoaded) return;
         
-        const x = this.gameObject.getGlobalX();
-        const y = this.gameObject.getGlobalY();
+        const position = this.gameObject.getGlobalPosition();
         
         // Use the sprite's draw method for consistent rendering
-        this.sprite.draw(ctx, x, y, null, null, this.gameObject.rotation || 0);
+        this.sprite.draw(ctx, position.x, position.y, null, null, this.gameObject.rotation || 0);
     }
 
     /**

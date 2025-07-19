@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NityJS Vector2 & Vector3 Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5; 
+        }
+        .test-section { 
+            background: white; 
+            margin: 10px 0; 
+            padding: 15px; 
+            border-radius: 5px; 
+            border-left: 4px solid #007acc; 
+        }
+        .pass { color: #28a745; }
+        .fail { color: #dc3545; }
+        .result { 
+            margin: 5px 0; 
+            padding: 5px; 
+            border-radius: 3px; 
+            background-color: #f8f9fa; 
+        }
+        h1, h2 { color: #333; }
+        pre { 
+            background: #f4f4f4; 
+            padding: 10px; 
+            border-radius: 4px; 
+            overflow-x: auto; 
+        }
+    </style>
+</head>
+<body>
+    <h1>NityJS Vector2 & Vector3 Test Suite</h1>
+    <div id="test-results"></div>
+
+    <script type="module">
+        // Import NityJS Vector classes
+        import { Vector2, Vector3 } from '../src/index.js';
+
+        const results = document.getElementById('test-results');
+
+        function addResult(section, test, result, expected, actual) {
+            const div = document.createElement('div');
+            div.className = 'result';
+            div.innerHTML = `
+                <strong>${section} - ${test}:</strong> 
+                <span class="${result ? 'pass' : 'fail'}">${result ? 'PASS' : 'FAIL'}</span>
+                ${!result ? `<br>Expected: ${expected}, Got: ${actual}` : ''}
+            `;
+            results.appendChild(div);
+        }
+
+        function addSection(title) {
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            section.innerHTML = `<h2>${title}</h2>`;
+            results.appendChild(section);
+            return section;
+        }
+
+        function approximately(a, b, epsilon = 0.0001) {
+            return Math.abs(a - b) < epsilon;
+        }
+
+        function vectorApproximately(v1, v2, epsilon = 0.0001) {
+            if (v1.z !== undefined && v2.z !== undefined) {
+                return approximately(v1.x, v2.x, epsilon) && 
+                       approximately(v1.y, v2.y, epsilon) && 
+                       approximately(v1.z, v2.z, epsilon);
+            }
+            return approximately(v1.x, v2.x, epsilon) && 
+                   approximately(v1.y, v2.y, epsilon);
+        }
+
+        // Vector2 Tests
+        addSection('Vector2 Tests');
+
+        // Constructor tests
+        const v2a = new Vector2(3, 4);
+        addResult('Vector2', 'Constructor', v2a.x === 3 && v2a.y === 4, '(3, 4)', `(${v2a.x}, ${v2a.y})`);
+
+        const v2b = new Vector2();
+        addResult('Vector2', 'Default Constructor', v2b.x === 0 && v2b.y === 0, '(0, 0)', `(${v2b.x}, ${v2b.y})`);
+
+        // Static constants
+        addResult('Vector2', 'Static Zero', Vector2.zero.x === 0 && Vector2.zero.y === 0, '(0, 0)', Vector2.zero.toString());
+        addResult('Vector2', 'Static One', Vector2.one.x === 1 && Vector2.one.y === 1, '(1, 1)', Vector2.one.toString());
+        addResult('Vector2', 'Static Up', Vector2.up.x === 0 && Vector2.up.y === 1, '(0, 1)', Vector2.up.toString());
+        addResult('Vector2', 'Static Right', Vector2.right.x === 1 && Vector2.right.y === 0, '(1, 0)', Vector2.right.toString());
+
+        // Magnitude tests
+        const v2mag = new Vector2(3, 4);
+        addResult('Vector2', 'Magnitude', v2mag.magnitude === 5, '5', v2mag.magnitude.toString());
+        addResult('Vector2', 'Squared Magnitude', v2mag.sqrMagnitude === 25, '25', v2mag.sqrMagnitude.toString());
+
+        // Normalization
+        const v2norm = new Vector2(3, 4).normalized;
+        addResult('Vector2', 'Normalized', vectorApproximately(v2norm, new Vector2(0.6, 0.8)), '(0.6, 0.8)', v2norm.toString());
+
+        // Basic operations
+        const v2op1 = new Vector2(1, 2);
+        const v2op2 = new Vector2(3, 4);
+        
+        const v2add = v2op1.add(v2op2);
+        addResult('Vector2', 'Addition', v2add.x === 4 && v2add.y === 6, '(4, 6)', v2add.toString());
+
+        const v2sub = v2op2.subtract(v2op1);
+        addResult('Vector2', 'Subtraction', v2sub.x === 2 && v2sub.y === 2, '(2, 2)', v2sub.toString());
+
+        const v2mul = v2op1.multiply(2);
+        addResult('Vector2', 'Scalar Multiplication', v2mul.x === 2 && v2mul.y === 4, '(2, 4)', v2mul.toString());
+
+        const v2div = v2op2.divide(2);
+        addResult('Vector2', 'Scalar Division', v2div.x === 1.5 && v2div.y === 2, '(1.5, 2)', v2div.toString());
+
+        // Static methods
+        const v2dot = Vector2.dot(v2op1, v2op2);
+        addResult('Vector2', 'Dot Product', v2dot === 11, '11', v2dot.toString());
+
+        const v2dist = Vector2.distance(Vector2.zero, new Vector2(3, 4));
+        addResult('Vector2', 'Distance', v2dist === 5, '5', v2dist.toString());
+
+        const v2lerp = Vector2.lerp(Vector2.zero, Vector2.one, 0.5);
+        addResult('Vector2', 'Lerp', v2lerp.x === 0.5 && v2lerp.y === 0.5, '(0.5, 0.5)', v2lerp.toString());
+
+        // Angle tests
+        const v2angle = Vector2.angle(Vector2.right, Vector2.up);
+        addResult('Vector2', 'Angle', approximately(v2angle, Math.PI / 2), 'π/2', v2angle.toString());
+
+        // Vector3 Tests
+        addSection('Vector3 Tests');
+
+        // Constructor tests
+        const v3a = new Vector3(1, 2, 3);
+        addResult('Vector3', 'Constructor', v3a.x === 1 && v3a.y === 2 && v3a.z === 3, '(1, 2, 3)', `(${v3a.x}, ${v3a.y}, ${v3a.z})`);
+
+        const v3b = new Vector3();
+        addResult('Vector3', 'Default Constructor', v3b.x === 0 && v3b.y === 0 && v3b.z === 0, '(0, 0, 0)', `(${v3b.x}, ${v3b.y}, ${v3b.z})`);
+
+        // Static constants
+        addResult('Vector3', 'Static Zero', Vector3.zero.x === 0 && Vector3.zero.y === 0 && Vector3.zero.z === 0, '(0, 0, 0)', Vector3.zero.toString());
+        addResult('Vector3', 'Static Forward', Vector3.forward.x === 0 && Vector3.forward.y === 0 && Vector3.forward.z === 1, '(0, 0, 1)', Vector3.forward.toString());
+
+        // Magnitude tests
+        const v3mag = new Vector3(1, 2, 2);
+        addResult('Vector3', 'Magnitude', v3mag.magnitude === 3, '3', v3mag.magnitude.toString());
+        addResult('Vector3', 'Squared Magnitude', v3mag.sqrMagnitude === 9, '9', v3mag.sqrMagnitude.toString());
+
+        // Basic operations
+        const v3op1 = new Vector3(1, 2, 3);
+        const v3op2 = new Vector3(4, 5, 6);
+        
+        const v3add = v3op1.add(v3op2);
+        addResult('Vector3', 'Addition', v3add.x === 5 && v3add.y === 7 && v3add.z === 9, '(5, 7, 9)', v3add.toString());
+
+        const v3sub = v3op2.subtract(v3op1);
+        addResult('Vector3', 'Subtraction', v3sub.x === 3 && v3sub.y === 3 && v3sub.z === 3, '(3, 3, 3)', v3sub.toString());
+
+        // Cross product test
+        const v3cross = Vector3.cross(Vector3.right, Vector3.up);
+        addResult('Vector3', 'Cross Product', vectorApproximately(v3cross, Vector3.forward), '(0, 0, 1)', v3cross.toString());
+
+        // Dot product test
+        const v3dot = Vector3.dot(v3op1, v3op2);
+        addResult('Vector3', 'Dot Product', v3dot === 32, '32', v3dot.toString());
+
+        // Distance test
+        const v3dist = Vector3.distance(Vector3.zero, new Vector3(1, 2, 2));
+        addResult('Vector3', 'Distance', v3dist === 3, '3', v3dist.toString());
+
+        // Slerp test (simple case)
+        const v3slerp = Vector3.slerp(Vector3.right, Vector3.up, 0.5);
+        const expectedSlerp = new Vector3(Math.sqrt(2)/2, Math.sqrt(2)/2, 0);
+        addResult('Vector3', 'Slerp', vectorApproximately(v3slerp, expectedSlerp), expectedSlerp.toString(), v3slerp.toString());
+
+        // Project test
+        const v3proj = Vector3.project(new Vector3(1, 1, 0), Vector3.right);
+        addResult('Vector3', 'Project', vectorApproximately(v3proj, Vector3.right), '(1, 0, 0)', v3proj.toString());
+
+        // Method chaining test
+        const v2chain = new Vector2(5, 0).set(10, 20).normalize();
+        const expectedChain = new Vector2(10, 20).normalized;
+        addResult('Vector2', 'Method Chaining', vectorApproximately(v2chain, expectedChain), expectedChain.toString(), v2chain.toString());
+
+        // Clone and equality tests
+        const v2orig = new Vector2(7, 8);
+        const v2clone = v2orig.clone();
+        addResult('Vector2', 'Clone', v2orig.equals(v2clone) && v2orig !== v2clone, 'true', (v2orig.equals(v2clone) && v2orig !== v2clone).toString());
+
+        // Rotation test
+        const v2rot = Vector2.rotate(Vector2.right, Math.PI / 2);
+        addResult('Vector2', 'Rotation', vectorApproximately(v2rot, Vector2.up), '(0, 1)', v2rot.toString());
+
+        // Perpendicular test
+        const v2perp = Vector2.perpendicular(Vector2.right);
+        addResult('Vector2', 'Perpendicular', vectorApproximately(v2perp, Vector2.up), '(0, 1)', v2perp.toString());
+
+        console.log('Vector tests completed!');
+    </script>
+</body>
+</html>

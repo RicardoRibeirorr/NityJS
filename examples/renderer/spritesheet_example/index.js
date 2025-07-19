@@ -6,7 +6,8 @@ import {
   SpriteRendererComponent,
   CameraComponent,
   SpritesheetAsset,
-  Component
+  Component,
+  Vector2
 } from '../../../dist/nity.module.min.js';
 
 const canvas = document.getElementById('game');
@@ -26,7 +27,7 @@ const scene = new Scene({
     for (let y = 0; y < 8; y++) {
       for (let x = 0; x < 12; x++) {
 
-        const go = new GameObject(x * 20 - 100, y * 20 - 80);
+        const go = new GameObject(new Vector2(x * 20 - 100, y * 20 - 80));
 
         // Add sprite renderer using the new unified sprite key format
         const spriteIndex = y * 12 + x;
@@ -36,10 +37,9 @@ const scene = new Scene({
         // Add border as an inline component
         go.addComponent(new class extends Component {
           draw(ctx) {
-            const gx = this.gameObject.getGlobalX();
-            const gy = this.gameObject.getGlobalY();
+            const globalPos = this.gameObject.getGlobalPosition();
             ctx.strokeStyle = "red";
-            ctx.strokeRect(gx - 8, gy - 8, 18, 18);
+            ctx.strokeRect(globalPos.x - 8, globalPos.y - 8, 18, 18);
           }
         });
 
@@ -49,7 +49,7 @@ const scene = new Scene({
     }
 
     // Add camera
-    const cameraObject = new GameObject(0, 0);
+    const cameraObject = new GameObject(new Vector2(0, 0));
     cameraObject.addComponent(new CameraComponent(game.canvas, 2));
     scene.add(cameraObject);
     game.mainCamera = cameraObject;

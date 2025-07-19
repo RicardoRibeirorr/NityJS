@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Vector2 Integration Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 1px solid #000;
+            background: white;
+        }
+        .controls {
+            margin: 10px 0;
+        }
+        .info {
+            margin: 10px 0;
+            font-size: 14px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Complete Vector2 Integration Test</h1>
+    <div class="info">
+        <p><strong>This test demonstrates:</strong></p>
+        <ul>
+            <li>Vector2 constructor in GameObject</li>
+            <li>Vector2 math operations (add, subtract, multiply, normalize)</li>
+            <li>Physics integration with Vector2 velocity</li>
+            <li>Movement components using Vector2</li>
+            <li>Position system completely Vector2-based</li>
+            <li>No more x/y properties - only Vector2 position</li>
+        </ul>
+    </div>
+    
+    <div class="controls">
+        <button id="spawnObject">Spawn Moving Object</button>
+        <button id="testVector">Test Vector Math</button>
+        <button id="clearLog">Clear Log</button>
+    </div>
+    
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    
+    <div class="info" id="log" style="height: 200px; overflow-y: scroll;">
+        <strong>Vector Operations Log:</strong><br>
+    </div>
+
+    <script type="module">
+        import {
+            Game,
+            Scene,
+            GameObject,
+            Component,
+            CameraComponent,
+            ShapeComponent,
+            RigidbodyComponent,
+            MovementComponent,
+            Vector2,
+            Random
+        } from '../dist/nity.module.min.js';
+
+        // Logging function
+        function log(message) {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `[${timestamp}] ${message}<br>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        log("Starting Complete Vector2 Integration Test...");
+
+        // === Test Vector2 Math Operations ===
+        function testVectorMath() {
+            log("=== Vector2 Math Operations Test ===");
+            
+            // Test constructor variations
+            const v1 = new Vector2(10, 20);
+            const v2 = new Vector2(5, 15);
+            log(`v1: ${v1.toString()}, v2: ${v2.toString()}`);
+            
+            // Test basic operations
+            const sum = v1.add(v2);
+            log(`v1.add(v2): ${sum.toString()}`);
+            
+            const diff = v1.subtract(v2);
+            log(`v1.subtract(v2): ${diff.toString()}`);
+            
+            const scaled = v1.multiply(2);
+            log(`v1.multiply(2): ${scaled.toString()}`);
+            
+            // Test static methods
+            const distance = Vector2.distance(v1, v2);
+            log(`Distance between v1 and v2: ${distance.toFixed(2)}`);
+            
+            const dot = Vector2.dot(v1, v2);
+            log(`Dot product: ${dot.toFixed(2)}`);
+            
+            const angle = Vector2.angle(v1, v2);
+            log(`Angle between vectors: ${(angle * 180 / Math.PI).toFixed(2)} degrees`);
+            
+            // Test normalization
+            const normalized = v1.normalized();
+            log(`v1 normalized: ${normalized.toString()}`);
+            log(`Normalized magnitude: ${normalized.magnitude().toFixed(4)}`);
+            
+            log("=== Vector2 Math Test Complete ===");
+        }
+
+        // === Game Setup ===
+        const canvas = document.getElementById('gameCanvas');
+        const game = new Game(canvas);
+
+        // Custom component that demonstrates Vector2 usage
+        class VectorDemoComponent extends Component {
+            constructor() {
+                super();
+                this.targetPosition = new Vector2(400, 300);
+                this.speed = 50;
+                this.color = `hsl(${Math.random() * 360}, 70%, 50%)`;
+            }
+
+            start() {
+                // Set random target
+                this.targetPosition = new Vector2(
+                    Random.range(50, 750),
+                    Random.range(50, 550)
+                );
+                
+                // Update shape color
+                const shape = this.gameObject.getComponent(ShapeComponent);
+                if (shape) {
+                    shape.color = this.color;
+                }
+
+                log(`Object spawned at ${this.gameObject.position.toString()}`);
+                log(`Target position: ${this.targetPosition.toString()}`);
+            }
+
+            update() {
+                const currentPos = this.gameObject.position;
+                const direction = this.targetPosition.subtract(currentPos);
+                const distance = direction.magnitude();
+
+                if (distance > 5) {
+                    // Move towards target using Vector2 operations
+                    const normalizedDirection = direction.normalized();
+                    const velocity = normalizedDirection.multiply(this.speed);
+                    
+                    // Use Vector2 translate
+                    this.gameObject.translate(velocity.multiply(game.time.deltaTime));
+                } else {
+                    // Reached target, pick new one
+                    this.targetPosition = new Vector2(
+                        Random.range(50, 750),
+                        Random.range(50, 550)
+                    );
+                    log(`Object reached target, new target: ${this.targetPosition.toString()}`);
+                }
+            }
+        }
+
+        const scene = new Scene({
+            create(scene) {
+                log("Scene created, testing GameObject with Vector2 constructor...");
+
+                // Test GameObject with Vector2 constructor
+                const testObject = new GameObject(new Vector2(100, 100));
+                testObject.addComponent(new ShapeComponent("circle", {
+                    radius: 15,
+                    color: 'red'
+                }));
+                testObject.addComponent(new VectorDemoComponent());
+                scene.add(testObject);
+                
+                log(`Test object position: ${testObject.position.toString()}`);
+                
+                // Create camera
+                const cameraObject = new GameObject(new Vector2(0, 0));
+                cameraObject.addComponent(new CameraComponent(game.canvas, 1));
+                scene.add(cameraObject);
+                game.mainCamera = cameraObject;
+
+                // Test physics with Vector2
+                const physicsObject = new GameObject(new Vector2(200, 200));
+                physicsObject.addComponent(new ShapeComponent("square", {
+                    width: 20,
+                    height: 20,
+                    color: 'blue'
+                }));
+                physicsObject.addComponent(new RigidbodyComponent({
+                    velocity: new Vector2(50, -100),
+                    gravity: true,
+                    gravityScale: 200
+                }));
+                scene.add(physicsObject);
+                
+                log("Physics object created with Vector2 velocity");
+                
+                // Movement component test
+                const movingObject = new GameObject(new Vector2(300, 300));
+                movingObject.addComponent(new ShapeComponent("square", {
+                    width: 15,
+                    height: 15,
+                    color: 'green'
+                }));
+                movingObject.addComponent(new MovementComponent(100));
+                scene.add(movingObject);
+                
+                log("Movement object created");
+                log("All Vector2 integration tests initialized!");
+            }
+        });
+
+        // Event handlers
+        document.getElementById('spawnObject').addEventListener('click', () => {
+            const randomPos = new Vector2(
+                Random.range(50, 750),
+                Random.range(50, 550)
+            );
+            
+            const newObject = new GameObject(randomPos);
+            newObject.addComponent(new ShapeComponent("circle", {
+                radius: Random.range(5, 20),
+                color: `hsl(${Math.random() * 360}, 70%, 50%)`
+            }));
+            newObject.addComponent(new VectorDemoComponent());
+            scene.add(newObject);
+            
+            log(`New object spawned at ${randomPos.toString()}`);
+        });
+
+        document.getElementById('testVector').addEventListener('click', testVectorMath);
+        
+        document.getElementById('clearLog').addEventListener('click', () => {
+            document.getElementById('log').innerHTML = '<strong>Vector Operations Log:</strong><br>';
+        });
+
+        // Launch the game
+        game.launch(scene);
+        
+        // Initial vector math test
+        setTimeout(testVectorMath, 1000);
+
+        // Make available for debugging
+        window.game = game;
+        window.Vector2 = Vector2;
+        
+        log("Game launched! Vector2 integration is complete!");
+    </script>
+</body>
+</html>

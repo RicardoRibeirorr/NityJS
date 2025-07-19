@@ -2,14 +2,14 @@ import { Instantiate } from '../core/Instantiate.js';
 import {
     Component
 } from './Component.js';
+import { Vector2 } from '../math/Vector2.js';
 
 /**
  * Represents a game object in the scene.
  * A GameObject can have multiple components, children, and tags.
  * It can be positioned in the scene and can have a parent-child relationship with other GameObjects.
  * @class GameObject
- * @property {number} x - The x-coordinate of the GameObject.
- * @property {number} y - The y-coordinate of the GameObject.
+ * @property {Vector2} position - The position of the GameObject (Vector2).
  * @property {Array<Component>} components - The list of components attached to the GameObject.
  * @property {Array<GameObject>} children - The list of child GameObjects.
  * @property {GameObject|null} parent - The parent GameObject, if any.
@@ -17,20 +17,22 @@ import {
  * @property {Set<string>} tags - A set of tags associated with the GameObject.
  * @property {boolean} paused - Indicates whether the GameObject is paused.
  * @constructor
- * @param {number} [x=0] - The initial x-coordinate of the Game
- * Object.
- * @param {number} [y=0] - The initial y-coordinate of the GameObject.
+ * @param {number|Vector2} [x=0] - The initial x-coordinate or Vector2 position of the GameObject.
+ * @param {number} [y=0] - The initial y-coordinate of the GameObject (ignored if x is Vector2).
  * */
 export class GameObject {
 
     /**
      * Creates a new GameObject.
-     * @param {number} [x=0] - The initial x-coordinate of the GameObject.
-     * @param {number} [y=0] - The initial y-coordinate of the
-     *  */
+     * @param {number|Vector2} [x=0] - The initial x-coordinate or Vector2 position of the GameObject.
+     * @param {number} [y=0] - The initial y-coordinate of the GameObject (ignored if x is Vector2).
+     */
     constructor(x = 0, y = 0) {
-        this.x = x;
-        this.y = y;
+        if (x instanceof Vector2) {
+            this.position = x.clone();
+        } else {
+            this.position = new Vector2(x, y);
+        }
         this.components = [];
         this.children = [];
         this.parent = null;
@@ -38,6 +40,8 @@ export class GameObject {
         this.tags = new Set();
         this.paused = false;
     }
+
+
 
     /**
      * Adds a component to the GameObject.
@@ -167,28 +171,41 @@ export class GameObject {
     }
 
     /**
-     * Gets the global x-coordinate of the GameObject.
-     * If the GameObject has a parent, it will add the parent's global x-coordinate to its own x-coordinate.
-     * @return {number} The global x-coordinate of the GameObject.
+     * Gets the global position of the GameObject as a Vector2.
+     * @returns {Vector2} The global position of the GameObject.
      */
-    getGlobalX() {
-        return this.parent ? this.x + this.parent.getGlobalX() : this.x;
-    }
-
-    /**
-     * Gets the global y-coordinate of the GameObject.
-     * If the GameObject has a parent, it will add the parent's global y-coordinate to its own y-coordinate.
-     * @return {number} The global y-coordinate of the GameObject.
-     */
-    getGlobalY() {
-        return this.parent ? this.y + this.parent.getGlobalY() : this.y;
+    getGlobalPosition() {
+        if (this.parent) {
+            return this.position.add(this.parent.getGlobalPosition());
+        }
+        return this.position.clone();
     }
 
     /**
      * Sets the position of the GameObject.
-     * @param {number} x - The new x-coordinate of the GameObject.
-     * @param {number} y - The new y-coordinate of the GameObject.
+     * @param {number|Vector2} x - The new x-coordinate of the GameObject or Vector2 position.
+     * @param {number} [y] - The new y-coordinate of the GameObject (ignored if x is Vector2).
      */
+    setPosition(x, y) {
+        if (x instanceof Vector2) {
+            this.position.set(x.x, x.y);
+        } else {
+            this.position.set(x, y);
+        }
+    }
+
+    /**
+     * Translates the GameObject by the given offset.
+     * @param {number|Vector2} x - The x offset or Vector2 offset.
+     * @param {number} [y] - The y offset (ignored if x is Vector2).
+     */
+    translate(x, y) {
+        if (x instanceof Vector2) {
+            this.position = this.position.add(x);
+        } else {
+            this.position = this.position.add(new Vector2(x, y));
+        }
+    }
     async preload() {
         const promises = this.components.map(c => c.preload?.());
         for (const child of this.children) {

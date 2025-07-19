@@ -7,7 +7,8 @@ import {
             ShapeComponent,
             RigidbodyComponent,
             Input,
-            Instantiate
+            Instantiate,
+            Vector2
         } from '../../../dist/nity.module.min.js';
 
         function log(message) {
@@ -142,8 +143,7 @@ import {
                     log(`🖱️ Left mouse CLICKED at (${Math.round(pos.x)}, ${Math.round(pos.y)}) - fires only once per click`);
                     
                     // Move player towards click position
-                    this.gameObject.x = pos.x - 20; // Center on click
-                    this.gameObject.y = pos.y - 20;
+                    this.gameObject.setPosition(pos.x - 20, pos.y - 20); // Center on click
                 }
 
                 // Test right mouse click

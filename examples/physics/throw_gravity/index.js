@@ -10,6 +10,7 @@ import {
   ImageComponent,
   CircleColliderComponent,
   BoxColliderComponent,
+  Vector2
 } from '../../../dist/nity.module.min.js';
 
 const canvas = document.getElementById('game');
@@ -18,12 +19,12 @@ const game = new Game(canvas);
 const scene = new Scene({
   create(scene) {
     // === Background ===
-    const background = new GameObject(-200, -300);
+    const background = new GameObject(new Vector2(-200, -300));
     background.addComponent(new ImageComponent('../../_assets/background_platform.png'))
     scene.add(background);
 
     // === Ground ===
-    const ground = new GameObject(0, 300);
+    const ground = new GameObject(new Vector2(0, 300));
     ground.addComponent(new ShapeComponent("rect", {
       width: 2000,
       height: 50,
@@ -33,7 +34,7 @@ const scene = new Scene({
     scene.add(ground);
 
     // === Ball ===
-    const ball = new GameObject(100, 100);
+    const ball = new GameObject(new Vector2(100, 100));
     ball.addComponent(new ShapeComponent("circle", {
       radius: 10,
       color: 'red'
@@ -47,7 +48,7 @@ const scene = new Scene({
     scene.add(ball);
 
     // === Camera ===
-    const cameraObject = new GameObject(0, 0);
+    const cameraObject = new GameObject(new Vector2(0, 0));
     cameraObject.addComponent(new CameraComponent(game.canvas, 1));
     ball.addChild(cameraObject);
     game.mainCamera = cameraObject;

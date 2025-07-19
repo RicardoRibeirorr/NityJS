@@ -1,4 +1,5 @@
 import { Component } from '../../common/Component.js';
+import { Vector2 } from '../../math/Vector2.js';
 
 // === CameraComponent.js ===
 export class CameraComponent extends Component {
@@ -9,13 +10,12 @@ export class CameraComponent extends Component {
     }
 
     applyTransform(ctx) {
-        const x = this.gameObject.getGlobalX();
-        const y = this.gameObject.getGlobalY();
+        const position = this.gameObject.getGlobalPosition();
         ctx.setTransform(
             this.zoom, 0,
             0, this.zoom,
-            -x * this.zoom + this.canvas.width / 2,
-            -y * this.zoom + this.canvas.height / 2
+            -position.x * this.zoom + this.canvas.width / 2,
+            -position.y * this.zoom + this.canvas.height / 2
         );
     }
 }

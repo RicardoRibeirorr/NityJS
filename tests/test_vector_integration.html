@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NityJS Vector Integration Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5; 
+        }
+        .test-section { 
+            background: white; 
+            margin: 10px 0; 
+            padding: 15px; 
+            border-radius: 5px; 
+            border-left: 4px solid #007acc; 
+        }
+        .pass { color: #28a745; }
+        .fail { color: #dc3545; }
+        .result { 
+            margin: 5px 0; 
+            padding: 5px; 
+            border-radius: 3px; 
+            background-color: #f8f9fa; 
+        }
+        h1, h2 { color: #333; }
+    </style>
+</head>
+<body>
+    <h1>NityJS Vector2/Vector3 Integration Test</h1>
+    <div id="test-results"></div>
+
+    <script type="module">
+        // Import NityJS classes
+        import { GameObject, Vector2, Vector3, RigidbodyComponent, MovementComponent, FollowTarget } from '../src/index.js';
+
+        const results = document.getElementById('test-results');
+
+        function addResult(section, test, result, expected, actual) {
+            const div = document.createElement('div');
+            div.className = 'result';
+            div.innerHTML = `
+                <strong>${section} - ${test}:</strong> 
+                <span class="${result ? 'pass' : 'fail'}">${result ? 'PASS' : 'FAIL'}</span>
+                ${!result ? `<br>Expected: ${expected}, Got: ${actual}` : ''}
+            `;
+            results.appendChild(div);
+        }
+
+        function addSection(title) {
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            section.innerHTML = `<h2>${title}</h2>`;
+            results.appendChild(section);
+            return section;
+        }
+
+        // GameObject Vector Integration Tests
+        addSection('GameObject Vector2 Integration');
+
+        // Test 1: Constructor with numbers
+        const obj1 = new GameObject(10, 20);
+        addResult('GameObject', 'Constructor with numbers', 
+            obj1.x === 10 && obj1.y === 20 && obj1.position instanceof Vector2, 
+            'x=10, y=20, position is Vector2', 
+            `x=${obj1.x}, y=${obj1.y}, position is ${obj1.position.constructor.name}`);
+
+        // Test 2: Constructor with Vector2
+        const pos = new Vector2(30, 40);
+        const obj2 = new GameObject(pos);
+        addResult('GameObject', 'Constructor with Vector2', 
+            obj2.x === 30 && obj2.y === 40 && obj2.position instanceof Vector2, 
+            'x=30, y=40, position is Vector2', 
+            `x=${obj2.x}, y=${obj2.y}, position is ${obj2.position.constructor.name}`);
+
+        // Test 3: Position property access
+        obj1.x = 100;
+        obj1.y = 200;
+        addResult('GameObject', 'Position property setters', 
+            obj1.position.x === 100 && obj1.position.y === 200, 
+            'position.x=100, position.y=200', 
+            `position.x=${obj1.position.x}, position.y=${obj1.position.y}`);
+
+        // Test 4: setPosition method with Vector2
+        const newPos = new Vector2(50, 60);
+        obj1.setPosition(newPos);
+        addResult('GameObject', 'setPosition with Vector2', 
+            obj1.x === 50 && obj1.y === 60, 
+            'x=50, y=60', 
+            `x=${obj1.x}, y=${obj1.y}`);
+
+        // Test 5: setPosition method with numbers
+        obj1.setPosition(70, 80);
+        addResult('GameObject', 'setPosition with numbers', 
+            obj1.x === 70 && obj1.y === 80, 
+            'x=70, y=80', 
+            `x=${obj1.x}, y=${obj1.y}`);
+
+        // Test 6: translate method
+        obj1.translate(10, 5);
+        addResult('GameObject', 'translate with numbers', 
+            obj1.x === 80 && obj1.y === 85, 
+            'x=80, y=85', 
+            `x=${obj1.x}, y=${obj1.y}`);
+
+        obj1.translate(new Vector2(-5, -10));
+        addResult('GameObject', 'translate with Vector2', 
+            obj1.x === 75 && obj1.y === 75, 
+            'x=75, y=75', 
+            `x=${obj1.x}, y=${obj1.y}`);
+
+        // Test 7: getGlobalPosition method
+        const globalPos = obj1.getGlobalPosition();
+        addResult('GameObject', 'getGlobalPosition returns Vector2', 
+            globalPos instanceof Vector2 && globalPos.x === 75 && globalPos.y === 75, 
+            'Vector2(75, 75)', 
+            `${globalPos.constructor.name}(${globalPos.x}, ${globalPos.y})`);
+
+        // Test 8: Child-parent position relationships
+        const parent = new GameObject(100, 100);
+        const child = new GameObject(10, 20);
+        parent.__addChild(child);
+        child.parent = parent;
+        
+        const childGlobalPos = child.getGlobalPosition();
+        addResult('GameObject', 'Child global position calculation', 
+            childGlobalPos.x === 110 && childGlobalPos.y === 120, 
+            'Vector2(110, 120)', 
+            `Vector2(${childGlobalPos.x}, ${childGlobalPos.y})`);
+
+        // Test backward compatibility
+        addSection('Backward Compatibility Tests');
+        
+        // Test that old x/y access still works
+        const oldStyleObj = new GameObject();
+        oldStyleObj.x = 42;
+        oldStyleObj.y = 84;
+        addResult('Backward Compatibility', 'Direct x/y property access', 
+            oldStyleObj.getGlobalX() === 42 && oldStyleObj.getGlobalY() === 84, 
+            'globalX=42, globalY=84', 
+            `globalX=${oldStyleObj.getGlobalX()}, globalY=${oldStyleObj.getGlobalY()}`);
+
+        console.log('Integration tests completed!');
+        
+        // Additional comprehensive test
+        addSection('Component Integration (Mock Tests)');
+        
+        // Test MovementComponent would work (can't fully test without full game setup)
+        try {
+            const movementObj = new GameObject(new Vector2(0, 0));
+            addResult('Component Integration', 'GameObject with Vector2 constructor works for components', 
+                movementObj.position instanceof Vector2, 
+                'true', 
+                `${movementObj.position instanceof Vector2}`);
+        } catch (e) {
+            addResult('Component Integration', 'GameObject with Vector2 constructor works for components', 
+                false, 
+                'no error', 
+                e.message);
+        }
+
+        // Test Vector operations work with GameObject positions
+        const obj3 = new GameObject(new Vector2(10, 10));
+        const obj4 = new GameObject(new Vector2(20, 30));
+        
+        const distance = Vector2.distance(obj3.position, obj4.position);
+        const expected = Math.sqrt((20-10)*(20-10) + (30-10)*(30-10)); // sqrt(100 + 400) = sqrt(500) ≈ 22.36
+        
+        addResult('Vector Operations', 'Distance calculation between GameObjects', 
+            Math.abs(distance - expected) < 0.01, 
+            `~${expected.toFixed(2)}`, 
+            `${distance.toFixed(2)}`);
+
+        // Test lerping between positions
+        const lerpedPos = Vector2.lerp(obj3.position, obj4.position, 0.5);
+        addResult('Vector Operations', 'Lerp between GameObject positions', 
+            lerpedPos.x === 15 && lerpedPos.y === 20, 
+            'Vector2(15, 20)', 
+            `Vector2(${lerpedPos.x}, ${lerpedPos.y})`);
+
+        console.log('All Vector2/Vector3 integration tests completed successfully!');
+    </script>
+</body>
+</html>

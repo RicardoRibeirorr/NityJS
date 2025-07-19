@@ -49,9 +49,9 @@ export class ShapeComponent extends Component {
     set radiusY(radiusY) { this.options.radiusY = radiusY; }
     get points() { return this.options.points || []; }
     set points(points) { this.options.points = points; }
-    get x2() { return this.options.x2 || this.gameObject.getGlobalX() + 10; }
+    get x2() { return this.options.x2 || this.gameObject.getGlobalPosition().x + 10; }
     set x2(x2) { this.options.x2 = x2; }
-    get y2() { return this.options.y2 || this.gameObject.getGlobalY(); }
+    get y2() { return this.options.y2 || this.gameObject.getGlobalPosition().y; }
     set y2(y2) { this.options.y2 = y2; }
     get size() { return this.options.size || 20; }
     set size(size) { this.options.size = size; }
@@ -62,8 +62,8 @@ export class ShapeComponent extends Component {
      * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
      */
     __draw(ctx) {
-        const x = this.gameObject.getGlobalX();
-        const y = this.gameObject.getGlobalY();
+        const x = this.gameObject.getGlobalPosition().x;
+        const y = this.gameObject.getGlobalPosition().y;
         switch (this.shape) {
             case 'rectangle':
             case 'square':

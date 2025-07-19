@@ -24,6 +24,8 @@ export * from './physics/components/BoxColliderComponent.js';
 export * from './physics/components/CircleColliderComponent.js';
 export * from './physics/components/RigidbodyComponent.js';
 export * from './math/Random.js';
+export * from './math/Vector2.js';
+export * from './math/Vector3.js';
 
 export * from './extensions/movement/FollowTarget.js';
 export * from './extensions/movement/MovementController.js';

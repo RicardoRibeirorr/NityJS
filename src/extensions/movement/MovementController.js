@@ -2,6 +2,7 @@ import { Component } from '../../common/Component.js';
 import { Time } from '../../core/Time.js';
 import { Input } from '../../input/Input.js';
 import { RigidbodyComponent } from '../../physics/components/RigidbodyComponent.js';
+import { Vector2 } from '../../math/Vector2.js';
 
 // === MovementComponent.js ===
 export class MovementComponent extends Component {
@@ -19,15 +20,15 @@ export class MovementComponent extends Component {
     }
 
     update() {
-        let dx = 0, dy = 0;
+        const movement = new Vector2(0, 0);
 
-        if (Input.isKeyDown('ArrowRight') || Input.isKeyDown('d') || Input.isKeyDown('D')) dx += this.speed * Time.deltaTime();
-        if (Input.isKeyDown('ArrowLeft') || Input.isKeyDown('a') || Input.isKeyDown('A'))  dx -= this.speed * Time.deltaTime();
-        if (Input.isKeyDown('ArrowDown') || Input.isKeyDown('s') || Input.isKeyDown('S'))  dy += this.speed * Time.deltaTime();
-        if (Input.isKeyDown('ArrowUp') || Input.isKeyDown('w') || Input.isKeyDown('W'))    dy -= this.speed * Time.deltaTime();
+        if (Input.isKeyDown('ArrowRight') || Input.isKeyDown('d') || Input.isKeyDown('D')) movement.x += this.speed * Time.deltaTime();
+        if (Input.isKeyDown('ArrowLeft') || Input.isKeyDown('a') || Input.isKeyDown('A'))  movement.x -= this.speed * Time.deltaTime();
+        if (Input.isKeyDown('ArrowDown') || Input.isKeyDown('s') || Input.isKeyDown('S'))  movement.y += this.speed * Time.deltaTime();
+        if (Input.isKeyDown('ArrowUp') || Input.isKeyDown('w') || Input.isKeyDown('W'))    movement.y -= this.speed * Time.deltaTime();
 
-        if (dx !== 0 || dy !== 0) {
-            this.rigidbody.move(dx, dy);
+        if (movement.magnitude > 0) {
+            this.rigidbody.move(movement);
         }
     }
 }

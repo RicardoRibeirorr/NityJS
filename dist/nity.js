@@ -42,7 +42,9 @@ var Nity = (() => {
     SpriteRegistry: () => SpriteRegistry,
     SpriteRendererComponent: () => SpriteRendererComponent,
     SpritesheetAsset: () => SpritesheetAsset,
-    Time: () => Time
+    Time: () => Time,
+    Vector2: () => Vector2,
+    Vector3: () => Vector3
   });
 
   // src/asset/SpriteRegistry.js
@@ -237,6 +239,360 @@ var Nity = (() => {
     }
   };
 
+  // src/math/Vector2.js
+  var Vector2 = class _Vector2 {
+    /**
+     * Creates a new Vector2.
+     * @param {number} x - The x component (default: 0)
+     * @param {number} y - The y component (default: 0)
+     */
+    constructor(x = 0, y = 0) {
+      this.x = x;
+      this.y = y;
+    }
+    // Static constants
+    static get zero() {
+      return new _Vector2(0, 0);
+    }
+    static get one() {
+      return new _Vector2(1, 1);
+    }
+    static get up() {
+      return new _Vector2(0, 1);
+    }
+    static get down() {
+      return new _Vector2(0, -1);
+    }
+    static get left() {
+      return new _Vector2(-1, 0);
+    }
+    static get right() {
+      return new _Vector2(1, 0);
+    }
+    static get positiveInfinity() {
+      return new _Vector2(Infinity, Infinity);
+    }
+    static get negativeInfinity() {
+      return new _Vector2(-Infinity, -Infinity);
+    }
+    /**
+     * Gets the magnitude (length) of this vector.
+     * @returns {number} The magnitude of the vector
+     */
+    get magnitude() {
+      return Math.sqrt(this.x * this.x + this.y * this.y);
+    }
+    /**
+     * Gets the squared magnitude of this vector (faster than magnitude).
+     * @returns {number} The squared magnitude of the vector
+     */
+    get sqrMagnitude() {
+      return this.x * this.x + this.y * this.y;
+    }
+    /**
+     * Gets the normalized version of this vector.
+     * @returns {Vector2} A normalized copy of this vector
+     */
+    get normalized() {
+      const mag = this.magnitude;
+      if (mag === 0) return _Vector2.zero;
+      return new _Vector2(this.x / mag, this.y / mag);
+    }
+    /**
+     * Adds another vector to this vector.
+     * @param {Vector2} other - The vector to add
+     * @returns {Vector2} A new vector representing the sum
+     */
+    add(other) {
+      return new _Vector2(this.x + other.x, this.y + other.y);
+    }
+    /**
+     * Subtracts another vector from this vector.
+     * @param {Vector2} other - The vector to subtract
+     * @returns {Vector2} A new vector representing the difference
+     */
+    subtract(other) {
+      return new _Vector2(this.x - other.x, this.y - other.y);
+    }
+    /**
+     * Multiplies this vector by a scalar.
+     * @param {number} scalar - The scalar to multiply by
+     * @returns {Vector2} A new vector representing the product
+     */
+    multiply(scalar) {
+      return new _Vector2(this.x * scalar, this.y * scalar);
+    }
+    /**
+     * Divides this vector by a scalar.
+     * @param {number} scalar - The scalar to divide by
+     * @returns {Vector2} A new vector representing the quotient
+     */
+    divide(scalar) {
+      if (scalar === 0) throw new Error("Cannot divide by zero");
+      return new _Vector2(this.x / scalar, this.y / scalar);
+    }
+    /**
+     * Normalizes this vector in place.
+     * @returns {Vector2} This vector for chaining
+     */
+    normalize() {
+      const mag = this.magnitude;
+      if (mag === 0) {
+        this.x = 0;
+        this.y = 0;
+      } else {
+        this.x /= mag;
+        this.y /= mag;
+      }
+      return this;
+    }
+    /**
+     * Sets the components of this vector.
+     * @param {number} x - The new x component
+     * @param {number} y - The new y component
+     * @returns {Vector2} This vector for chaining
+     */
+    set(x, y) {
+      this.x = x;
+      this.y = y;
+      return this;
+    }
+    /**
+     * Creates a copy of this vector.
+     * @returns {Vector2} A new vector with the same components
+     */
+    clone() {
+      return new _Vector2(this.x, this.y);
+    }
+    /**
+     * Checks if this vector equals another vector.
+     * @param {Vector2} other - The vector to compare to
+     * @returns {boolean} True if vectors are equal
+     */
+    equals(other) {
+      return this.x === other.x && this.y === other.y;
+    }
+    /**
+     * Returns a string representation of this vector.
+     * @returns {string} String representation
+     */
+    toString() {
+      return `(${this.x.toFixed(2)}, ${this.y.toFixed(2)})`;
+    }
+    // Static methods
+    /**
+     * Calculates the dot product of two vectors.
+     * @param {Vector2} a - First vector
+     * @param {Vector2} b - Second vector
+     * @returns {number} The dot product
+     */
+    static dot(a, b) {
+      return a.x * b.x + a.y * b.y;
+    }
+    /**
+     * Calculates the distance between two vectors.
+     * @param {Vector2} a - First vector
+     * @param {Vector2} b - Second vector
+     * @returns {number} The distance between the vectors
+     */
+    static distance(a, b) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+    /**
+     * Calculates the squared distance between two vectors (faster than distance).
+     * @param {Vector2} a - First vector
+     * @param {Vector2} b - Second vector
+     * @returns {number} The squared distance between the vectors
+     */
+    static sqrDistance(a, b) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      return dx * dx + dy * dy;
+    }
+    /**
+     * Linearly interpolates between two vectors.
+     * @param {Vector2} a - Start vector
+     * @param {Vector2} b - End vector
+     * @param {number} t - Interpolation factor (0-1)
+     * @returns {Vector2} Interpolated vector
+     */
+    static lerp(a, b, t) {
+      t = Math.max(0, Math.min(1, t));
+      return new _Vector2(
+        a.x + (b.x - a.x) * t,
+        a.y + (b.y - a.y) * t
+      );
+    }
+    /**
+     * Linearly interpolates between two vectors without clamping t.
+     * @param {Vector2} a - Start vector
+     * @param {Vector2} b - End vector
+     * @param {number} t - Interpolation factor
+     * @returns {Vector2} Interpolated vector
+     */
+    static lerpUnclamped(a, b, t) {
+      return new _Vector2(
+        a.x + (b.x - a.x) * t,
+        a.y + (b.y - a.y) * t
+      );
+    }
+    /**
+     * Returns a vector with the minimum components of two vectors.
+     * @param {Vector2} a - First vector
+     * @param {Vector2} b - Second vector
+     * @returns {Vector2} Vector with minimum components
+     */
+    static min(a, b) {
+      return new _Vector2(Math.min(a.x, b.x), Math.min(a.y, b.y));
+    }
+    /**
+     * Returns a vector with the maximum components of two vectors.
+     * @param {Vector2} a - First vector
+     * @param {Vector2} b - Second vector
+     * @returns {Vector2} Vector with maximum components
+     */
+    static max(a, b) {
+      return new _Vector2(Math.max(a.x, b.x), Math.max(a.y, b.y));
+    }
+    /**
+     * Moves a point towards a target.
+     * @param {Vector2} current - Current position
+     * @param {Vector2} target - Target position
+     * @param {number} maxDistanceDelta - Maximum distance to move
+     * @returns {Vector2} New position
+     */
+    static moveTowards(current, target, maxDistanceDelta) {
+      const diff = target.subtract(current);
+      const distance = diff.magnitude;
+      if (distance <= maxDistanceDelta || distance === 0) {
+        return target.clone();
+      }
+      return current.add(diff.divide(distance).multiply(maxDistanceDelta));
+    }
+    /**
+     * Reflects a vector off a plane defined by a normal.
+     * @param {Vector2} inDirection - The direction vector to reflect
+     * @param {Vector2} inNormal - The normal of the surface
+     * @returns {Vector2} The reflected vector
+     */
+    static reflect(inDirection, inNormal) {
+      const factor = -2 * _Vector2.dot(inNormal, inDirection);
+      return new _Vector2(
+        factor * inNormal.x + inDirection.x,
+        factor * inNormal.y + inDirection.y
+      );
+    }
+    /**
+     * Returns the angle in radians between two vectors.
+     * @param {Vector2} from - First vector
+     * @param {Vector2} to - Second vector
+     * @returns {number} Angle in radians
+     */
+    static angle(from, to) {
+      const denominator = Math.sqrt(from.sqrMagnitude * to.sqrMagnitude);
+      if (denominator < 1e-15) return 0;
+      const dot = Math.max(-1, Math.min(1, _Vector2.dot(from, to) / denominator));
+      return Math.acos(dot);
+    }
+    /**
+     * Returns the signed angle in radians between two vectors.
+     * @param {Vector2} from - First vector
+     * @param {Vector2} to - Second vector
+     * @returns {number} Signed angle in radians
+     */
+    static signedAngle(from, to) {
+      const unsignedAngle = _Vector2.angle(from, to);
+      const sign = Math.sign(from.x * to.y - from.y * to.x);
+      return unsignedAngle * sign;
+    }
+    /**
+     * Clamps the magnitude of a vector to a maximum length.
+     * @param {Vector2} vector - The vector to clamp
+     * @param {number} maxLength - The maximum length
+     * @returns {Vector2} The clamped vector
+     */
+    static clampMagnitude(vector, maxLength) {
+      const sqrMagnitude = vector.sqrMagnitude;
+      if (sqrMagnitude > maxLength * maxLength) {
+        const mag = Math.sqrt(sqrMagnitude);
+        const normalizedX = vector.x / mag;
+        const normalizedY = vector.y / mag;
+        return new _Vector2(normalizedX * maxLength, normalizedY * maxLength);
+      }
+      return vector.clone();
+    }
+    /**
+     * Rotates a vector by an angle in radians.
+     * @param {Vector2} vector - The vector to rotate
+     * @param {number} angle - The angle in radians
+     * @returns {Vector2} The rotated vector
+     */
+    static rotate(vector, angle) {
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      return new _Vector2(
+        vector.x * cos - vector.y * sin,
+        vector.x * sin + vector.y * cos
+      );
+    }
+    /**
+     * Returns a perpendicular vector (rotated 90 degrees counterclockwise).
+     * @param {Vector2} vector - The input vector
+     * @returns {Vector2} The perpendicular vector
+     */
+    static perpendicular(vector) {
+      return new _Vector2(-vector.y, vector.x);
+    }
+    /**
+     * Smoothly damps between vectors.
+     * @param {Vector2} current - Current position
+     * @param {Vector2} target - Target position
+     * @param {Object} currentVelocity - Object with x, y velocity components (modified by reference)
+     * @param {number} smoothTime - Approximate time to reach target
+     * @param {number} maxSpeed - Maximum speed (optional)
+     * @param {number} deltaTime - Time since last call
+     * @returns {Vector2} Smoothly damped position
+     */
+    static smoothDamp(current, target, currentVelocity, smoothTime, maxSpeed = Infinity, deltaTime) {
+      smoothTime = Math.max(1e-4, smoothTime);
+      const omega = 2 / smoothTime;
+      const x = omega * deltaTime;
+      const exp = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+      let changeX = current.x - target.x;
+      let changeY = current.y - target.y;
+      const originalTo = target.clone();
+      const maxChange = maxSpeed * smoothTime;
+      const maxChangeSq = maxChange * maxChange;
+      const sqrMag = changeX * changeX + changeY * changeY;
+      if (sqrMag > maxChangeSq) {
+        const mag = Math.sqrt(sqrMag);
+        changeX = changeX / mag * maxChange;
+        changeY = changeY / mag * maxChange;
+      }
+      const targetX = current.x - changeX;
+      const targetY = current.y - changeY;
+      const tempX = (currentVelocity.x + omega * changeX) * deltaTime;
+      const tempY = (currentVelocity.y + omega * changeY) * deltaTime;
+      currentVelocity.x = (currentVelocity.x - omega * tempX) * exp;
+      currentVelocity.y = (currentVelocity.y - omega * tempY) * exp;
+      let outputX = targetX + (changeX + tempX) * exp;
+      let outputY = targetY + (changeY + tempY) * exp;
+      const origMinusCurrentX = originalTo.x - current.x;
+      const origMinusCurrentY = originalTo.y - current.y;
+      const outMinusOrigX = outputX - originalTo.x;
+      const outMinusOrigY = outputY - originalTo.y;
+      if (origMinusCurrentX * outMinusOrigX + origMinusCurrentY * outMinusOrigY > 0) {
+        outputX = originalTo.x;
+        outputY = originalTo.y;
+        currentVelocity.x = (outputX - originalTo.x) / deltaTime;
+        currentVelocity.y = (outputY - originalTo.y) / deltaTime;
+      }
+      return new _Vector2(outputX, outputY);
+    }
+  };
+
   // src/common/components/CameraComponent.js
   var CameraComponent = class extends Component {
     constructor(canvas, zoom = 1) {
@@ -245,15 +601,14 @@ var Nity = (() => {
       this.zoom = zoom;
     }
     applyTransform(ctx) {
-      const x = this.gameObject.getGlobalX();
-      const y = this.gameObject.getGlobalY();
+      const position = this.gameObject.getGlobalPosition();
       ctx.setTransform(
         this.zoom,
         0,
         0,
         this.zoom,
-        -x * this.zoom + this.canvas.width / 2,
-        -y * this.zoom + this.canvas.height / 2
+        -position.x * this.zoom + this.canvas.width / 2,
+        -position.y * this.zoom + this.canvas.height / 2
       );
     }
   };
@@ -656,12 +1011,15 @@ var Nity = (() => {
   var GameObject = class _GameObject {
     /**
      * Creates a new GameObject.
-     * @param {number} [x=0] - The initial x-coordinate of the GameObject.
-     * @param {number} [y=0] - The initial y-coordinate of the
-     *  */
+     * @param {number|Vector2} [x=0] - The initial x-coordinate or Vector2 position of the GameObject.
+     * @param {number} [y=0] - The initial y-coordinate of the GameObject (ignored if x is Vector2).
+     */
     constructor(x = 0, y = 0) {
-      this.x = x;
-      this.y = y;
+      if (x instanceof Vector2) {
+        this.position = x.clone();
+      } else {
+        this.position = new Vector2(x, y);
+      }
       this.components = [];
       this.children = [];
       this.parent = null;
@@ -777,26 +1135,39 @@ var Nity = (() => {
       }
     }
     /**
-     * Gets the global x-coordinate of the GameObject.
-     * If the GameObject has a parent, it will add the parent's global x-coordinate to its own x-coordinate.
-     * @return {number} The global x-coordinate of the GameObject.
+     * Gets the global position of the GameObject as a Vector2.
+     * @returns {Vector2} The global position of the GameObject.
      */
-    getGlobalX() {
-      return this.parent ? this.x + this.parent.getGlobalX() : this.x;
-    }
-    /**
-     * Gets the global y-coordinate of the GameObject.
-     * If the GameObject has a parent, it will add the parent's global y-coordinate to its own y-coordinate.
-     * @return {number} The global y-coordinate of the GameObject.
-     */
-    getGlobalY() {
-      return this.parent ? this.y + this.parent.getGlobalY() : this.y;
+    getGlobalPosition() {
+      if (this.parent) {
+        return this.position.add(this.parent.getGlobalPosition());
+      }
+      return this.position.clone();
     }
     /**
      * Sets the position of the GameObject.
-     * @param {number} x - The new x-coordinate of the GameObject.
-     * @param {number} y - The new y-coordinate of the GameObject.
+     * @param {number|Vector2} x - The new x-coordinate of the GameObject or Vector2 position.
+     * @param {number} [y] - The new y-coordinate of the GameObject (ignored if x is Vector2).
      */
+    setPosition(x, y) {
+      if (x instanceof Vector2) {
+        this.position.set(x.x, x.y);
+      } else {
+        this.position.set(x, y);
+      }
+    }
+    /**
+     * Translates the GameObject by the given offset.
+     * @param {number|Vector2} x - The x offset or Vector2 offset.
+     * @param {number} [y] - The y offset (ignored if x is Vector2).
+     */
+    translate(x, y) {
+      if (x instanceof Vector2) {
+        this.position = this.position.add(x);
+      } else {
+        this.position = this.position.add(new Vector2(x, y));
+      }
+    }
     async preload() {
       const promises = this.components.map((c) => c.preload?.());
       for (const child of this.children) {
@@ -1248,9 +1619,8 @@ var Nity = (() => {
      */
     __draw(ctx) {
       if (!this.sprite || !this.sprite.image || !this.sprite.isLoaded) return;
-      const x = this.gameObject.getGlobalX();
-      const y = this.gameObject.getGlobalY();
-      this.sprite.draw(ctx, x, y, null, null, this.gameObject.rotation || 0);
+      const position = this.gameObject.getGlobalPosition();
+      this.sprite.draw(ctx, position.x, position.y, null, null, this.gameObject.rotation || 0);
     }
     /**
      * Change the sprite being rendered using unified sprite key
@@ -1434,7 +1804,7 @@ var Nity = (() => {
       super();
       this.gravity = true;
       this.gravityScale = options.gravityScale || 300;
-      this.velocity = { x: 0, y: 0 };
+      this.velocity = new Vector2(0, 0);
     }
     /**
      * Updates the gravity effect. Called automatically each frame.
@@ -1449,12 +1819,15 @@ var Nity = (() => {
      * Moves the GameObject by the specified offset.
      * @private
      * 
-     * @param {number} dx - X offset
-     * @param {number} dy - Y offset
+     * @param {number|Vector2} dx - X offset or Vector2 offset
+     * @param {number} [dy] - Y offset (ignored if dx is Vector2)
      */
     _doMove(dx, dy) {
-      this.gameObject.x += dx;
-      this.gameObject.y += dy;
+      if (dx instanceof Vector2) {
+        this.gameObject.translate(dx);
+      } else {
+        this.gameObject.translate(dx, dy);
+      }
     }
   };
 
@@ -1490,29 +1863,36 @@ var Nity = (() => {
      */
     update() {
       super.update();
-      this.move(this.velocity.x * Time.deltaTime(), this.velocity.y * Time.deltaTime());
+      const movement = this.velocity.multiply(Time.deltaTime());
+      this.move(movement.x, movement.y);
     }
     /**
      * Moves the GameObject and handles collision resolution.
-     * @param {number} dx - The change in x position.
-     * @param {number} dy - The change in y position.
+     * @param {number|Vector2} dx - The change in x position or Vector2 movement.
+     * @param {number} [dy] - The change in y position (ignored if dx is Vector2).
      * @returns {boolean} - Returns true if the movement was successful.
      */
     move(dx, dy) {
       if (!this.#_collider) return true;
-      const maxSpeed = Math.max(Math.abs(dx), Math.abs(dy));
+      let moveX, moveY;
+      if (dx instanceof Vector2) {
+        moveX = dx.x;
+        moveY = dx.y;
+      } else {
+        moveX = dx;
+        moveY = dy;
+      }
+      const maxSpeed = Math.max(Math.abs(moveX), Math.abs(moveY));
       const steps = Math.max(1, Math.ceil(maxSpeed / 0.25));
-      const stepX = dx / steps;
-      const stepY = dy / steps;
+      const stepX = moveX / steps;
+      const stepY = moveY / steps;
       let currentCollisions = /* @__PURE__ */ new Set();
       let resolved = false;
-      let totalMoved = { x: 0, y: 0 };
+      let totalMoved = new Vector2(0, 0);
       for (let i = 0; i < steps; i++) {
-        const prevX = this.gameObject.x;
-        const prevY = this.gameObject.y;
+        const prevPos = this.gameObject.position.clone();
         this._doMove(stepX, stepY);
-        totalMoved.x += stepX;
-        totalMoved.y += stepY;
+        totalMoved = totalMoved.add(new Vector2(stepX, stepY));
         for (const other of CollisionSystem.instance.colliders) {
           if (other === this.#_collider) continue;
           if (!this.#_collider.checkCollisionWith(other)) continue;
@@ -1530,8 +1910,7 @@ var Nity = (() => {
               this.#eventStay(otherObj, this.gameObject);
           }
           if (!isTrigger && !resolved) {
-            this.gameObject.x = prevX;
-            this.gameObject.y = prevY;
+            this.gameObject.setPosition(prevPos);
             if (Math.abs(stepY) > Math.abs(stepX)) {
               this.velocity.y *= -this.bounciness;
             } else {
@@ -1608,12 +1987,15 @@ var Nity = (() => {
     }
     /**
      * Directly moves the GameObject without collision checking.
-     * @param {number} dx - The change in x position.
-     * @param {number} dy - The change in y position.
+     * @param {number|Vector2} dx - The change in x position or Vector2 movement.
+     * @param {number} [dy] - The change in y position (ignored if dx is Vector2).
      */
     _doMove(dx, dy) {
-      this.gameObject.x += dx;
-      this.gameObject.y += dy;
+      if (dx instanceof Vector2) {
+        this.gameObject.translate(dx);
+      } else {
+        this.gameObject.translate(dx, dy);
+      }
     }
   };
 
@@ -1631,13 +2013,13 @@ var Nity = (() => {
       }
     }
     update() {
-      let dx = 0, dy = 0;
-      if (Input.isKeyDown("ArrowRight") || Input.isKeyDown("d") || Input.isKeyDown("D")) dx += this.speed * Time.deltaTime();
-      if (Input.isKeyDown("ArrowLeft") || Input.isKeyDown("a") || Input.isKeyDown("A")) dx -= this.speed * Time.deltaTime();
-      if (Input.isKeyDown("ArrowDown") || Input.isKeyDown("s") || Input.isKeyDown("S")) dy += this.speed * Time.deltaTime();
-      if (Input.isKeyDown("ArrowUp") || Input.isKeyDown("w") || Input.isKeyDown("W")) dy -= this.speed * Time.deltaTime();
-      if (dx !== 0 || dy !== 0) {
-        this.rigidbody.move(dx, dy);
+      const movement = new Vector2(0, 0);
+      if (Input.isKeyDown("ArrowRight") || Input.isKeyDown("d") || Input.isKeyDown("D")) movement.x += this.speed * Time.deltaTime();
+      if (Input.isKeyDown("ArrowLeft") || Input.isKeyDown("a") || Input.isKeyDown("A")) movement.x -= this.speed * Time.deltaTime();
+      if (Input.isKeyDown("ArrowDown") || Input.isKeyDown("s") || Input.isKeyDown("S")) movement.y += this.speed * Time.deltaTime();
+      if (Input.isKeyDown("ArrowUp") || Input.isKeyDown("w") || Input.isKeyDown("W")) movement.y -= this.speed * Time.deltaTime();
+      if (movement.magnitude > 0) {
+        this.rigidbody.move(movement);
       }
     }
   };
@@ -2018,8 +2400,8 @@ var Nity = (() => {
      */
     draw(ctx) {
       if (this.image) {
-        const x = this.gameObject.getGlobalX();
-        const y = this.gameObject.getGlobalY();
+        const x = this.gameObject.getGlobalPosition().x;
+        const y = this.gameObject.getGlobalPosition().y;
         ctx.drawImage(this.image, x, y, this.width, this.height);
       }
     }
@@ -2092,13 +2474,13 @@ var Nity = (() => {
       this.options.points = points;
     }
     get x2() {
-      return this.options.x2 || this.gameObject.getGlobalX() + 10;
+      return this.options.x2 || this.gameObject.getGlobalPosition().x + 10;
     }
     set x2(x2) {
       this.options.x2 = x2;
     }
     get y2() {
-      return this.options.y2 || this.gameObject.getGlobalY();
+      return this.options.y2 || this.gameObject.getGlobalPosition().y;
     }
     set y2(y2) {
       this.options.y2 = y2;
@@ -2115,8 +2497,8 @@ var Nity = (() => {
      * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
      */
     __draw(ctx) {
-      const x = this.gameObject.getGlobalX();
-      const y = this.gameObject.getGlobalY();
+      const x = this.gameObject.getGlobalPosition().x;
+      const y = this.gameObject.getGlobalPosition().y;
       switch (this.shape) {
         case "rectangle":
         case "square":
@@ -2270,8 +2652,8 @@ var Nity = (() => {
      * @returns {Object} Bounds object with x, y, and radius properties
      */
     getBounds() {
-      const x = this.gameObject.getGlobalX();
-      const y = this.gameObject.getGlobalY();
+      const x = this.gameObject.getGlobalPosition().x;
+      const y = this.gameObject.getGlobalPosition().y;
       let r = this.radius;
       const sprite = this.gameObject.getComponent(SpriteRendererComponent)?.sprite;
       if (r === null && sprite) {
@@ -2304,8 +2686,8 @@ var Nity = (() => {
       return a.x < b.x + b.width + tolerance && a.x + a.width + tolerance > b.x && a.y < b.y + b.height + tolerance && a.y + a.height + tolerance > b.y;
     }
     getBounds() {
-      const x = this.gameObject.getGlobalX();
-      const y = this.gameObject.getGlobalY();
+      const x = this.gameObject.getGlobalPosition().x;
+      const y = this.gameObject.getGlobalPosition().y;
       let w = this.width;
       let h = this.height;
       const sprite = this.gameObject.getComponent(SpriteRendererComponent)?.sprite;
@@ -2330,6 +2712,468 @@ var Nity = (() => {
     }
   };
 
+  // src/math/Vector3.js
+  var Vector3 = class _Vector3 {
+    /**
+     * Creates a new Vector3.
+     * @param {number} x - The x component (default: 0)
+     * @param {number} y - The y component (default: 0)
+     * @param {number} z - The z component (default: 0)
+     */
+    constructor(x = 0, y = 0, z = 0) {
+      this.x = x;
+      this.y = y;
+      this.z = z;
+    }
+    // Static constants
+    static get zero() {
+      return new _Vector3(0, 0, 0);
+    }
+    static get one() {
+      return new _Vector3(1, 1, 1);
+    }
+    static get up() {
+      return new _Vector3(0, 1, 0);
+    }
+    static get down() {
+      return new _Vector3(0, -1, 0);
+    }
+    static get left() {
+      return new _Vector3(-1, 0, 0);
+    }
+    static get right() {
+      return new _Vector3(1, 0, 0);
+    }
+    static get forward() {
+      return new _Vector3(0, 0, 1);
+    }
+    static get back() {
+      return new _Vector3(0, 0, -1);
+    }
+    static get positiveInfinity() {
+      return new _Vector3(Infinity, Infinity, Infinity);
+    }
+    static get negativeInfinity() {
+      return new _Vector3(-Infinity, -Infinity, -Infinity);
+    }
+    /**
+     * Gets the magnitude (length) of this vector.
+     * @returns {number} The magnitude of the vector
+     */
+    get magnitude() {
+      return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
+    }
+    /**
+     * Gets the squared magnitude of this vector (faster than magnitude).
+     * @returns {number} The squared magnitude of the vector
+     */
+    get sqrMagnitude() {
+      return this.x * this.x + this.y * this.y + this.z * this.z;
+    }
+    /**
+     * Gets the normalized version of this vector.
+     * @returns {Vector3} A normalized copy of this vector
+     */
+    get normalized() {
+      const mag = this.magnitude;
+      if (mag === 0) return _Vector3.zero;
+      return new _Vector3(this.x / mag, this.y / mag, this.z / mag);
+    }
+    /**
+     * Adds another vector to this vector.
+     * @param {Vector3} other - The vector to add
+     * @returns {Vector3} A new vector representing the sum
+     */
+    add(other) {
+      return new _Vector3(this.x + other.x, this.y + other.y, this.z + other.z);
+    }
+    /**
+     * Subtracts another vector from this vector.
+     * @param {Vector3} other - The vector to subtract
+     * @returns {Vector3} A new vector representing the difference
+     */
+    subtract(other) {
+      return new _Vector3(this.x - other.x, this.y - other.y, this.z - other.z);
+    }
+    /**
+     * Multiplies this vector by a scalar.
+     * @param {number} scalar - The scalar to multiply by
+     * @returns {Vector3} A new vector representing the product
+     */
+    multiply(scalar) {
+      return new _Vector3(this.x * scalar, this.y * scalar, this.z * scalar);
+    }
+    /**
+     * Divides this vector by a scalar.
+     * @param {number} scalar - The scalar to divide by
+     * @returns {Vector3} A new vector representing the quotient
+     */
+    divide(scalar) {
+      if (scalar === 0) throw new Error("Cannot divide by zero");
+      return new _Vector3(this.x / scalar, this.y / scalar, this.z / scalar);
+    }
+    /**
+     * Normalizes this vector in place.
+     * @returns {Vector3} This vector for chaining
+     */
+    normalize() {
+      const mag = this.magnitude;
+      if (mag === 0) {
+        this.x = 0;
+        this.y = 0;
+        this.z = 0;
+      } else {
+        this.x /= mag;
+        this.y /= mag;
+        this.z /= mag;
+      }
+      return this;
+    }
+    /**
+     * Sets the components of this vector.
+     * @param {number} x - The new x component
+     * @param {number} y - The new y component
+     * @param {number} z - The new z component
+     * @returns {Vector3} This vector for chaining
+     */
+    set(x, y, z) {
+      this.x = x;
+      this.y = y;
+      this.z = z;
+      return this;
+    }
+    /**
+     * Creates a copy of this vector.
+     * @returns {Vector3} A new vector with the same components
+     */
+    clone() {
+      return new _Vector3(this.x, this.y, this.z);
+    }
+    /**
+     * Checks if this vector equals another vector.
+     * @param {Vector3} other - The vector to compare to
+     * @returns {boolean} True if vectors are equal
+     */
+    equals(other) {
+      return this.x === other.x && this.y === other.y && this.z === other.z;
+    }
+    /**
+     * Returns a string representation of this vector.
+     * @returns {string} String representation
+     */
+    toString() {
+      return `(${this.x.toFixed(2)}, ${this.y.toFixed(2)}, ${this.z.toFixed(2)})`;
+    }
+    // Static methods
+    /**
+     * Calculates the dot product of two vectors.
+     * @param {Vector3} a - First vector
+     * @param {Vector3} b - Second vector
+     * @returns {number} The dot product
+     */
+    static dot(a, b) {
+      return a.x * b.x + a.y * b.y + a.z * b.z;
+    }
+    /**
+     * Calculates the cross product of two vectors.
+     * @param {Vector3} a - First vector
+     * @param {Vector3} b - Second vector
+     * @returns {Vector3} The cross product
+     */
+    static cross(a, b) {
+      return new _Vector3(
+        a.y * b.z - a.z * b.y,
+        a.z * b.x - a.x * b.z,
+        a.x * b.y - a.y * b.x
+      );
+    }
+    /**
+     * Calculates the distance between two vectors.
+     * @param {Vector3} a - First vector
+     * @param {Vector3} b - Second vector
+     * @returns {number} The distance between the vectors
+     */
+    static distance(a, b) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      const dz = a.z - b.z;
+      return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+    /**
+     * Calculates the squared distance between two vectors (faster than distance).
+     * @param {Vector3} a - First vector
+     * @param {Vector3} b - Second vector
+     * @returns {number} The squared distance between the vectors
+     */
+    static sqrDistance(a, b) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      const dz = a.z - b.z;
+      return dx * dx + dy * dy + dz * dz;
+    }
+    /**
+     * Linearly interpolates between two vectors.
+     * @param {Vector3} a - Start vector
+     * @param {Vector3} b - End vector
+     * @param {number} t - Interpolation factor (0-1)
+     * @returns {Vector3} Interpolated vector
+     */
+    static lerp(a, b, t) {
+      t = Math.max(0, Math.min(1, t));
+      return new _Vector3(
+        a.x + (b.x - a.x) * t,
+        a.y + (b.y - a.y) * t,
+        a.z + (b.z - a.z) * t
+      );
+    }
+    /**
+     * Linearly interpolates between two vectors without clamping t.
+     * @param {Vector3} a - Start vector
+     * @param {Vector3} b - End vector
+     * @param {number} t - Interpolation factor
+     * @returns {Vector3} Interpolated vector
+     */
+    static lerpUnclamped(a, b, t) {
+      return new _Vector3(
+        a.x + (b.x - a.x) * t,
+        a.y + (b.y - a.y) * t,
+        a.z + (b.z - a.z) * t
+      );
+    }
+    /**
+     * Spherically interpolates between two vectors.
+     * @param {Vector3} a - Start vector
+     * @param {Vector3} b - End vector
+     * @param {number} t - Interpolation factor (0-1)
+     * @returns {Vector3} Spherically interpolated vector
+     */
+    static slerp(a, b, t) {
+      t = Math.max(0, Math.min(1, t));
+      const dot = _Vector3.dot(a.normalized, b.normalized);
+      const clampedDot = Math.max(-1, Math.min(1, dot));
+      if (Math.abs(clampedDot) > 0.9995) {
+        return _Vector3.lerp(a, b, t);
+      }
+      const theta = Math.acos(Math.abs(clampedDot));
+      const sinTheta = Math.sin(theta);
+      const factorA = Math.sin((1 - t) * theta) / sinTheta;
+      const factorB = Math.sin(t * theta) / sinTheta;
+      if (clampedDot < 0) {
+        return new _Vector3(
+          factorA * a.x - factorB * b.x,
+          factorA * a.y - factorB * b.y,
+          factorA * a.z - factorB * b.z
+        );
+      }
+      return new _Vector3(
+        factorA * a.x + factorB * b.x,
+        factorA * a.y + factorB * b.y,
+        factorA * a.z + factorB * b.z
+      );
+    }
+    /**
+     * Returns a vector with the minimum components of two vectors.
+     * @param {Vector3} a - First vector
+     * @param {Vector3} b - Second vector
+     * @returns {Vector3} Vector with minimum components
+     */
+    static min(a, b) {
+      return new _Vector3(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.min(a.z, b.z));
+    }
+    /**
+     * Returns a vector with the maximum components of two vectors.
+     * @param {Vector3} a - First vector
+     * @param {Vector3} b - Second vector
+     * @returns {Vector3} Vector with maximum components
+     */
+    static max(a, b) {
+      return new _Vector3(Math.max(a.x, b.x), Math.max(a.y, b.y), Math.max(a.z, b.z));
+    }
+    /**
+     * Moves a point towards a target.
+     * @param {Vector3} current - Current position
+     * @param {Vector3} target - Target position
+     * @param {number} maxDistanceDelta - Maximum distance to move
+     * @returns {Vector3} New position
+     */
+    static moveTowards(current, target, maxDistanceDelta) {
+      const diff = target.subtract(current);
+      const distance = diff.magnitude;
+      if (distance <= maxDistanceDelta || distance === 0) {
+        return target.clone();
+      }
+      return current.add(diff.divide(distance).multiply(maxDistanceDelta));
+    }
+    /**
+     * Reflects a vector off a plane defined by a normal.
+     * @param {Vector3} inDirection - The direction vector to reflect
+     * @param {Vector3} inNormal - The normal of the surface
+     * @returns {Vector3} The reflected vector
+     */
+    static reflect(inDirection, inNormal) {
+      const factor = -2 * _Vector3.dot(inNormal, inDirection);
+      return new _Vector3(
+        factor * inNormal.x + inDirection.x,
+        factor * inNormal.y + inDirection.y,
+        factor * inNormal.z + inDirection.z
+      );
+    }
+    /**
+     * Returns the angle in radians between two vectors.
+     * @param {Vector3} from - First vector
+     * @param {Vector3} to - Second vector
+     * @returns {number} Angle in radians
+     */
+    static angle(from, to) {
+      const denominator = Math.sqrt(from.sqrMagnitude * to.sqrMagnitude);
+      if (denominator < 1e-15) return 0;
+      const dot = Math.max(-1, Math.min(1, _Vector3.dot(from, to) / denominator));
+      return Math.acos(dot);
+    }
+    /**
+     * Projects a vector onto another vector.
+     * @param {Vector3} vector - The vector to project
+     * @param {Vector3} onNormal - The vector to project onto
+     * @returns {Vector3} The projected vector
+     */
+    static project(vector, onNormal) {
+      const sqrMag = onNormal.sqrMagnitude;
+      if (sqrMag < 1e-15) return _Vector3.zero;
+      const dot = _Vector3.dot(vector, onNormal);
+      return onNormal.multiply(dot / sqrMag);
+    }
+    /**
+     * Projects a vector onto a plane defined by a normal.
+     * @param {Vector3} vector - The vector to project
+     * @param {Vector3} planeNormal - The normal of the plane
+     * @returns {Vector3} The projected vector
+     */
+    static projectOnPlane(vector, planeNormal) {
+      const sqrMag = planeNormal.sqrMagnitude;
+      if (sqrMag < 1e-15) return vector.clone();
+      const dot = _Vector3.dot(vector, planeNormal);
+      return vector.subtract(planeNormal.multiply(dot / sqrMag));
+    }
+    /**
+     * Clamps the magnitude of a vector to a maximum length.
+     * @param {Vector3} vector - The vector to clamp
+     * @param {number} maxLength - The maximum length
+     * @returns {Vector3} The clamped vector
+     */
+    static clampMagnitude(vector, maxLength) {
+      const sqrMagnitude = vector.sqrMagnitude;
+      if (sqrMagnitude > maxLength * maxLength) {
+        const mag = Math.sqrt(sqrMagnitude);
+        const normalizedX = vector.x / mag;
+        const normalizedY = vector.y / mag;
+        const normalizedZ = vector.z / mag;
+        return new _Vector3(normalizedX * maxLength, normalizedY * maxLength, normalizedZ * maxLength);
+      }
+      return vector.clone();
+    }
+    /**
+     * Rotates a vector towards another vector.
+     * @param {Vector3} current - Current direction
+     * @param {Vector3} target - Target direction
+     * @param {number} maxRadiansDelta - Maximum rotation in radians
+     * @param {number} maxMagnitudeDelta - Maximum magnitude change
+     * @returns {Vector3} The rotated vector
+     */
+    static rotateTowards(current, target, maxRadiansDelta, maxMagnitudeDelta) {
+      const currentMag = current.magnitude;
+      const targetMag = target.magnitude;
+      if (currentMag > 1e-15 && targetMag > 1e-15) {
+        const currentNorm = current.divide(currentMag);
+        const targetNorm = target.divide(targetMag);
+        const angle = _Vector3.angle(currentNorm, targetNorm);
+        if (angle > 1e-15) {
+          const t = Math.min(1, maxRadiansDelta / angle);
+          const newDirection = _Vector3.slerp(currentNorm, targetNorm, t);
+          const newMagnitude2 = currentMag + Math.max(-maxMagnitudeDelta, Math.min(maxMagnitudeDelta, targetMag - currentMag));
+          return newDirection.multiply(newMagnitude2);
+        }
+      }
+      const newMagnitude = currentMag + Math.max(-maxMagnitudeDelta, Math.min(maxMagnitudeDelta, targetMag - currentMag));
+      return target.normalized.multiply(newMagnitude);
+    }
+    /**
+     * Smoothly damps between vectors.
+     * @param {Vector3} current - Current position
+     * @param {Vector3} target - Target position
+     * @param {Object} currentVelocity - Object with x, y, z velocity components (modified by reference)
+     * @param {number} smoothTime - Approximate time to reach target
+     * @param {number} maxSpeed - Maximum speed (optional)
+     * @param {number} deltaTime - Time since last call
+     * @returns {Vector3} Smoothly damped position
+     */
+    static smoothDamp(current, target, currentVelocity, smoothTime, maxSpeed = Infinity, deltaTime) {
+      smoothTime = Math.max(1e-4, smoothTime);
+      const omega = 2 / smoothTime;
+      const x = omega * deltaTime;
+      const exp = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+      let changeX = current.x - target.x;
+      let changeY = current.y - target.y;
+      let changeZ = current.z - target.z;
+      const originalTo = target.clone();
+      const maxChange = maxSpeed * smoothTime;
+      const maxChangeSq = maxChange * maxChange;
+      const sqrMag = changeX * changeX + changeY * changeY + changeZ * changeZ;
+      if (sqrMag > maxChangeSq) {
+        const mag = Math.sqrt(sqrMag);
+        changeX = changeX / mag * maxChange;
+        changeY = changeY / mag * maxChange;
+        changeZ = changeZ / mag * maxChange;
+      }
+      const targetX = current.x - changeX;
+      const targetY = current.y - changeY;
+      const targetZ = current.z - changeZ;
+      const tempX = (currentVelocity.x + omega * changeX) * deltaTime;
+      const tempY = (currentVelocity.y + omega * changeY) * deltaTime;
+      const tempZ = (currentVelocity.z + omega * changeZ) * deltaTime;
+      currentVelocity.x = (currentVelocity.x - omega * tempX) * exp;
+      currentVelocity.y = (currentVelocity.y - omega * tempY) * exp;
+      currentVelocity.z = (currentVelocity.z - omega * tempZ) * exp;
+      let outputX = targetX + (changeX + tempX) * exp;
+      let outputY = targetY + (changeY + tempY) * exp;
+      let outputZ = targetZ + (changeZ + tempZ) * exp;
+      const origMinusCurrentX = originalTo.x - current.x;
+      const origMinusCurrentY = originalTo.y - current.y;
+      const origMinusCurrentZ = originalTo.z - current.z;
+      const outMinusOrigX = outputX - originalTo.x;
+      const outMinusOrigY = outputY - originalTo.y;
+      const outMinusOrigZ = outputZ - originalTo.z;
+      if (origMinusCurrentX * outMinusOrigX + origMinusCurrentY * outMinusOrigY + origMinusCurrentZ * outMinusOrigZ > 0) {
+        outputX = originalTo.x;
+        outputY = originalTo.y;
+        outputZ = originalTo.z;
+        currentVelocity.x = (outputX - originalTo.x) / deltaTime;
+        currentVelocity.y = (outputY - originalTo.y) / deltaTime;
+        currentVelocity.z = (outputZ - originalTo.z) / deltaTime;
+      }
+      return new _Vector3(outputX, outputY, outputZ);
+    }
+    /**
+     * Returns an orthonormal basis from a single vector.
+     * @param {Vector3} normal - The normal vector (will be normalized)
+     * @returns {Object} Object containing {normal, tangent, binormal}
+     */
+    static orthonormalize(normal) {
+      const norm = normal.normalized;
+      let tangent;
+      if (Math.abs(norm.x) < 0.9) {
+        tangent = _Vector3.cross(norm, _Vector3.right).normalized;
+      } else {
+        tangent = _Vector3.cross(norm, _Vector3.up).normalized;
+      }
+      const binormal = _Vector3.cross(norm, tangent).normalized;
+      return {
+        normal: norm,
+        tangent,
+        binormal
+      };
+    }
+  };
+
   // src/extensions/movement/FollowTarget.js
   var FollowTarget = class extends Component {
     constructor(target) {
@@ -2338,7 +3182,13 @@ var Nity = (() => {
     }
     update() {
       if (!this.target) return;
-      this.gameObject.x = this.target.x;
+      if (this.target instanceof Vector2) {
+        this.gameObject.setPosition(this.target);
+      } else if (this.target.position) {
+        this.gameObject.setPosition(this.target.position);
+      } else {
+        this.gameObject.setPosition(this.target.x, this.target.y);
+      }
     }
   };
   return __toCommonJS(index_exports);

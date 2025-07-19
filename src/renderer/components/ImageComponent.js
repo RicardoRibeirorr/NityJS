@@ -44,8 +44,8 @@ export class ImageComponent extends Component {
      */
     draw(ctx) {
         if (this.image) {
-            const x = this.gameObject.getGlobalX();
-            const y = this.gameObject.getGlobalY();
+            const x = this.gameObject.getGlobalPosition().x;
+            const y = this.gameObject.getGlobalPosition().y;
             ctx.drawImage(this.image, x, y, this.width, this.height);
         }
     }

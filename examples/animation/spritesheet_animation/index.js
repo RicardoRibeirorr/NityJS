@@ -1,5 +1,5 @@
 
-import { Game, Scene, GameObject, SpriteRendererComponent, CameraComponent, SpritesheetAsset, Component } from '../../../dist/nity.module.min.js';
+import { Game, Scene, GameObject, SpriteRendererComponent, CameraComponent, SpritesheetAsset, Component, Vector2 } from '../../../dist/nity.module.min.js';
 import { SpriteAnimationComponent } from '../../../dist/nity.module.min.js';
 import { SpriteAnimationClip } from '../../../dist/nity.module.min.js';
 
@@ -11,7 +11,7 @@ const game = new Game(canvas);
 const scene = new Scene({
   create(scene) {
     
-    const player = new GameObject(100, 100);
+    const player = new GameObject(new Vector2(100, 100));
     
     // Load the spritesheet - automatically registers individual sprites with colon notation
     new SpritesheetAsset("SPS_Player_Walk", "./assets/player_walk_spritesheet.png", {
@@ -36,7 +36,7 @@ const scene = new Scene({
     ], 8, true));
     player.addComponent(anim);
 
-    const cameraObject = new GameObject(0, 0);
+    const cameraObject = new GameObject(new Vector2(0, 0));
         cameraObject.addComponent(new CameraComponent(game.canvas, 6));
     cameraObject.name = 'MainCamera';
     player.addChild(cameraObject);

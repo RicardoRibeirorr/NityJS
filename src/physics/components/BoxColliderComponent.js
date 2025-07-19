@@ -37,8 +37,8 @@ export class BoxColliderComponent extends AbstractColliderComponent {
     }
 
     getBounds() {
-        const x = this.gameObject.getGlobalX();
-        const y = this.gameObject.getGlobalY();
+        const x = this.gameObject.getGlobalPosition().x;
+        const y = this.gameObject.getGlobalPosition().y;
         let w = this.width;
         let h = this.height;
 
