@@ -71,7 +71,7 @@ export class SpriteAnimationComponent extends Component {
     update() {
         if (!this.currentClip) return;
 
-        this.time += Time.deltaTime();
+        this.time += Time.deltaTime;
         const frameDuration = 1 / this.currentClip.fps;
 
         if (this.time >= frameDuration) {

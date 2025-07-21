@@ -1508,6 +1508,213 @@ var Nity = (() => {
     }
   };
 
+  // src/core/Time.js
+  var Time = class {
+    static #startTime = performance.now();
+    static #lastFrameTime = performance.now();
+    static #frameCount = 0;
+    static #fpsUpdateInterval = 1e3;
+    // Update FPS every second
+    static #lastFpsUpdate = performance.now();
+    static #currentFps = 60;
+    static #timeScale = 1;
+    /**
+     * Returns the time elapsed since the last frame in seconds.
+     * This is useful for creating frame-rate independent animations and movement.
+     * 
+     * @returns {number} The delta time in seconds
+     * 
+     * @example
+     * // Move an object at 50 pixels per second regardless of frame rate
+     * gameObject.x += 50 * Time.deltaTime;
+     */
+    static get deltaTime() {
+      return Game.instance?._deltaTime || 0;
+    }
+    /**
+     * The unscaled time elapsed since the last frame in seconds.
+     * This is not affected by timeScale and is useful for UI animations.
+     * 
+     * @returns {number} The unscaled delta time in seconds
+     */
+    static get unscaleddeltaTime() {
+      return (Game.instance?._deltaTime || 0) / this.#timeScale;
+    }
+    /**
+     * The time at the beginning of this frame in seconds since the game started.
+     * This is affected by timeScale.
+     * 
+     * @returns {number} The current game time in seconds
+     */
+    static get time() {
+      return (performance.now() - this.#startTime) / 1e3 * this.#timeScale;
+    }
+    /**
+     * The unscaled time at the beginning of this frame in seconds since the game started.
+     * This is not affected by timeScale.
+     * 
+     * @returns {number} The current real time in seconds
+     */
+    static get unscaledTime() {
+      return (performance.now() - this.#startTime) / 1e3;
+    }
+    /**
+     * The current frames per second (updated once per second).
+     * 
+     * @returns {number} The current FPS
+     */
+    static get fps() {
+      return this.#currentFps;
+    }
+    /**
+     * The total number of frames that have passed since the game started.
+     * 
+     * @returns {number} The frame count
+     */
+    static get frameCount() {
+      return this.#frameCount;
+    }
+    /**
+     * The scale at which time passes. This affects deltaTime and time.
+     * 1.0 = normal speed, 0.5 = half speed, 2.0 = double speed, 0.0 = paused.
+     * 
+     * @returns {number} The current time scale
+     */
+    static get timeScale() {
+      return this.#timeScale;
+    }
+    /**
+     * Sets the time scale. Useful for slow motion, fast forward, or pause effects.
+     * 
+     * @param {number} value - The new time scale (0 = paused, 1 = normal, 2 = double speed, etc.)
+     */
+    static set timeScale(value) {
+      this.#timeScale = Math.max(0, value);
+    }
+    /**
+     * Returns the current high-precision timestamp in milliseconds.
+     * Uses performance.now() for sub-millisecond accuracy.
+     * 
+     * @returns {number} The current timestamp in milliseconds
+     */
+    static get timestamp() {
+      return performance.now();
+    }
+    /**
+     * Returns the time since the Unix epoch in milliseconds.
+     * Equivalent to Date.now() but more explicit.
+     * 
+     * @returns {number} The current Unix timestamp in milliseconds
+     */
+    static get realtimeSinceStartup() {
+      return Date.now();
+    }
+    /**
+     * Internal method called by the Game class to update time statistics.
+     * This should not be called directly by user code.
+     * 
+     * @private
+     */
+    static _updateTimeStats() {
+      const currentTime = performance.now();
+      this.#frameCount++;
+      if (currentTime - this.#lastFpsUpdate >= this.#fpsUpdateInterval) {
+        const deltaTime = currentTime - this.#lastFpsUpdate;
+        const framesPassed = this.#frameCount - (this.#lastFpsUpdate === performance.now() ? 0 : Math.floor(deltaTime / 16.67));
+        this.#currentFps = Math.round(1e3 / (deltaTime / framesPassed)) || 60;
+        this.#lastFpsUpdate = currentTime;
+      }
+      this.#lastFrameTime = currentTime;
+    }
+    /**
+     * Converts seconds to milliseconds.
+     * 
+     * @param {number} seconds - Time in seconds
+     * @returns {number} Time in milliseconds
+     */
+    static secondsToMilliseconds(seconds) {
+      return seconds * 1e3;
+    }
+    /**
+     * Converts milliseconds to seconds.
+     * 
+     * @param {number} milliseconds - Time in milliseconds
+     * @returns {number} Time in seconds
+     */
+    static millisecondsToSeconds(milliseconds) {
+      return milliseconds / 1e3;
+    }
+    /**
+     * Creates a simple timer that can be checked against.
+     * 
+     * @param {number} duration - Duration in seconds
+     * @returns {function} A function that returns true when the timer expires
+     * 
+     * @example
+     * const timer = Time.createTimer(2.0);
+     * // Later in update loop:
+     * if (timer()) {
+     *     console.log('2 seconds have passed!');
+     * }
+     */
+    static createTimer(duration) {
+      const startTime = this.time;
+      return () => this.time - startTime >= duration;
+    }
+    /**
+     * Creates a repeating timer that triggers at regular intervals.
+     * 
+     * @param {number} interval - Interval in seconds
+     * @returns {function} A function that returns true at each interval
+     * 
+     * @example
+     * const intervalTimer = Time.createInterval(1.0);
+     * // Later in update loop:
+     * if (intervalTimer()) {
+     *     console.log('Another second has passed!');
+     * }
+     */
+    static createInterval(interval) {
+      let lastTrigger = this.time;
+      return () => {
+        if (this.time - lastTrigger >= interval) {
+          lastTrigger = this.time;
+          return true;
+        }
+        return false;
+      };
+    }
+    /**
+     * Smoothly interpolates between two values over time.
+     * 
+     * @param {number} from - Starting value
+     * @param {number} to - Target value  
+     * @param {number} speed - Interpolation speed (higher = faster)
+     * @returns {number} The interpolated value
+     * 
+     * @example
+     * // Smooth camera follow
+     * camera.x = Time.lerp(camera.x, player.x, 2.0);
+     */
+    static lerp(from, to, speed) {
+      return from + (to - from) * (1 - Math.exp(-speed * this.deltaTime));
+    }
+    /**
+     * Resets the time system. Called when starting a new game or scene.
+     * This should not typically be called by user code.
+     * 
+     * @private
+     */
+    static _reset() {
+      this.#startTime = performance.now();
+      this.#lastFrameTime = performance.now();
+      this.#frameCount = 0;
+      this.#lastFpsUpdate = performance.now();
+      this.#currentFps = 60;
+      this.#timeScale = 1;
+    }
+  };
+
   // src/core/Game.js
   var Game = class _Game {
     #_forcedpaused = false;
@@ -1556,6 +1763,7 @@ var Nity = (() => {
       this.start();
     }
     start() {
+      Time._reset();
       Input.initialize(this.canvas);
       this.#_initEventListeners();
       requestAnimationFrame(this.loop.bind(this));
@@ -1564,6 +1772,7 @@ var Nity = (() => {
       this._deltaTime = (timestamp - this.#_lastTime) / 1e3;
       if (this._deltaTime > 0.1) this._deltaTime = 0.1;
       this.#_lastTime = timestamp;
+      Time._updateTimeStats();
       this.ctx.setTransform(1, 0, 0, 1, 0, 0);
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
       if (!this.#_forcedpaused) {
@@ -1624,23 +1833,6 @@ var Nity = (() => {
     }
   };
   Game.instance = null;
-
-  // src/core/Time.js
-  var Time = class {
-    /**
-     * Returns the time elapsed since the last frame in seconds.
-     * This is useful for creating frame-rate independent animations and movement.
-     * 
-     * @returns {number} The delta time in seconds
-     * 
-     * @example
-     * // Move an object at 50 pixels per second regardless of frame rate
-     * gameObject.x += 50 * Time.deltaTime();
-     */
-    static deltaTime() {
-      return Game.instance._deltaTime;
-    }
-  };
 
   // src/animations/SpriteAnimationClip.js
   var SpriteAnimationClip = class {
@@ -1765,7 +1957,7 @@ var Nity = (() => {
      */
     update() {
       if (!this.currentClip) return;
-      this.time += Time.deltaTime();
+      this.time += Time.deltaTime;
       const frameDuration = 1 / this.currentClip.fps;
       if (this.time >= frameDuration) {
         this.time -= frameDuration;
@@ -1891,7 +2083,7 @@ var Nity = (() => {
      */
     update() {
       if (this.gravity) {
-        this.velocity.y += this.gravityScale * Time.deltaTime();
+        this.velocity.y += this.gravityScale * Time.deltaTime;
       }
     }
     /**
@@ -1942,7 +2134,7 @@ var Nity = (() => {
      */
     update() {
       super.update();
-      const movement = this.velocity.multiply(Time.deltaTime());
+      const movement = this.velocity.multiply(Time.deltaTime);
       this.move(movement.x, movement.y);
     }
     /**
@@ -2094,10 +2286,10 @@ var Nity = (() => {
     }
     update() {
       const movement = new Vector2(0, 0);
-      if (Input.isKeyDown("ArrowRight") || Input.isKeyDown("d") || Input.isKeyDown("D")) movement.x += this.speed * Time.deltaTime();
-      if (Input.isKeyDown("ArrowLeft") || Input.isKeyDown("a") || Input.isKeyDown("A")) movement.x -= this.speed * Time.deltaTime();
-      if (Input.isKeyDown("ArrowDown") || Input.isKeyDown("s") || Input.isKeyDown("S")) movement.y += this.speed * Time.deltaTime();
-      if (Input.isKeyDown("ArrowUp") || Input.isKeyDown("w") || Input.isKeyDown("W")) movement.y -= this.speed * Time.deltaTime();
+      if (Input.isKeyDown("ArrowRight") || Input.isKeyDown("d") || Input.isKeyDown("D")) movement.x += this.speed * Time.deltaTime;
+      if (Input.isKeyDown("ArrowLeft") || Input.isKeyDown("a") || Input.isKeyDown("A")) movement.x -= this.speed * Time.deltaTime;
+      if (Input.isKeyDown("ArrowDown") || Input.isKeyDown("s") || Input.isKeyDown("S")) movement.y += this.speed * Time.deltaTime;
+      if (Input.isKeyDown("ArrowUp") || Input.isKeyDown("w") || Input.isKeyDown("W")) movement.y -= this.speed * Time.deltaTime;
       if (movement.magnitude > 0) {
         this.rigidbody.move(movement);
       }
@@ -2521,15 +2713,21 @@ var Nity = (() => {
       });
     }
     /**
-     * Draws the image on the canvas at the GameObject's global position.
+     * Draws the image on the canvas at the GameObject's global position with rotation support.
      * 
      * @param {CanvasRenderingContext2D} ctx - The canvas rendering context to draw on.
      */
     draw(ctx) {
       if (this.image) {
-        const x = this.gameObject.getGlobalPosition().x;
-        const y = this.gameObject.getGlobalPosition().y;
-        ctx.drawImage(this.image, x, y, this.width, this.height);
+        const position = this.gameObject.getGlobalPosition();
+        const rotation = this.gameObject.getGlobalRotation();
+        ctx.save();
+        ctx.translate(position.x, position.y);
+        if (rotation !== 0) {
+          ctx.rotate(rotation);
+        }
+        ctx.drawImage(this.image, -this.width / 2, -this.height / 2, this.width, this.height);
+        ctx.restore();
       }
     }
   };

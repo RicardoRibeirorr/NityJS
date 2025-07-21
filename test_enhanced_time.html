@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Time Class Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+        }
+        canvas {
+            border: 2px solid #333;
+            background: white;
+            display: block;
+            margin: 20px 0;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            background: #007acc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover { background: #005999; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .info-panel {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .section {
+            background: white;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            border-left: 4px solid #007acc;
+        }
+    </style>
+</head>
+<body>
+    <h1>Enhanced Time Class Demo</h1>
+    
+    <div class="section">
+        <h3>🕒 Real-time Time Information</h3>
+        <div id="timeInfo" class="info-panel"></div>
+    </div>
+
+    <div class="controls">
+        <button onclick="setTimeScale(0)">⏸️ Pause (0x)</button>
+        <button onclick="setTimeScale(0.25)">🐌 Slow (0.25x)</button>
+        <button onclick="setTimeScale(1)">▶️ Normal (1x)</button>
+        <button onclick="setTimeScale(2)">⏩ Fast (2x)</button>
+        <button onclick="setTimeScale(5)">🚀 Super Fast (5x)</button>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+    <div class="section">
+        <h3>🎮 Game Features Demonstrated</h3>
+        <ul>
+            <li><strong>Time Scale Control</strong> - Buttons above control game speed</li>
+            <li><strong>Frame-rate Independent Movement</strong> - Objects move consistently regardless of FPS</li>
+            <li><strong>Timer Systems</strong> - Various timing mechanisms in action</li>
+            <li><strong>Performance Monitoring</strong> - Real-time FPS and timing stats</li>
+            <li><strong>Smooth Interpolation</strong> - Using Time.lerp() for smooth animations</li>
+        </ul>
+    </div>
+
+    <script src="dist/nity.min.js"></script>
+    <script>
+        // Initialize game
+        const canvas = document.getElementById('gameCanvas');
+        const game = new Nity.Game(canvas);
+        const scene = new Nity.Scene();
+
+        // Demo component showing various Time features
+        class TimeDemo extends Nity.Component {
+            start() {
+                this.speed = 100;
+                this.rotationSpeed = 2;
+                
+                // Create timers
+                this.colorTimer = Nity.Time.createInterval(1.0); // Change color every second
+                this.scaleTimer = Nity.Time.createTimer(3.0);    // Scale after 3 seconds
+                this.resetTimer = Nity.Time.createTimer(10.0);   // Reset after 10 seconds
+                
+                this.colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
+                this.colorIndex = 0;
+                this.initialScale = 1.0;
+                this.targetScale = 1.5;
+                this.currentScale = this.initialScale;
+                
+                this.startTime = Nity.Time.time;
+            }
+
+            update() {
+                const renderer = this.gameObject.getComponent(Nity.SpriteRendererComponent);
+                
+                // Frame-rate independent movement
+                this.gameObject.position.x += this.speed * Nity.Time.deltaTime;
+                if (this.gameObject.position.x > 750) {
+                    this.gameObject.position.x = 50;
+                }
+                
+                // Frame-rate independent rotation
+                this.gameObject.rotation += this.rotationSpeed * Nity.Time.deltaTime;
+                
+                // Color change timer
+                if (this.colorTimer()) {
+                    this.colorIndex = (this.colorIndex + 1) % this.colors.length;
+                    renderer.setColor(this.colors[this.colorIndex]);
+                }
+                
+                // Scale animation using smooth interpolation
+                if (this.scaleTimer()) {
+                    this.currentScale = Nity.Time.lerp(this.currentScale, this.targetScale, 2.0);
+                    const size = 50 * this.currentScale;
+                    renderer.setSize(size, size);
+                }
+                
+                // Reset demo
+                if (this.resetTimer()) {
+                    this.gameObject.position.x = 50;
+                    this.gameObject.rotation = 0;
+                    this.colorIndex = 0;
+                    this.currentScale = this.initialScale;
+                    renderer.setColor(this.colors[0]);
+                    renderer.setSize(50, 50);
+                    
+                    // Recreate timers
+                    this.colorTimer = Nity.Time.createInterval(1.0);
+                    this.scaleTimer = Nity.Time.createTimer(3.0);
+                    this.resetTimer = Nity.Time.createTimer(10.0);
+                    this.startTime = Nity.Time.time;
+                }
+            }
+        }
+
+        // Create demo objects
+        for (let i = 0; i < 3; i++) {
+            const obj = new Nity.GameObject(`DemoObject_${i}`);
+            obj.position = new Nity.Vector2(50, 100 + i * 100);
+            
+            obj.addComponent(new Nity.SpriteRendererComponent())
+                .setSize(50, 50)
+                .setColor('#FF0000');
+            
+            obj.addComponent(new TimeDemo());
+            scene.addGameObject(obj);
+        }
+
+        // UI updater component
+        class UIUpdater extends Nity.Component {
+            update() {
+                updateTimeInfo();
+            }
+        }
+
+        // Create UI updater object
+        const uiUpdater = new Nity.GameObject("UIUpdater");
+        uiUpdater.addComponent(new UIUpdater());
+        scene.addGameObject(uiUpdater);
+
+        // Start game
+        game.loadScene(scene);
+        game.start();
+
+        // UI Functions
+        function updateTimeInfo() {
+            const timeInfo = document.getElementById('timeInfo');
+            timeInfo.innerHTML = `
+<strong>🕐 Time Properties:</strong>
+Time.deltaTime:        ${Nity.Time.deltaTime.toFixed(6)} seconds
+Time.unscaledDeltaTime: ${Nity.Time.unscaledDeltaTime.toFixed(6)} seconds
+Time.time:             ${Nity.Time.time.toFixed(2)} seconds
+Time.unscaledTime:     ${Nity.Time.unscaledTime.toFixed(2)} seconds
+
+<strong>📊 Performance:</strong>
+Time.fps:              ${Nity.Time.fps} FPS
+Time.frameCount:       ${Nity.Time.frameCount}
+Time.timeScale:        ${Nity.Time.timeScale}x
+
+<strong>🔧 Utilities:</strong>
+Time.timestamp:        ${Nity.Time.timestamp.toFixed(2)} ms
+Time.realtimeSinceStartup: ${new Date(Nity.Time.realtimeSinceStartup).toLocaleTimeString()}
+
+<strong>ℹ️ Status:</strong>
+Game Speed: ${Nity.Time.timeScale === 0 ? 'PAUSED' : Nity.Time.timeScale + 'x'}
+            `;
+        }
+
+        function setTimeScale(scale) {
+            Nity.Time.timeScale = scale;
+            console.log(`Time scale set to: ${scale}x`);
+        }
+
+        // Initial info update
+        updateTimeInfo();
+
+        console.log('Enhanced Time Class Demo loaded!');
+        console.log('Available Time properties:', Object.getOwnPropertyNames(Nity.Time));
+    </script>
+</body>
+</html>

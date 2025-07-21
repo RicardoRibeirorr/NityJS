@@ -55,7 +55,7 @@ export class RigidbodyComponent extends GravityComponent {
      */
     update() {
         super.update(); // apply gravity
-        const movement = this.velocity.multiply(Time.deltaTime());
+        const movement = this.velocity.multiply(Time.deltaTime);
         this.move(movement.x, movement.y);
     }
 

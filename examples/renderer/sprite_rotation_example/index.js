@@ -22,13 +22,13 @@ const scene = new Scene({
     obj.addComponent(new class extends Component{
       update(){
         console.log(this.gameObject.rotation);
-        this.gameObject.rotation += 0.1; // Rotate the image
+        this.gameObject.rotation += 0.01; // Rotate the image
       }
     })
 
     // Add camera
     scene.add(obj);
-    const cameraObject = new GameObject(new Vector2(250, 250));
+    const cameraObject = new GameObject(new Vector2(0, 0));
     cameraObject.addComponent(new CameraComponent(game.canvas, 1));
     scene.add(cameraObject);
     game.mainCamera = cameraObject;

@@ -37,7 +37,7 @@
 
             update() {
                 // Update display every 1 second using deltaTime
-                this.updateTimer += Time.deltaTime();
+                this.updateTimer += Time.deltaTime;
                 if (this.updateTimer >= 1.0) {
                     this.updateTimer = 0;
                     
@@ -68,7 +68,7 @@
 
             update() {
                 if (autoRotating) {
-                    this.gameObject.rotateDegrees(this.speed * Time.deltaTime());
+                    this.gameObject.rotateDegrees(this.speed * Time.deltaTime);
                 }
             }
         }

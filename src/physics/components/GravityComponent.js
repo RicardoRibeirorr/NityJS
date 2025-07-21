@@ -33,7 +33,7 @@ export class GravityComponent extends Component {
      */
     update() {
         if (this.gravity) {
-            this.velocity.y += this.gravityScale * Time.deltaTime();
+            this.velocity.y += this.gravityScale * Time.deltaTime;
         }
     }
 

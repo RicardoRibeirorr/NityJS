@@ -164,7 +164,7 @@
                     const velocity = normalizedDirection.multiply(this.speed);
                     
                     // Use Vector2 translate
-                    this.gameObject.translate(velocity.multiply(Time.deltaTime()));
+                    this.gameObject.translate(velocity.multiply(Time.deltaTime));
                 } else {
                     // Reached target, pick new one
                     this.targetPosition = new Vector2(

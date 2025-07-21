@@ -38,15 +38,29 @@ export class ImageComponent extends Component {
     }
 
     /**
-     * Draws the image on the canvas at the GameObject's global position.
+     * Draws the image on the canvas at the GameObject's global position with rotation support.
      * 
      * @param {CanvasRenderingContext2D} ctx - The canvas rendering context to draw on.
      */
     draw(ctx) {
         if (this.image) {
-            const x = this.gameObject.getGlobalPosition().x;
-            const y = this.gameObject.getGlobalPosition().y;
-            ctx.drawImage(this.image, x, y, this.width, this.height);
+            const position = this.gameObject.getGlobalPosition();
+            const rotation = this.gameObject.getGlobalRotation();
+
+            ctx.save();
+            
+            // Translate to the GameObject's position
+            ctx.translate(position.x, position.y);
+            
+            // Apply rotation if any
+            if (rotation !== 0) {
+                ctx.rotate(rotation);
+            }
+            
+            // Draw image centered on the position (like Unity)
+            ctx.drawImage(this.image, -this.width / 2, -this.height / 2, this.width, this.height);
+            
+            ctx.restore();
         }
     }
 }

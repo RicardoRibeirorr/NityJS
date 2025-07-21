@@ -3,6 +3,7 @@ import { CameraComponent } from '../common/components/CameraComponent.js';
 import { Input } from '../input/Input.js';
 import { CollisionSystem } from '../bin/CollisionSystem.js';
 import { Instantiate } from './Instantiate.js';
+import { Time } from './Time.js';
 
 // === Game.js ===
 export class Game {
@@ -62,6 +63,7 @@ export class Game {
     }
 
     start() {
+        Time._reset(); // Reset time system for new game session
         Input.initialize(this.canvas);
         this.#_initEventListeners();
         
@@ -72,6 +74,9 @@ export class Game {
         this._deltaTime = (timestamp - this.#_lastTime) / 1000;
         if (this._deltaTime > 0.1) this._deltaTime = 0.1;
         this.#_lastTime = timestamp;
+
+        // Update time statistics
+        Time._updateTimeStats();
 
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
