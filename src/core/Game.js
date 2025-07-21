@@ -7,24 +7,34 @@ import { Instantiate } from './Instantiate.js';
 // === Game.js ===
 export class Game {
     #_forcedpaused = false;
+    #_lastTime = 0; // For tracking the last frame time
 
     constructor(canvas) {
         Game.instance = this;
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.scene = null;
-        this._lastTime = 0;
         this.mainCamera = null; // GameObject with CameraComponent
         // this.spriteRegistry = new SpriteRegistry();
         this.paused = false;
         //privates
-        this.#_forcedpaused = false;
+        this._internalGizmos = false; // Debug drawing for all components in view
         //protected
+        this._debugMode = false;
         this._deltaTime = 0;
         //internal systems
         new CollisionSystem();
         // Register any pending colliders that were created before CollisionSystem
         Instantiate.registerPendingColliders();
+    }
+
+    configure(options = {canvas:null, mainCamera:null, debug:false}) {
+        if (options.canvas) {
+            this.canvas = options.canvas;
+            this.ctx = this.canvas.getContext('2d');
+        }
+        if (options.mainCamera) this.mainCamera = options.mainCamera;
+        if(options.debug) this.#_debugMode();
     }
 
     launch(scene) {
@@ -59,9 +69,9 @@ export class Game {
     }
 
      loop(timestamp) {
-        this._deltaTime = (timestamp - this._lastTime) / 1000;
+        this._deltaTime = (timestamp - this.#_lastTime) / 1000;
         if (this._deltaTime > 0.1) this._deltaTime = 0.1;
-        this._lastTime = timestamp;
+        this.#_lastTime = timestamp;
 
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -101,7 +111,7 @@ export class Game {
     #_forcedResume() {
         if( this.#_forcedpaused === false) return; // Avoid unnecessary resume
         this.#_forcedpaused = false;
-        this._lastTime = performance.now(); // reset time to avoid jump
+        this.#_lastTime = performance.now(); // reset time to avoid jump
         console.log("Game fullscale resume");
     }
 
@@ -131,6 +141,10 @@ export class Game {
         this.ctx.imageSmoothingEnabled = false;
         this.ctx.mozImageSmoothingEnabled = false;
         this.ctx.webkitImageSmoothingEnabled = false;
+    }
+    #_debugMode(){
+        this._debugMode = true;
+        this._internalGizmos = true;
     }
 
 }

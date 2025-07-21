@@ -23,5 +23,46 @@ export class Sprite {
         this.y = y;
         this.width = width;
         this.height = height;
+        this.isLoaded = true; // For compatibility
+    }
+
+    /**
+     * Draws the sprite on the canvas with optional rotation.
+     * 
+     * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
+     * @param {number} drawX - The x coordinate to draw the sprite at
+     * @param {number} drawY - The y coordinate to draw the sprite at
+     * @param {number} [drawWidth] - Optional width to scale the sprite to
+     * @param {number} [drawHeight] - Optional height to scale the sprite to
+     * @param {number} [rotation=0] - Rotation in radians
+     */
+    draw(ctx, drawX, drawY, drawWidth, drawHeight, rotation = 0) {
+        if (!this.image) return;
+
+        const finalWidth = drawWidth || this.width;
+        const finalHeight = drawHeight || this.height;
+
+        ctx.save();
+
+        if (rotation !== 0) {
+            // Translate to the center of the sprite for rotation
+            ctx.translate(drawX + finalWidth / 2, drawY + finalHeight / 2);
+            ctx.rotate(rotation);
+            // Draw relative to the center
+            ctx.drawImage(
+                this.image,
+                this.x, this.y, this.width, this.height,
+                -finalWidth / 2, -finalHeight / 2, finalWidth, finalHeight
+            );
+        } else {
+            // No rotation, simple draw
+            ctx.drawImage(
+                this.image,
+                this.x, this.y, this.width, this.height,
+                drawX, drawY, finalWidth, finalHeight
+            );
+        }
+
+        ctx.restore();
     }
 }

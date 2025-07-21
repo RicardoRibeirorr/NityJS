@@ -66,7 +66,6 @@ export class RigidbodyComponent extends GravityComponent {
      * @returns {boolean} - Returns true if the movement was successful.
      */
      move(dx, dy) {
-        if (!this.#_collider) return true;
 
         // Handle Vector2 input
         let moveX, moveY;
@@ -87,7 +86,7 @@ export class RigidbodyComponent extends GravityComponent {
         let currentCollisions = new Set();
         let resolved = false;
         let totalMoved = new Vector2(0, 0);
-
+        
         for (let i = 0; i < steps; i++) {
             // Store position before move
             const prevPos = this.gameObject.position.clone();
@@ -95,6 +94,7 @@ export class RigidbodyComponent extends GravityComponent {
             this._doMove(stepX, stepY);
             totalMoved = totalMoved.add(new Vector2(stepX, stepY));
 
+        if (this.#_collider){
             for (const other of CollisionSystem.instance.colliders) {
                 if (other === this.#_collider) continue;
                 if (!this.#_collider.checkCollisionWith(other)) continue;
@@ -130,15 +130,16 @@ export class RigidbodyComponent extends GravityComponent {
                     resolved = true;
                     break;
                 }
+        }
             }
 
             if (resolved) break;
-        }
 
         // Enhanced exit detection with hysteresis
         this.#handleExitEvents(currentCollisions);
 
         this.#_lastCollisions = currentCollisions;
+    }
         return true;
     }
 

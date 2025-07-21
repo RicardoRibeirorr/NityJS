@@ -62,4 +62,9 @@ const scene = new Scene({
 });
 
 
+ game._internalGizmos = true;
+
+        game.configure({
+            debug: true
+        });
 game.launch(scene);

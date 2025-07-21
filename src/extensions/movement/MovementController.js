@@ -32,3 +32,4 @@ export class MovementComponent extends Component {
         }
     }
 }
+export class MovementController extends MovementComponent{}

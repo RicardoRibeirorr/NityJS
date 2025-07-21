@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- <script src="../../../dist/nity.min.js"></script> -->
+    <title>GameObject Rotation Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 1px solid #000;
+            background: white;
+        }
+        .controls {
+            margin: 10px 0;
+        }
+        .info {
+            margin: 10px 0;
+            font-size: 14px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        button {
+            margin: 5px;
+            padding: 5px 10px;
+        }
+    </style>
+   
+</head>
+<body>
+    <h1>GameObject Rotation System Test</h1>
+    <div class="info">
+        <p><strong>This test demonstrates:</strong></p>
+        <ul>
+            <li>GameObject rotation property (in radians)</li>
+            <li>Parent-child rotation inheritance (Unity-style)</li>
+            <li>Global rotation calculation</li>
+            <li>Rotation with Vector2 position system</li>
+            <li>ShapeComponent rotation support</li>
+            <li>SpriteRendererComponent rotation support</li>
+        </ul>
+    </div>
+    
+    <div class="controls">
+        <button id="rotateParent">Rotate Parent (10°)</button>
+        <button id="rotateChild">Rotate Child (15°)</button>
+        <button id="resetRotations">Reset All Rotations</button>
+        <button id="autoRotate">Toggle Auto Rotation</button>
+    </div>
+    
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    
+    <div class="info" id="rotationInfo" style="height: 150px; overflow-y: scroll;">
+        <strong>Rotation Info:</strong><br>
+    </div>
+
+    <script src="./index.js" type="module" defer></script>
+</body>
+</html>

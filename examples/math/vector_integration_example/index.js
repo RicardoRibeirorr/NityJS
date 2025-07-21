@@ -1,25 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NityJS Vector Integration Example</title>
-    <style>
-        body { margin: 0; background-color: #1e1e1e; color: white; font-family: Arial, sans-serif; }
-        #gameCanvas { border: 1px solid #444; }
-        #info { position: absolute; top: 10px; left: 10px; }
-    </style>
-</head>
-<body>
-    <div id="info">
-        <h3>NityJS Vector2/Vector3 Integration Demo</h3>
-        <p>Use WASD or Arrow keys to move the player</p>
-        <p>Player Position: <span id="position">Vector2(0, 0)</span></p>
-        <p>Player Velocity: <span id="velocity">Vector2(0, 0)</span></p>
-    </div>
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
 
-    <script type="module">
         import { 
             Game, 
             Scene, 
@@ -32,7 +11,7 @@
             MovementComponent,
             RigidbodyComponent,
             CameraComponent
-        } from '../dist/nity.module.js';
+        } from '../../../dist/nity.module.js';
 
         class VectorDemoScene extends Scene {
             constructor() {
@@ -154,6 +133,3 @@
         console.log('- GameObject positions are now Vector2 objects');
         console.log('- Movement uses Vector2 math operations');
         console.log('- All position calculations use Vector methods');
-    </script>
-</body>
-</html>

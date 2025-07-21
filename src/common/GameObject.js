@@ -10,6 +10,7 @@ import { Vector2 } from '../math/Vector2.js';
  * It can be positioned in the scene and can have a parent-child relationship with other GameObjects.
  * @class GameObject
  * @property {Vector2} position - The position of the GameObject (Vector2).
+ * @property {number} rotation - The rotation of the GameObject in radians.
  * @property {Array<Component>} components - The list of components attached to the GameObject.
  * @property {Array<GameObject>} children - The list of child GameObjects.
  * @property {GameObject|null} parent - The parent GameObject, if any.
@@ -33,6 +34,7 @@ export class GameObject {
         } else {
             this.position = new Vector2(x, y);
         }
+        this.rotation = 0; // Rotation in radians
         this.components = [];
         this.children = [];
         this.parent = null;
@@ -182,6 +184,18 @@ export class GameObject {
     }
 
     /**
+     * Gets the global rotation of the GameObject in radians.
+     * If the GameObject has a parent, it will add the parent's global rotation to its own rotation.
+     * @returns {number} The global rotation of the GameObject in radians.
+     */
+    getGlobalRotation() {
+        if (this.parent) {
+            return this.rotation + this.parent.getGlobalRotation();
+        }
+        return this.rotation;
+    }
+
+    /**
      * Sets the position of the GameObject.
      * @param {number|Vector2} x - The new x-coordinate of the GameObject or Vector2 position.
      * @param {number} [y] - The new y-coordinate of the GameObject (ignored if x is Vector2).
@@ -192,6 +206,54 @@ export class GameObject {
         } else {
             this.position.set(x, y);
         }
+    }
+
+    /**
+     * Sets the rotation of the GameObject.
+     * @param {number} radians - The new rotation in radians.
+     */
+    setRotation(radians) {
+        this.rotation = radians;
+    }
+
+    /**
+     * Sets the rotation of the GameObject in degrees.
+     * @param {number} degrees - The new rotation in degrees.
+     */
+    setRotationDegrees(degrees) {
+        this.rotation = degrees * (Math.PI / 180);
+    }
+
+    /**
+     * Gets the rotation of the GameObject in degrees.
+     * @returns {number} The rotation in degrees.
+     */
+    getRotationDegrees() {
+        return this.rotation * (180 / Math.PI);
+    }
+
+    /**
+     * Gets the global rotation of the GameObject in degrees.
+     * @returns {number} The global rotation in degrees.
+     */
+    getGlobalRotationDegrees() {
+        return this.getGlobalRotation() * (180 / Math.PI);
+    }
+
+    /**
+     * Rotates the GameObject by the given amount.
+     * @param {number} radians - The rotation amount in radians to add.
+     */
+    rotate(radians) {
+        this.rotation += radians;
+    }
+
+    /**
+     * Rotates the GameObject by the given amount in degrees.
+     * @param {number} degrees - The rotation amount in degrees to add.
+     */
+    rotateDegrees(degrees) {
+        this.rotation += degrees * (Math.PI / 180);
     }
 
     /**

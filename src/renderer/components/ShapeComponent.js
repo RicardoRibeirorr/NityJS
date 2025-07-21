@@ -49,9 +49,9 @@ export class ShapeComponent extends Component {
     set radiusY(radiusY) { this.options.radiusY = radiusY; }
     get points() { return this.options.points || []; }
     set points(points) { this.options.points = points; }
-    get x2() { return this.options.x2 || this.gameObject.getGlobalPosition().x + 10; }
+    get x2() { return this.options.x2 || 10; }
     set x2(x2) { this.options.x2 = x2; }
-    get y2() { return this.options.y2 || this.gameObject.getGlobalPosition().y; }
+    get y2() { return this.options.y2 || 0; }
     set y2(y2) { this.options.y2 = y2; }
     get size() { return this.options.size || 20; }
     set size(size) { this.options.size = size; }
@@ -62,8 +62,29 @@ export class ShapeComponent extends Component {
      * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
      */
     __draw(ctx) {
-        const x = this.gameObject.getGlobalPosition().x;
-        const y = this.gameObject.getGlobalPosition().y;
+        const position = this.gameObject.getGlobalPosition();
+        const rotation = this.gameObject.getGlobalRotation();
+        
+        ctx.save();
+        
+        // Apply rotation if needed
+        if (rotation !== 0) {
+            ctx.translate(position.x, position.y);
+            ctx.rotate(rotation);
+            // Draw shapes relative to the rotation center
+            this.drawShape(ctx, 0, 0);
+        } else {
+            this.drawShape(ctx, position.x, position.y);
+        }
+        
+        ctx.restore();
+    }
+
+    /**
+     * Draws the actual shape based on the type.
+     * @private
+     */
+    drawShape(ctx, x, y) {
         switch (this.shape) {
             case 'rectangle':
             case 'square':
@@ -97,7 +118,8 @@ export class ShapeComponent extends Component {
     drawRect(ctx, x, y) {
         const { width = 10, height = 10, color = 'black' } = this.options;
         ctx.fillStyle = color;
-        ctx.fillRect(x, y, width, height);
+        // Draw rectangle centered for proper rotation
+        ctx.fillRect(x - width/2, y - height/2, width, height);
     }
 
     /**

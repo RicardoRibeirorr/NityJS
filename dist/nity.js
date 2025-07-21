@@ -31,6 +31,7 @@ var Nity = (() => {
     Input: () => Input,
     Instantiate: () => Instantiate,
     MovementComponent: () => MovementComponent,
+    MovementController: () => MovementController,
     Random: () => Random,
     RigidbodyComponent: () => RigidbodyComponent,
     Scene: () => Scene,
@@ -213,6 +214,7 @@ var Nity = (() => {
       this.gameObject = null;
       this.enabled = true;
       this._started = false;
+      this._internalGizmos = this._internalGizmos || (Game.instance?._internalGizmos ?? false);
     }
     __lateStart() {
     }
@@ -222,8 +224,16 @@ var Nity = (() => {
       if (this.enabled && typeof this.draw === "function") {
         this.draw(ctx);
       }
+      if (this._internalGizmos) {
+        this.__internalGizmos(ctx);
+      }
+      if (this.OnDrawGizmos && typeof this.OnDrawGizmos === "function") {
+        this.OnDrawGizmos(ctx);
+      }
     }
     __preload() {
+    }
+    __internalGizmos(ctx) {
     }
     start() {
     }
@@ -1020,6 +1030,7 @@ var Nity = (() => {
       } else {
         this.position = new Vector2(x, y);
       }
+      this.rotation = 0;
       this.components = [];
       this.children = [];
       this.parent = null;
@@ -1145,6 +1156,17 @@ var Nity = (() => {
       return this.position.clone();
     }
     /**
+     * Gets the global rotation of the GameObject in radians.
+     * If the GameObject has a parent, it will add the parent's global rotation to its own rotation.
+     * @returns {number} The global rotation of the GameObject in radians.
+     */
+    getGlobalRotation() {
+      if (this.parent) {
+        return this.rotation + this.parent.getGlobalRotation();
+      }
+      return this.rotation;
+    }
+    /**
      * Sets the position of the GameObject.
      * @param {number|Vector2} x - The new x-coordinate of the GameObject or Vector2 position.
      * @param {number} [y] - The new y-coordinate of the GameObject (ignored if x is Vector2).
@@ -1155,6 +1177,48 @@ var Nity = (() => {
       } else {
         this.position.set(x, y);
       }
+    }
+    /**
+     * Sets the rotation of the GameObject.
+     * @param {number} radians - The new rotation in radians.
+     */
+    setRotation(radians) {
+      this.rotation = radians;
+    }
+    /**
+     * Sets the rotation of the GameObject in degrees.
+     * @param {number} degrees - The new rotation in degrees.
+     */
+    setRotationDegrees(degrees) {
+      this.rotation = degrees * (Math.PI / 180);
+    }
+    /**
+     * Gets the rotation of the GameObject in degrees.
+     * @returns {number} The rotation in degrees.
+     */
+    getRotationDegrees() {
+      return this.rotation * (180 / Math.PI);
+    }
+    /**
+     * Gets the global rotation of the GameObject in degrees.
+     * @returns {number} The global rotation in degrees.
+     */
+    getGlobalRotationDegrees() {
+      return this.getGlobalRotation() * (180 / Math.PI);
+    }
+    /**
+     * Rotates the GameObject by the given amount.
+     * @param {number} radians - The rotation amount in radians to add.
+     */
+    rotate(radians) {
+      this.rotation += radians;
+    }
+    /**
+     * Rotates the GameObject by the given amount in degrees.
+     * @param {number} degrees - The rotation amount in degrees to add.
+     */
+    rotateDegrees(degrees) {
+      this.rotation += degrees * (Math.PI / 180);
     }
     /**
      * Translates the GameObject by the given offset.
@@ -1447,18 +1511,28 @@ var Nity = (() => {
   // src/core/Game.js
   var Game = class _Game {
     #_forcedpaused = false;
+    #_lastTime = 0;
+    // For tracking the last frame time
     constructor(canvas) {
       _Game.instance = this;
       this.canvas = canvas;
       this.ctx = canvas.getContext("2d");
       this.scene = null;
-      this._lastTime = 0;
       this.mainCamera = null;
       this.paused = false;
-      this.#_forcedpaused = false;
+      this._internalGizmos = false;
+      this._debugMode = false;
       this._deltaTime = 0;
       new CollisionSystem();
       Instantiate.registerPendingColliders();
+    }
+    configure(options = { canvas: null, mainCamera: null, debug: false }) {
+      if (options.canvas) {
+        this.canvas = options.canvas;
+        this.ctx = this.canvas.getContext("2d");
+      }
+      if (options.mainCamera) this.mainCamera = options.mainCamera;
+      if (options.debug) this.#_debugMode();
     }
     launch(scene) {
       if (!scene) throw new Error("No scene assigned to game.");
@@ -1487,9 +1561,9 @@ var Nity = (() => {
       requestAnimationFrame(this.loop.bind(this));
     }
     loop(timestamp) {
-      this._deltaTime = (timestamp - this._lastTime) / 1e3;
+      this._deltaTime = (timestamp - this.#_lastTime) / 1e3;
       if (this._deltaTime > 0.1) this._deltaTime = 0.1;
-      this._lastTime = timestamp;
+      this.#_lastTime = timestamp;
       this.ctx.setTransform(1, 0, 0, 1, 0, 0);
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
       if (!this.#_forcedpaused) {
@@ -1520,7 +1594,7 @@ var Nity = (() => {
     #_forcedResume() {
       if (this.#_forcedpaused === false) return;
       this.#_forcedpaused = false;
-      this._lastTime = performance.now();
+      this.#_lastTime = performance.now();
       console.log("Game fullscale resume");
     }
     #_initEventListeners() {
@@ -1543,6 +1617,10 @@ var Nity = (() => {
       this.ctx.imageSmoothingEnabled = false;
       this.ctx.mozImageSmoothingEnabled = false;
       this.ctx.webkitImageSmoothingEnabled = false;
+    }
+    #_debugMode() {
+      this._debugMode = true;
+      this._internalGizmos = true;
     }
   };
   Game.instance = null;
@@ -1620,7 +1698,8 @@ var Nity = (() => {
     __draw(ctx) {
       if (!this.sprite || !this.sprite.image || !this.sprite.isLoaded) return;
       const position = this.gameObject.getGlobalPosition();
-      this.sprite.draw(ctx, position.x, position.y, null, null, this.gameObject.rotation || 0);
+      const rotation = this.gameObject.getGlobalRotation();
+      this.sprite.draw(ctx, position.x, position.y, null, null, rotation);
     }
     /**
      * Change the sprite being rendered using unified sprite key
@@ -1873,7 +1952,6 @@ var Nity = (() => {
      * @returns {boolean} - Returns true if the movement was successful.
      */
     move(dx, dy) {
-      if (!this.#_collider) return true;
       let moveX, moveY;
       if (dx instanceof Vector2) {
         moveX = dx.x;
@@ -1893,37 +1971,39 @@ var Nity = (() => {
         const prevPos = this.gameObject.position.clone();
         this._doMove(stepX, stepY);
         totalMoved = totalMoved.add(new Vector2(stepX, stepY));
-        for (const other of CollisionSystem.instance.colliders) {
-          if (other === this.#_collider) continue;
-          if (!this.#_collider.checkCollisionWith(other)) continue;
-          const otherObj = other.gameObject;
-          currentCollisions.add(otherObj);
-          const wasColliding = this.#_lastCollisions.has(otherObj);
-          const isTrigger = this.#_collider.isTrigger() || other.isTrigger();
-          if (!wasColliding) {
-            this.#eventEnter(this.gameObject, otherObj);
-            if (!otherObj.hasComponent?.(_RigidbodyComponent))
-              this.#eventEnter(otherObj, this.gameObject);
-          } else {
-            this.#eventStay(this.gameObject, otherObj);
-            if (!otherObj.hasComponent?.(_RigidbodyComponent))
-              this.#eventStay(otherObj, this.gameObject);
-          }
-          if (!isTrigger && !resolved) {
-            this.gameObject.setPosition(prevPos);
-            if (Math.abs(stepY) > Math.abs(stepX)) {
-              this.velocity.y *= -this.bounciness;
+        if (this.#_collider) {
+          for (const other of CollisionSystem.instance.colliders) {
+            if (other === this.#_collider) continue;
+            if (!this.#_collider.checkCollisionWith(other)) continue;
+            const otherObj = other.gameObject;
+            currentCollisions.add(otherObj);
+            const wasColliding = this.#_lastCollisions.has(otherObj);
+            const isTrigger = this.#_collider.isTrigger() || other.isTrigger();
+            if (!wasColliding) {
+              this.#eventEnter(this.gameObject, otherObj);
+              if (!otherObj.hasComponent?.(_RigidbodyComponent))
+                this.#eventEnter(otherObj, this.gameObject);
             } else {
-              this.velocity.x *= -this.bounciness;
+              this.#eventStay(this.gameObject, otherObj);
+              if (!otherObj.hasComponent?.(_RigidbodyComponent))
+                this.#eventStay(otherObj, this.gameObject);
             }
-            resolved = true;
-            break;
+            if (!isTrigger && !resolved) {
+              this.gameObject.setPosition(prevPos);
+              if (Math.abs(stepY) > Math.abs(stepX)) {
+                this.velocity.y *= -this.bounciness;
+              } else {
+                this.velocity.x *= -this.bounciness;
+              }
+              resolved = true;
+              break;
+            }
           }
         }
         if (resolved) break;
+        this.#handleExitEvents(currentCollisions);
+        this.#_lastCollisions = currentCollisions;
       }
-      this.#handleExitEvents(currentCollisions);
-      this.#_lastCollisions = currentCollisions;
       return true;
     }
     /**
@@ -2023,6 +2103,8 @@ var Nity = (() => {
       }
     }
   };
+  var MovementController = class extends MovementComponent {
+  };
 
   // src/renderer/Sprite.js
   var Sprite = class {
@@ -2041,6 +2123,51 @@ var Nity = (() => {
       this.y = y;
       this.width = width;
       this.height = height;
+      this.isLoaded = true;
+    }
+    /**
+     * Draws the sprite on the canvas with optional rotation.
+     * 
+     * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
+     * @param {number} drawX - The x coordinate to draw the sprite at
+     * @param {number} drawY - The y coordinate to draw the sprite at
+     * @param {number} [drawWidth] - Optional width to scale the sprite to
+     * @param {number} [drawHeight] - Optional height to scale the sprite to
+     * @param {number} [rotation=0] - Rotation in radians
+     */
+    draw(ctx, drawX, drawY, drawWidth, drawHeight, rotation = 0) {
+      if (!this.image) return;
+      const finalWidth = drawWidth || this.width;
+      const finalHeight = drawHeight || this.height;
+      ctx.save();
+      if (rotation !== 0) {
+        ctx.translate(drawX + finalWidth / 2, drawY + finalHeight / 2);
+        ctx.rotate(rotation);
+        ctx.drawImage(
+          this.image,
+          this.x,
+          this.y,
+          this.width,
+          this.height,
+          -finalWidth / 2,
+          -finalHeight / 2,
+          finalWidth,
+          finalHeight
+        );
+      } else {
+        ctx.drawImage(
+          this.image,
+          this.x,
+          this.y,
+          this.width,
+          this.height,
+          drawX,
+          drawY,
+          finalWidth,
+          finalHeight
+        );
+      }
+      ctx.restore();
     }
   };
 
@@ -2474,13 +2601,13 @@ var Nity = (() => {
       this.options.points = points;
     }
     get x2() {
-      return this.options.x2 || this.gameObject.getGlobalPosition().x + 10;
+      return this.options.x2 || 10;
     }
     set x2(x2) {
       this.options.x2 = x2;
     }
     get y2() {
-      return this.options.y2 || this.gameObject.getGlobalPosition().y;
+      return this.options.y2 || 0;
     }
     set y2(y2) {
       this.options.y2 = y2;
@@ -2497,8 +2624,23 @@ var Nity = (() => {
      * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
      */
     __draw(ctx) {
-      const x = this.gameObject.getGlobalPosition().x;
-      const y = this.gameObject.getGlobalPosition().y;
+      const position = this.gameObject.getGlobalPosition();
+      const rotation = this.gameObject.getGlobalRotation();
+      ctx.save();
+      if (rotation !== 0) {
+        ctx.translate(position.x, position.y);
+        ctx.rotate(rotation);
+        this.drawShape(ctx, 0, 0);
+      } else {
+        this.drawShape(ctx, position.x, position.y);
+      }
+      ctx.restore();
+    }
+    /**
+     * Draws the actual shape based on the type.
+     * @private
+     */
+    drawShape(ctx, x, y) {
       switch (this.shape) {
         case "rectangle":
         case "square":
@@ -2531,7 +2673,7 @@ var Nity = (() => {
     drawRect(ctx, x, y) {
       const { width = 10, height = 10, color = "black" } = this.options;
       ctx.fillStyle = color;
-      ctx.fillRect(x, y, width, height);
+      ctx.fillRect(x - width / 2, y - height / 2, width, height);
     }
     /**
      * Draws a circle.
@@ -2652,14 +2794,33 @@ var Nity = (() => {
      * @returns {Object} Bounds object with x, y, and radius properties
      */
     getBounds() {
-      const x = this.gameObject.getGlobalPosition().x;
-      const y = this.gameObject.getGlobalPosition().y;
+      const position = this.gameObject.getGlobalPosition();
       let r = this.radius;
-      const sprite = this.gameObject.getComponent(SpriteRendererComponent)?.sprite;
-      if (r === null && sprite) {
-        r = sprite.width / 2;
-      }
-      return { x, y, radius: r };
+      return { x: position.x, y: position.y, radius: r };
+    }
+    /**
+     * Draws gizmos for the circle collider bounds.
+     * This method is called automatically by the engine for debugging visualization.
+     * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
+     */
+    __internalGizmos(ctx) {
+      const bounds = this.getBounds();
+      ctx.save();
+      ctx.strokeStyle = this.trigger ? "#00ffddff" : "#00FF00";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.arc(bounds.x, bounds.y, bounds.radius, 0, Math.PI * 2);
+      ctx.stroke();
+      const crossSize = 3;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(bounds.x - crossSize, bounds.y);
+      ctx.lineTo(bounds.x + crossSize, bounds.y);
+      ctx.moveTo(bounds.x, bounds.y - crossSize);
+      ctx.lineTo(bounds.x, bounds.y + crossSize);
+      ctx.stroke();
+      ctx.restore();
     }
   };
 
@@ -2686,16 +2847,39 @@ var Nity = (() => {
       return a.x < b.x + b.width + tolerance && a.x + a.width + tolerance > b.x && a.y < b.y + b.height + tolerance && a.y + a.height + tolerance > b.y;
     }
     getBounds() {
-      const x = this.gameObject.getGlobalPosition().x;
-      const y = this.gameObject.getGlobalPosition().y;
+      const position = this.gameObject.getGlobalPosition();
       let w = this.width;
       let h = this.height;
-      const sprite = this.gameObject.getComponent(SpriteRendererComponent)?.sprite;
-      if ((w === null || h === null) && sprite) {
-        w = w ?? sprite.width;
-        h = h ?? sprite.height;
-      }
-      return { x, y, width: w, height: h };
+      return {
+        x: position.x - w / 2,
+        y: position.y - h / 2,
+        width: w,
+        height: h
+      };
+    }
+    /**
+     * Draws gizmos for the box collider bounds.
+     * This method is called automatically by the engine for debugging visualization.
+     * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
+     */
+    __internalGizmos(ctx) {
+      const bounds = this.getBounds();
+      ctx.save();
+      ctx.strokeStyle = this.trigger ? "#00ffddff" : "#00FF00";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 2]);
+      ctx.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
+      const centerX = bounds.x + bounds.width / 2;
+      const centerY = bounds.y + bounds.height / 2;
+      const crossSize = 3;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(centerX - crossSize, centerY);
+      ctx.lineTo(centerX + crossSize, centerY);
+      ctx.moveTo(centerX, centerY - crossSize);
+      ctx.lineTo(centerX, centerY + crossSize);
+      ctx.stroke();
+      ctx.restore();
     }
   };
 

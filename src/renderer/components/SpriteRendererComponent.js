@@ -63,9 +63,10 @@ export class SpriteRendererComponent extends Component {
         if (!this.sprite || !this.sprite.image || !this.sprite.isLoaded) return;
         
         const position = this.gameObject.getGlobalPosition();
+        const rotation = this.gameObject.getGlobalRotation();
         
-        // Use the sprite's draw method for consistent rendering
-        this.sprite.draw(ctx, position.x, position.y, null, null, this.gameObject.rotation || 0);
+        // Use the sprite's draw method for consistent rendering with rotation
+        this.sprite.draw(ctx, position.x, position.y, null, null, rotation);
     }
 
     /**
