@@ -1856,6 +1856,7 @@ var Nity = (() => {
      * @param {Object} [options={}] - Rendering options
      * @param {number} [options.width] - Custom width for scaling. If not provided, uses sprite's natural width
      * @param {number} [options.height] - Custom height for scaling. If not provided, uses sprite's natural height
+     * @param {number} [options.opacity=1.0] - Sprite opacity/alpha (0.0 to 1.0)
      * @param {boolean} [options.flipX=false] - Flip sprite horizontally
      * @param {boolean} [options.flipY=false] - Flip sprite vertically
      */
@@ -1866,6 +1867,7 @@ var Nity = (() => {
       this.options = {
         width: options.width || null,
         height: options.height || null,
+        opacity: options.opacity !== void 0 ? options.opacity : 1,
         flipX: options.flipX || false,
         flipY: options.flipY || false
       };
@@ -1882,7 +1884,7 @@ var Nity = (() => {
       }
     }
     /**
-     * Draws the sprite on the canvas at the GameObject's global position with optional custom scaling.
+     * Draws the sprite on the canvas at the GameObject's global position with optional custom scaling and opacity.
      * Called automatically during the render phase.
      * 
      * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
@@ -1893,7 +1895,15 @@ var Nity = (() => {
       const rotation = this.gameObject.getGlobalRotation();
       const width = this.options.width || null;
       const height = this.options.height || null;
+      const needsOpacity = this.options.opacity !== 1;
+      if (needsOpacity) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, this.options.opacity));
+      }
       this.sprite.draw(ctx, position.x, position.y, width, height, rotation);
+      if (needsOpacity) {
+        ctx.restore();
+      }
     }
     /**
      * Change the sprite being rendered using unified sprite key
@@ -1937,6 +1947,20 @@ var Nity = (() => {
     getRenderedHeight() {
       if (!this.sprite) return 0;
       return this.options.height || this.sprite.height;
+    }
+    /**
+     * Get the current opacity of the sprite
+     * @returns {number} The opacity value (0.0 to 1.0)
+     */
+    getOpacity() {
+      return this.options.opacity;
+    }
+    /**
+     * Set the opacity of the sprite
+     * @param {number} opacity - Opacity value (0.0 to 1.0)
+     */
+    setOpacity(opacity) {
+      this.options.opacity = Math.max(0, Math.min(1, opacity));
     }
     /**
      * Draws gizmos for the sprite renderer bounds.

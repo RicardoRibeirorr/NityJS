@@ -16,7 +16,8 @@ const game = new Game(canvas);
 let spriteRenderer;
 let currentOptions = {
   width: 100,
-  height: 100
+  height: 100,
+  opacity: 1.0
 };
 
 const scene = new Scene({
@@ -51,6 +52,7 @@ function updateSpriteRenderer() {
 function updateDisplayValues() {
   document.getElementById('widthValue').textContent = currentOptions.width;
   document.getElementById('heightValue').textContent = currentOptions.height;
+  document.getElementById('opacityValue').textContent = currentOptions.opacity.toFixed(2);
 }
 
 // Control functions
@@ -64,10 +66,16 @@ function changeHeight(delta) {
   updateSpriteRenderer();
 }
 
+function changeOpacity(delta) {
+  currentOptions.opacity = Math.max(0, Math.min(1, currentOptions.opacity + delta));
+  updateSpriteRenderer();
+}
+
 function resetAll() {
   currentOptions = {
     width: 100,
-    height: 100
+    height: 100,
+    opacity: 1.0
   };
   updateSpriteRenderer();
 }
@@ -75,6 +83,7 @@ function resetAll() {
 // Make functions globally available
 window.changeWidth = changeWidth;
 window.changeHeight = changeHeight;
+window.changeOpacity = changeOpacity;
 window.resetAll = resetAll;
 
 // Start the game

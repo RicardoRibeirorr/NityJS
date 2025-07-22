@@ -24,6 +24,7 @@ import { Vector2 } from '../../math/Vector2.js';
  * const scaledRenderer = new SpriteRendererComponent("tiles:tile1", { 
  *     width: 128, 
  *     height: 128,
+ *     opacity: 0.8,
  *     flipX: false,
  *     flipY: false 
  * });
@@ -37,6 +38,7 @@ export class SpriteRendererComponent extends Component {
      * @param {Object} [options={}] - Rendering options
      * @param {number} [options.width] - Custom width for scaling. If not provided, uses sprite's natural width
      * @param {number} [options.height] - Custom height for scaling. If not provided, uses sprite's natural height
+     * @param {number} [options.opacity=1.0] - Sprite opacity/alpha (0.0 to 1.0)
      * @param {boolean} [options.flipX=false] - Flip sprite horizontally
      * @param {boolean} [options.flipY=false] - Flip sprite vertically
      */
@@ -49,6 +51,7 @@ export class SpriteRendererComponent extends Component {
         this.options = {
             width: options.width || null,
             height: options.height || null,
+            opacity: options.opacity !== undefined ? options.opacity : 1.0,
             flipX: options.flipX || false,
             flipY: options.flipY || false
         };
@@ -68,7 +71,7 @@ export class SpriteRendererComponent extends Component {
     }
 
     /**
-     * Draws the sprite on the canvas at the GameObject's global position with optional custom scaling.
+     * Draws the sprite on the canvas at the GameObject's global position with optional custom scaling and opacity.
      * Called automatically during the render phase.
      * 
      * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
@@ -83,8 +86,19 @@ export class SpriteRendererComponent extends Component {
         const width = this.options.width || null;
         const height = this.options.height || null;
         
+        // Apply opacity if different from 1.0
+        const needsOpacity = this.options.opacity !== 1.0;
+        if (needsOpacity) {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, Math.min(1, this.options.opacity)); // Clamp between 0 and 1
+        }
+        
         // Use the sprite's draw method for simple cases (no flipping for now)
         this.sprite.draw(ctx, position.x, position.y, width, height, rotation);
+        
+        if (needsOpacity) {
+            ctx.restore();
+        }
     }
 
     /**
@@ -134,6 +148,22 @@ export class SpriteRendererComponent extends Component {
     getRenderedHeight() {
         if (!this.sprite) return 0;
         return this.options.height || this.sprite.height;
+    }
+
+    /**
+     * Get the current opacity of the sprite
+     * @returns {number} The opacity value (0.0 to 1.0)
+     */
+    getOpacity() {
+        return this.options.opacity;
+    }
+
+    /**
+     * Set the opacity of the sprite
+     * @param {number} opacity - Opacity value (0.0 to 1.0)
+     */
+    setOpacity(opacity) {
+        this.options.opacity = Math.max(0, Math.min(1, opacity));
     }
 
     /**
