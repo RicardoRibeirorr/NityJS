@@ -10,11 +10,13 @@ export class SpritesheetAsset {
      * @param {string} name - Name to register the spritesheet under (cannot contain colons)
      * @param {string} imagePath - Path to the spritesheet image
      * @param {Object} spriteData - Configuration for individual sprites
-     * @param {number} spriteData.spriteWidth - Width of each sprite
-     * @param {number} spriteData.spriteHeight - Height of each sprite
-     * @param {number} [spriteData.columns] - Number of columns in the sheet
-     * @param {number} [spriteData.rows] - Number of rows in the sheet
-     * @param {Object} [spriteData.sprites] - Named sprite definitions
+     * @param {number} [spriteData.spriteWidth] - Width of each sprite (for grid-based)
+     * @param {number} [spriteData.spriteHeight] - Height of each sprite (for grid-based)
+     * @param {number} [spriteData.columns] - Number of columns in the sheet (for grid-based)
+     * @param {number} [spriteData.rows] - Number of rows in the sheet (for grid-based)
+     * @param {Array} [spriteData.sprites] - Array of pixel coordinate-based sprite definitions: 
+     *                                        [{name, startX, startY, endX, endY}, ...]
+     * @param {Object} [spriteData.namedSprites] - Object of named sprite definitions (legacy support)
      */
     constructor(name, imagePath, spriteData) {
         // Validate name doesn't contain colons (reserved for sprite notation)
@@ -70,13 +72,14 @@ export class SpritesheetAsset {
 
     /**
      * Generate sprite definitions from the spritesheet and register them in the unified registry
+     * Supports both grid-based and pixel coordinate-based sprite definitions
      * @private
      */
     generateSprites() {
-        const { spriteWidth, spriteHeight, columns, rows, sprites } = this.spriteData;
+        const { spriteWidth, spriteHeight, columns, rows, sprites, namedSprites } = this.spriteData;
         
-        // Generate grid-based sprites if columns/rows specified
-        if (columns && rows) {
+        // METHOD 1: Generate grid-based sprites if columns/rows specified
+        if (columns != null && rows != null && spriteWidth != null && spriteHeight != null) {
             for (let row = 0; row < rows; row++) {
                 for (let col = 0; col < columns; col++) {
                     const index = row * columns + col;
@@ -92,9 +95,27 @@ export class SpritesheetAsset {
             }
         }
         
-        // Add named sprites if provided
-        if (sprites) {
-            Object.entries(sprites).forEach(([name, config]) => {
+        // METHOD 2: Add pixel coordinate-based sprites if provided as array
+        if (sprites != null && Array.isArray(sprites)) {
+            sprites.forEach(sprite => {
+                if (sprite.name && sprite.startX != null && sprite.startY != null && 
+                    sprite.endX != null && sprite.endY != null) {
+                    const spriteConfig = {
+                        x: sprite.startX,
+                        y: sprite.startY,
+                        width: sprite.endX - sprite.startX,
+                        height: sprite.endY - sprite.startY
+                    };
+                    this.sprites.set(sprite.name, spriteConfig);
+                } else {
+                    console.warn(`Invalid sprite definition in "${this.name}":`, sprite);
+                }
+            });
+        }
+        
+        // LEGACY: Add named sprites if provided as object (backward compatibility)
+        if (namedSprites != null && typeof namedSprites === 'object' && !Array.isArray(namedSprites)) {
+            Object.entries(namedSprites).forEach(([name, config]) => {
                 this.sprites.set(name, config);
             });
         }
@@ -125,7 +146,6 @@ export class SpritesheetAsset {
             const unifiedKey = `${this.name}:${spriteName}`;
             SpriteRegistry._addSprite(unifiedKey, this._createSpriteWrapper(spriteName));
         }
-        console.log(`Registered ${this.sprites.size} sprites from sheet "${this.name}" with colon notation`);
     }
     
     /**

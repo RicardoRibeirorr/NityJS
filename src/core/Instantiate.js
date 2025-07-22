@@ -86,14 +86,11 @@ export class Instantiate {
      * @private
      */
     static _registerComponent(component) {
-        console.log('Instantiate: Registering component:', component.constructor.name);
         
         // Register colliders with the collision system
         if (component instanceof AbstractColliderComponent) {
-            console.log('Instantiate: Found collider component, registering...');
             if (CollisionSystem.instance) {
                 CollisionSystem.instance.register(component);
-                console.log('Collider registered with CollisionSystem:', component, 'Total colliders:', CollisionSystem.instance.colliders.size);
             } else {
                 console.warn('CollisionSystem not initialized. Collider will be registered when system is available:', component);
                 // Queue for later registration
@@ -106,7 +103,6 @@ export class Instantiate {
 
         // Call component start method if it exists
         if (typeof component.start === 'function') {
-            console.log('Instantiate: Calling start() on component:', component.constructor.name);
             component.start();
         }
     }
@@ -117,7 +113,6 @@ export class Instantiate {
      */
     static registerPendingColliders() {
         if (Instantiate._pendingColliders && CollisionSystem.instance) {
-            console.log('Registering pending colliders:', Instantiate._pendingColliders.length);
             for (const collider of Instantiate._pendingColliders) {
                 CollisionSystem.instance.register(collider);
             }

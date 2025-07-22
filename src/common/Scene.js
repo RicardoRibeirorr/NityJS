@@ -12,8 +12,8 @@ export class Scene {
 
     
     /**
-     * @deprecated Use {@link Instantiate.create} instead.
-     * Adds an object to the scene.
+     * Adds an object to the scene before the game starts.
+     * You should use {@link Instantiate.create} when adding new objects after launched the game.
      * 
      * @param {Object} obj - The object to add to the scene.
      */
@@ -39,8 +39,6 @@ export class Scene {
         if (typeof this._create === 'function') {
             this._create(this); // Now run creation logic only when game launches
             this._create = null; // clear reference after use
-        }else{
-            console.log("Empty scene loaded");
         }
 
         const preloadPromises = this.objects.map(obj => obj?.preload?.());

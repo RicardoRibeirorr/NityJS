@@ -1391,12 +1391,9 @@ var Nity = (() => {
      * @private
      */
     static _registerComponent(component) {
-      console.log("Instantiate: Registering component:", component.constructor.name);
       if (component instanceof AbstractColliderComponent) {
-        console.log("Instantiate: Found collider component, registering...");
         if (CollisionSystem.instance) {
           CollisionSystem.instance.register(component);
-          console.log("Collider registered with CollisionSystem:", component, "Total colliders:", CollisionSystem.instance.colliders.size);
         } else {
           console.warn("CollisionSystem not initialized. Collider will be registered when system is available:", component);
           if (!_Instantiate._pendingColliders) {
@@ -1406,7 +1403,6 @@ var Nity = (() => {
         }
       }
       if (typeof component.start === "function") {
-        console.log("Instantiate: Calling start() on component:", component.constructor.name);
         component.start();
       }
     }
@@ -1416,7 +1412,6 @@ var Nity = (() => {
      */
     static registerPendingColliders() {
       if (_Instantiate._pendingColliders && CollisionSystem.instance) {
-        console.log("Registering pending colliders:", _Instantiate._pendingColliders.length);
         for (const collider of _Instantiate._pendingColliders) {
           CollisionSystem.instance.register(collider);
         }
@@ -1742,13 +1737,9 @@ var Nity = (() => {
       if (options.debug) this.#_debugMode();
     }
     launch(scene) {
-      if (!scene) throw new Error("No scene assigned to game.");
+      if (!scene && !this.scene) throw new Error("No scene assigned to game.");
       this.#_initCanvas();
-      this.#_launch(scene);
-    }
-    async #_launch(scene) {
-      await this.loadScene(scene);
-      this.start();
+      this.#_launch(scene || this.scene);
     }
     async loadScene(scene) {
       if (!scene) throw new Error("No scene provided.");
@@ -1760,15 +1751,25 @@ var Nity = (() => {
       await SpriteRegistry.preloadAll();
       await this.scene.preload();
       await this.scene.start();
-      this.start();
+      this.#_start();
     }
-    start() {
+    pause() {
+      this.paused = true;
+    }
+    resume() {
+      this.paused = false;
+    }
+    async #_launch(scene) {
+      await this.loadScene(scene);
+      this.#_start();
+    }
+    #_start() {
       Time._reset();
       Input.initialize(this.canvas);
       this.#_initEventListeners();
-      requestAnimationFrame(this.loop.bind(this));
+      requestAnimationFrame(this.#_loop.bind(this));
     }
-    loop(timestamp) {
+    #_loop(timestamp) {
       this._deltaTime = (timestamp - this.#_lastTime) / 1e3;
       if (this._deltaTime > 0.1) this._deltaTime = 0.1;
       this.#_lastTime = timestamp;
@@ -1787,13 +1788,7 @@ var Nity = (() => {
         this.scene.__lateUpdate();
         this.scene.__draw(this.ctx);
       }
-      requestAnimationFrame(this.loop.bind(this));
-    }
-    pause() {
-      this.paused = true;
-    }
-    resume() {
-      this.paused = false;
+      requestAnimationFrame(this.#_loop.bind(this));
     }
     #_forcedPause() {
       if (this.#_forcedpaused === true) return;
@@ -1857,18 +1852,23 @@ var Nity = (() => {
     /**
      * Creates a new SpriteRendererComponent.
      * 
-     * @param {string} spriteKey - Unified sprite key ("name" or "sheet:sprite") or legacy assetName
-     * @param {string} [spriteName] - Legacy: sprite name for spritesheets (deprecated, use colon notation)
+     * @param {string} spriteName - Unified sprite key ("name" or "sheet:sprite") or legacy assetName
+     * @param {Object} [options={}] - Rendering options
+     * @param {number} [options.width] - Custom width for scaling. If not provided, uses sprite's natural width
+     * @param {number} [options.height] - Custom height for scaling. If not provided, uses sprite's natural height
+     * @param {boolean} [options.flipX=false] - Flip sprite horizontally
+     * @param {boolean} [options.flipY=false] - Flip sprite vertically
      */
-    constructor(spriteKey, spriteName = null) {
+    constructor(spriteName, options = {}) {
       super();
-      if (spriteName !== null) {
-        console.warn(`SpriteRendererComponent: Two-parameter constructor is deprecated. Use "${spriteKey}:${spriteName}" instead.`);
-        this.spriteKey = `${spriteKey}:${spriteName}`;
-      } else {
-        this.spriteKey = spriteKey;
-      }
+      this.spriteKey = spriteName;
       this.sprite = null;
+      this.options = {
+        width: options.width || null,
+        height: options.height || null,
+        flipX: options.flipX || false,
+        flipY: options.flipY || false
+      };
     }
     /**
      * Preloads the sprite from the unified registry. Called automatically during GameObject preload.
@@ -1882,7 +1882,7 @@ var Nity = (() => {
       }
     }
     /**
-     * Draws the sprite on the canvas at the GameObject's global position.
+     * Draws the sprite on the canvas at the GameObject's global position with optional custom scaling.
      * Called automatically during the render phase.
      * 
      * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
@@ -1891,7 +1891,9 @@ var Nity = (() => {
       if (!this.sprite || !this.sprite.image || !this.sprite.isLoaded) return;
       const position = this.gameObject.getGlobalPosition();
       const rotation = this.gameObject.getGlobalRotation();
-      this.sprite.draw(ctx, position.x, position.y, null, null, rotation);
+      const width = this.options.width || null;
+      const height = this.options.height || null;
+      this.sprite.draw(ctx, position.x, position.y, width, height, rotation);
     }
     /**
      * Change the sprite being rendered using unified sprite key
@@ -1903,6 +1905,68 @@ var Nity = (() => {
       if (!this.sprite) {
         console.warn(`Sprite '${newSpriteKey}' not found in SpriteRegistry.`);
       }
+    }
+    /**
+     * Set custom scale dimensions for the sprite
+     * @param {number} width - Custom width for scaling
+     * @param {number} height - Custom height for scaling
+     */
+    setScale(width, height) {
+      this.options.width = width;
+      this.options.height = height;
+    }
+    /**
+     * Update sprite rendering options
+     * @param {Object} newOptions - New options to merge with existing ones
+     */
+    setOptions(newOptions) {
+      this.options = { ...this.options, ...newOptions };
+    }
+    /**
+     * Get the actual rendered width of the sprite (custom or natural)
+     * @returns {number} The rendered width
+     */
+    getRenderedWidth() {
+      if (!this.sprite) return 0;
+      return this.options.width || this.sprite.width;
+    }
+    /**
+     * Get the actual rendered height of the sprite (custom or natural)
+     * @returns {number} The rendered height
+     */
+    getRenderedHeight() {
+      if (!this.sprite) return 0;
+      return this.options.height || this.sprite.height;
+    }
+    /**
+     * Draws gizmos for the sprite renderer bounds.
+     * Shows the sprite's bounding box and center point for debugging.
+     * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
+     */
+    __internalGizmos(ctx) {
+      if (!this.sprite || !this.sprite.image || !this.sprite.isLoaded) return;
+      const position = this.gameObject.getGlobalPosition();
+      const rotation = this.gameObject.getGlobalRotation();
+      ctx.save();
+      ctx.translate(position.x, position.y);
+      if (rotation !== 0) ctx.rotate(rotation);
+      ctx.strokeStyle = "#FF00FF";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 2]);
+      const width = this.getRenderedWidth();
+      const height = this.getRenderedHeight();
+      ctx.strokeRect(-width / 2, -height / 2, width, height);
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#FF00FF";
+      ctx.beginPath();
+      ctx.arc(0, 0, 2, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.fillStyle = "#FF00FF";
+      ctx.font = "10px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(this.spriteKey, 0, -height / 2 - 8);
+      ctx.fillText(`${width}x${height}`, 0, height / 2 + 15);
+      ctx.restore();
     }
   };
 
@@ -1994,8 +2058,8 @@ var Nity = (() => {
       this._create = create;
     }
     /**
-     * @deprecated Use {@link Instantiate.create} instead.
-     * Adds an object to the scene.
+     * Adds an object to the scene before the game starts.
+     * You should use {@link Instantiate.create} when adding new objects after launched the game.
      * 
      * @param {Object} obj - The object to add to the scene.
      */
@@ -2016,8 +2080,6 @@ var Nity = (() => {
       if (typeof this._create === "function") {
         this._create(this);
         this._create = null;
-      } else {
-        console.log("Empty scene loaded");
       }
       const preloadPromises = this.objects.map((obj) => obj?.preload?.());
       await Promise.all(preloadPromises);
@@ -2480,11 +2542,13 @@ var Nity = (() => {
      * @param {string} name - Name to register the spritesheet under (cannot contain colons)
      * @param {string} imagePath - Path to the spritesheet image
      * @param {Object} spriteData - Configuration for individual sprites
-     * @param {number} spriteData.spriteWidth - Width of each sprite
-     * @param {number} spriteData.spriteHeight - Height of each sprite
-     * @param {number} [spriteData.columns] - Number of columns in the sheet
-     * @param {number} [spriteData.rows] - Number of rows in the sheet
-     * @param {Object} [spriteData.sprites] - Named sprite definitions
+     * @param {number} [spriteData.spriteWidth] - Width of each sprite (for grid-based)
+     * @param {number} [spriteData.spriteHeight] - Height of each sprite (for grid-based)
+     * @param {number} [spriteData.columns] - Number of columns in the sheet (for grid-based)
+     * @param {number} [spriteData.rows] - Number of rows in the sheet (for grid-based)
+     * @param {Array} [spriteData.sprites] - Array of pixel coordinate-based sprite definitions: 
+     *                                        [{name, startX, startY, endX, endY}, ...]
+     * @param {Object} [spriteData.namedSprites] - Object of named sprite definitions (legacy support)
      */
     constructor(name, imagePath, spriteData) {
       if (name.includes(":")) {
@@ -2526,11 +2590,12 @@ var Nity = (() => {
     }
     /**
      * Generate sprite definitions from the spritesheet and register them in the unified registry
+     * Supports both grid-based and pixel coordinate-based sprite definitions
      * @private
      */
     generateSprites() {
-      const { spriteWidth, spriteHeight, columns, rows, sprites } = this.spriteData;
-      if (columns && rows) {
+      const { spriteWidth, spriteHeight, columns, rows, sprites, namedSprites } = this.spriteData;
+      if (columns != null && rows != null && spriteWidth != null && spriteHeight != null) {
         for (let row = 0; row < rows; row++) {
           for (let col = 0; col < columns; col++) {
             const index = row * columns + col;
@@ -2545,8 +2610,23 @@ var Nity = (() => {
           }
         }
       }
-      if (sprites) {
-        Object.entries(sprites).forEach(([name, config]) => {
+      if (sprites != null && Array.isArray(sprites)) {
+        sprites.forEach((sprite) => {
+          if (sprite.name && sprite.startX != null && sprite.startY != null && sprite.endX != null && sprite.endY != null) {
+            const spriteConfig = {
+              x: sprite.startX,
+              y: sprite.startY,
+              width: sprite.endX - sprite.startX,
+              height: sprite.endY - sprite.startY
+            };
+            this.sprites.set(sprite.name, spriteConfig);
+          } else {
+            console.warn(`Invalid sprite definition in "${this.name}":`, sprite);
+          }
+        });
+      }
+      if (namedSprites != null && typeof namedSprites === "object" && !Array.isArray(namedSprites)) {
+        Object.entries(namedSprites).forEach(([name, config]) => {
           this.sprites.set(name, config);
         });
       }
@@ -2574,7 +2654,6 @@ var Nity = (() => {
         const unifiedKey = `${this.name}:${spriteName}`;
         SpriteRegistry._addSprite(unifiedKey, this._createSpriteWrapper(spriteName));
       }
-      console.log(`Registered ${this.sprites.size} sprites from sheet "${this.name}" with colon notation`);
     }
     /**
      * Create a sprite wrapper that acts like a SpriteAsset for individual spritesheet sprites
@@ -2729,6 +2808,35 @@ var Nity = (() => {
         ctx.drawImage(this.image, -this.width / 2, -this.height / 2, this.width, this.height);
         ctx.restore();
       }
+    }
+    /**
+     * Draws gizmos for the image component bounds.
+     * Shows the image's bounding box and center point for debugging.
+     * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
+     */
+    __internalGizmos(ctx) {
+      if (!this.image) return;
+      const position = this.gameObject.getGlobalPosition();
+      const rotation = this.gameObject.getGlobalRotation();
+      ctx.save();
+      ctx.translate(position.x, position.y);
+      if (rotation !== 0) ctx.rotate(rotation);
+      ctx.strokeStyle = "#FF00FF";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 2]);
+      ctx.strokeRect(-this.width / 2, -this.height / 2, this.width, this.height);
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#FF00FF";
+      ctx.beginPath();
+      ctx.arc(0, 0, 2, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.fillStyle = "#FF00FF";
+      ctx.font = "10px Arial";
+      ctx.textAlign = "center";
+      const filename = this.src.split("/").pop();
+      ctx.fillText(filename, 0, -this.height / 2 - 8);
+      ctx.fillText(`${this.width}x${this.height}`, 0, this.height / 2 + 15);
+      ctx.restore();
     }
   };
 
@@ -2937,6 +3045,82 @@ var Nity = (() => {
       }
       ctx.closePath();
       ctx.fill();
+    }
+    /**
+     * Draws gizmos for shape visualization
+     * @param {CanvasRenderingContext2D} ctx - The canvas context to draw with
+     * @private
+     */
+    __internalGizmos(ctx) {
+      if (!this.gameObject) return;
+      const position = this.gameObject.getGlobalPosition();
+      const rotation = this.gameObject.getGlobalRotation();
+      ctx.save();
+      ctx.translate(position.x, position.y);
+      if (rotation !== 0) ctx.rotate(rotation);
+      ctx.strokeStyle = "#FF00FF";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 2]);
+      const { shape, size = 10, width = 10, height = 10 } = this.options;
+      switch (shape) {
+        case "rectangle":
+          ctx.strokeRect(-width / 2, -height / 2, width, height);
+          break;
+        case "circle":
+          ctx.beginPath();
+          ctx.arc(0, 0, size, 0, 2 * Math.PI);
+          ctx.stroke();
+          break;
+        case "triangle":
+          const triangleHeight = size;
+          ctx.beginPath();
+          ctx.moveTo(0, -triangleHeight / 2);
+          ctx.lineTo(-size / 2, triangleHeight / 2);
+          ctx.lineTo(size / 2, triangleHeight / 2);
+          ctx.closePath();
+          ctx.stroke();
+          break;
+        case "polygon":
+          const { points = [] } = this.options;
+          if (points.length >= 3) {
+            ctx.beginPath();
+            ctx.moveTo(points[0][0], points[0][1]);
+            for (let i = 1; i < points.length; i++) {
+              ctx.lineTo(points[i][0], points[i][1]);
+            }
+            ctx.closePath();
+            ctx.stroke();
+          }
+          break;
+      }
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#FF00FF";
+      ctx.beginPath();
+      ctx.arc(0, 0, 2, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.fillStyle = "#FF00FF";
+      ctx.font = "10px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(`Shape: ${shape || "none"}`, 0, -Math.max(size, height) / 2 - 8);
+      let sizeText = "";
+      switch (shape) {
+        case "rectangle":
+          sizeText = `${width}x${height}`;
+          break;
+        case "circle":
+          sizeText = `r:${size}`;
+          break;
+        case "triangle":
+          sizeText = `s:${size}`;
+          break;
+        case "polygon":
+          sizeText = `${this.options.points?.length || 0} pts`;
+          break;
+      }
+      if (sizeText) {
+        ctx.fillText(sizeText, 0, Math.max(size, height) / 2 + 15);
+      }
+      ctx.restore();
     }
   };
 

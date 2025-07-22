@@ -63,5 +63,50 @@ export class ImageComponent extends Component {
             ctx.restore();
         }
     }
+
+    /**
+     * Draws gizmos for the image component bounds.
+     * Shows the image's bounding box and center point for debugging.
+     * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
+     */
+    __internalGizmos(ctx) {
+        if (!this.image) return;
+        
+        const position = this.gameObject.getGlobalPosition();
+        const rotation = this.gameObject.getGlobalRotation();
+        
+        ctx.save();
+        
+        // Apply rotation to gizmos as well
+        ctx.translate(position.x, position.y);
+        if (rotation !== 0) ctx.rotate(rotation);
+        
+        // Set gizmo styling - magenta for image components
+        ctx.strokeStyle = '#FF00FF';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 2]); // Different dash pattern for images
+        
+        // Draw the image bounds rectangle (centered)
+        ctx.strokeRect(-this.width / 2, -this.height / 2, this.width, this.height);
+        
+        // Draw center point
+        ctx.setLineDash([]); // Solid line for center
+        ctx.fillStyle = '#FF00FF';
+        ctx.beginPath();
+        ctx.arc(0, 0, 2, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Draw image source label
+        ctx.fillStyle = '#FF00FF';
+        ctx.font = '10px Arial';
+        ctx.textAlign = 'center';
+        const filename = this.src.split('/').pop(); // Get just the filename
+        ctx.fillText(filename, 0, -this.height / 2 - 8);
+        
+        // Draw dimensions
+        ctx.fillText(`${this.width}x${this.height}`, 0, this.height / 2 + 15);
+        
+        ctx.restore();
+    }
 }
 3

@@ -191,4 +191,102 @@ export class ShapeComponent extends Component {
         ctx.closePath();
         ctx.fill();
     }
+
+    /**
+     * Draws gizmos for shape visualization
+     * @param {CanvasRenderingContext2D} ctx - The canvas context to draw with
+     * @private
+     */
+    __internalGizmos(ctx) {
+        if (!this.gameObject) return;
+        
+        const position = this.gameObject.getGlobalPosition();
+        const rotation = this.gameObject.getGlobalRotation();
+        
+        ctx.save();
+        
+        // Apply rotation to gizmos as well
+        ctx.translate(position.x, position.y);
+        if (rotation !== 0) ctx.rotate(rotation);
+        
+        // Set gizmo styling - magenta for shape components (matching ImageComponent)
+        ctx.strokeStyle = '#FF00FF';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 2]); // Same dash pattern as ImageComponent
+        
+        const { shape, size = 10, width = 10, height = 10 } = this.options;
+        
+        switch (shape) {
+            case 'rectangle':
+                // Rectangle outline (centered)
+                ctx.strokeRect(-width/2, -height/2, width, height);
+                break;
+                
+            case 'circle':
+                // Circle outline
+                ctx.beginPath();
+                ctx.arc(0, 0, size, 0, 2 * Math.PI);
+                ctx.stroke();
+                break;
+                
+            case 'triangle':
+                // Triangle outline (centered)
+                const triangleHeight = size;
+                ctx.beginPath();
+                ctx.moveTo(0, -triangleHeight/2);
+                ctx.lineTo(-size/2, triangleHeight/2);
+                ctx.lineTo(size/2, triangleHeight/2);
+                ctx.closePath();
+                ctx.stroke();
+                break;
+                
+            case 'polygon':
+                const { points = [] } = this.options;
+                if (points.length >= 3) {
+                    ctx.beginPath();
+                    ctx.moveTo(points[0][0], points[0][1]);
+                    for (let i = 1; i < points.length; i++) {
+                        ctx.lineTo(points[i][0], points[i][1]);
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+                break;
+        }
+        
+        // Draw center point
+        ctx.setLineDash([]); // Solid line for center
+        ctx.fillStyle = '#FF00FF';
+        ctx.beginPath();
+        ctx.arc(0, 0, 2, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Draw shape type label
+        ctx.fillStyle = '#FF00FF';
+        ctx.font = '10px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Shape: ${shape || 'none'}`, 0, -Math.max(size, height)/2 - 8);
+        
+        // Draw size info based on shape
+        let sizeText = '';
+        switch (shape) {
+            case 'rectangle':
+                sizeText = `${width}x${height}`;
+                break;
+            case 'circle':
+                sizeText = `r:${size}`;
+                break;
+            case 'triangle':
+                sizeText = `s:${size}`;
+                break;
+            case 'polygon':
+                sizeText = `${this.options.points?.length || 0} pts`;
+                break;
+        }
+        if (sizeText) {
+            ctx.fillText(sizeText, 0, Math.max(size, height)/2 + 15);
+        }
+        
+        ctx.restore();
+    }
 }

@@ -1,29 +1,63 @@
 # Renderer Components
 
-The renderer components in NityJS handle the visual display of GameObjects. They provide different ways to render graphics, from simple shapes to complex sprites and images.
+The renderer components in NityJS handle the visual display of GameObjects with Unity-style rendering patterns. They provide different ways to render graphics, from simple shapes to complex sprites and images, with built-in gizmos for debugging.
 
 ## Overview
 
-- **SpriteRendererComponent**: Renders sprites from spritesheets
-- **ImageComponent**: Renders individual image files
-- **ShapeComponent**: Renders geometric shapes
+- **SpriteRendererComponent**: Renders sprites with options object for scaling and effects
+- **ImageComponent**: Renders individual image files with width/height parameters  
+- **ShapeComponent**: Renders geometric shapes (rectangle, circle, triangle, polygon)
+- **Gizmos System**: All renderer components include debug visualization
 
 ## SpriteRendererComponent Class
 
 ### Constructor
 
 ```javascript
-new SpriteRendererComponent(sheetName, spriteName)
+new SpriteRendererComponent(spriteKey, options = {})
 ```
 
 **Parameters:**
-- `sheetName` (string) - Name of the spritesheet containing the sprite
-- `spriteName` (string) - Name of the specific sprite to render
+- `spriteKey` (string) - Unified sprite key ("spriteName" or "spritesheet:spriteName")
+- `options` (Object, optional) - Rendering options:
+  - `width` (number) - Custom width for scaling
+  - `height` (number) - Custom height for scaling
+  - `flipX` (boolean) - Flip horizontally (future feature)
+  - `flipY` (boolean) - Flip vertically (future feature)
+  - `opacity` (number) - Transparency 0-1 (future feature)
+
+### Examples
+
+```javascript
+// Natural size
+gameObject.addComponent(new SpriteRendererComponent("player"));
+
+// Custom scaling
+gameObject.addComponent(new SpriteRendererComponent("player", { 
+    width: 64, 
+    height: 64 
+}));
+
+// Spritesheet sprite
+gameObject.addComponent(new SpriteRendererComponent("enemies:orc"));
+```
 
 ### Methods
 
 #### preload()
-Preloads the sprite from the spritesheet (called automatically).
+Preloads the sprite from the unified SpriteRegistry (called automatically).
+
+#### setOptions(newOptions)
+Updates rendering options at runtime.
+- `newOptions` (Object) - New options to merge with existing ones
+
+#### setScale(width, height)
+Convenience method to set width/height.
+- `width` (number) - New width
+- `height` (number) - New height
+
+#### getRenderedWidth() / getRenderedHeight()
+Returns the actual rendered dimensions (custom or natural).
 
 ## ImageComponent Class
 
@@ -44,7 +78,7 @@ new ImageComponent(src, width, height)
 Loads the image file (called automatically).
 
 #### draw(ctx)
-Draws the image on the canvas.
+Draws the image on the canvas with rotation support.
 
 ## ShapeComponent Class
 

@@ -39,14 +39,9 @@ export class Game {
     }
 
     launch(scene) {
-        if (!scene) throw new Error('No scene assigned to game.');
+        if (!scene && !this.scene) throw new Error('No scene assigned to game.');
         this.#_initCanvas();
-        this.#_launch(scene);
-    }
-
-    async #_launch(scene) {
-        await this.loadScene(scene);
-        this.start();
+        this.#_launch(scene||this.scene);
     }
 
     async loadScene(scene){
@@ -59,18 +54,31 @@ export class Game {
         await SpriteRegistry.preloadAll();
         await this.scene.preload();
         await this.scene.start();
-        this.start();
+        this.#_start();
     }
 
-    start() {
+    pause(){
+        this.paused = true;
+    }
+
+    resume(){
+        this.paused = false;
+    }
+
+    async #_launch(scene) {
+        await this.loadScene(scene);
+        this.#_start();
+    }
+
+    #_start() {
         Time._reset(); // Reset time system for new game session
         Input.initialize(this.canvas);
         this.#_initEventListeners();
         
-        requestAnimationFrame(this.loop.bind(this));
+        requestAnimationFrame(this.#_loop.bind(this));
     }
 
-     loop(timestamp) {
+     #_loop(timestamp) {
         this._deltaTime = (timestamp - this.#_lastTime) / 1000;
         if (this._deltaTime > 0.1) this._deltaTime = 0.1;
         this.#_lastTime = timestamp;
@@ -95,15 +103,7 @@ export class Game {
             this.scene.__draw(this.ctx);
         }
 
-        requestAnimationFrame(this.loop.bind(this));
-    }
-
-    pause(){
-        this.paused = true;
-    }
-
-    resume(){
-        this.paused = false;
+        requestAnimationFrame(this.#_loop.bind(this));
     }
 
 

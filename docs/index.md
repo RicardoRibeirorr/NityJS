@@ -7,12 +7,20 @@ This is a complete index of all available documentation for the NityJS game engi
 ### Fundamental Classes
 - [Game](core/Game.md) - Main game engine, canvas management, and game loop
 - [Scene](core/Scene.md) - Scene management, object lifecycle, and game state
-- [GameObject](core/GameObject.md) - Base entity class with transform and component system
+- [GameObject](core/GameObject.md) - Base entity class with Vector2 transform, rotation, and component system
 - [Component](core/Component.md) - Base class for all modular functionality (Unity's MonoBehaviour equivalent)
 - [Instantiate](Instantiate.md) - Object creation, destruction, and scene management
-- [Time](core/Time.md) - Delta time, frame-rate independent calculations
+- [Time](core/Time.md) - Enhanced timing with deltaTime, performance.now(), timeScale, FPS monitoring
 
-> **Unity Developers:** Component = MonoBehaviour, GameObject = GameObject, Scene = Scene. Note that `lateUpdate()` runs independently and does NOT pause when game is in pause mode.
+> **Unity Developers:** Component = MonoBehaviour, GameObject = GameObject with Vector2 position/rotation, Scene = Scene. GameObject.rotation uses radians. Note that `lateUpdate()` runs independently and does NOT pause when game is in pause mode.
+
+## Math System
+
+### Vector Mathematics
+- **Vector2** - Unity-compatible 2D vector with properties (magnitude, normalized, sqrMagnitude) and static methods (distance, dot, lerp, etc.)
+- **Vector3** - Unity-compatible 3D vector with full vector operations
+- **Static Constants** - Vector2.zero, Vector2.one, Vector2.up, Vector2.right, etc.
+- **Transform System** - GameObject position/rotation with parent-child inheritance via getGlobalPosition(), getGlobalRotation()
 
 ## Input System
 
@@ -23,21 +31,28 @@ This is a complete index of all available documentation for the NityJS game engi
 
 ### Movement and Collision
 - [RigidbodyComponent](physics/RigidbodyComponent.md) - Physics-based movement with velocity
-- [BoxColliderComponent](physics/BoxColliderComponent.md) - Rectangle collision detection
-- [CircleColliderComponent](physics/CircleColliderComponent.md) - Circle collision detection
+- [BoxColliderComponent](physics/BoxColliderComponent.md) - Rectangle collision detection with gizmos
+- [CircleColliderComponent](physics/CircleColliderComponent.md) - Circle collision detection with gizmos
 - [GravityComponent](physics/GravityComponent.md) - Gravity simulation and effects
 
 ## Rendering System
 
 ### Visual Components
-- [Renderer Components](renderer/RendererComponents.md) - Complete guide to all rendering components
-  - SpriteRendererComponent - Render sprites from spritesheets
-  - ImageComponent - Display individual image files
-  - ShapeComponent - Draw geometric shapes
+- [Renderer Components](renderer/RendererComponents.md) - Complete guide to all rendering components with gizmos
+  - SpriteRendererComponent - Render sprites with options object (width, height scaling)
+  - ImageComponent - Display individual image files with width/height parameters
+  - ShapeComponent - Draw geometric shapes (rectangle, circle, triangle, polygon)
 - [Sprite and Spritesheet](renderer/Sprite.md) - Sprite management and spritesheet handling
 
 ### Asset Management
-- [SpriteRegistry](asset/SpriteRegistry.md) - Centralized sprite loading and management
+- [SpriteRegistry](asset/SpriteRegistry.md) - Centralized sprite loading and unified access with colon notation
+- **SpriteAsset** - Single sprite loading: `new SpriteAsset("key", "path.png")`
+- **SpritesheetAsset** - Dual methods: grid-based and pixel coordinate-based definitions
+
+### Debug Visualization
+- **Gizmos System** - Visual debugging with __internalGizmos() methods
+  - Renderer components: Magenta gizmos showing bounds and properties
+  - Collision components: Green/blue gizmos showing collision areas
 
 ## Animation System
 
@@ -63,10 +78,35 @@ This is a complete index of all available documentation for the NityJS game engi
 
 **Component Usage Patterns:**
 - **Class Extension** - `class PlayerController extends Component { ... }` (Unity-style)
-- **Inline Anonymous** - `gameObject.addComponent(new class extends Component { ... })`
-- **Factory Pattern** - Configurable, reusable component creation
-- **Mixin Pattern** - Shared functionality across components
-- **Functional Components** - Simple function-based behaviors
+- **Inline Anonymous** - `gameObject.addComponent(new class extends Component { update() { ... } })`
+- **Options Objects** - `new SpriteRendererComponent("sprite", { width: 64, height: 64 })`
+
+## Current API Examples
+
+```javascript
+// GameObject with Vector2 transforms
+const obj = new GameObject(new Vector2(100, 50));
+obj.rotation = Math.PI / 4; // 45 degrees in radians
+
+// SpriteRendererComponent with options
+obj.addComponent(new SpriteRendererComponent("player", { 
+    width: 64, 
+    height: 64 
+}));
+
+// Spritesheet with pixel coordinate method
+const sheet = new SpritesheetAsset("tiles", "tiles.png", {
+    sprites: [
+        { name: "tile1", startX: 0, startY: 0, endX: 16, endY: 16 }
+    ]
+});
+obj.addComponent(new SpriteRendererComponent("tiles:tile1"));
+
+// Vector math operations
+const velocity = Vector2.up.multiply(100);
+const newPos = obj.position.add(velocity.multiply(Time.deltaTime));
+const distance = Vector2.distance(obj.position, target.position);
+```
 
 **For Visuals:**
 1. Use [Renderer Components](renderer/RendererComponents.md) for basic graphics

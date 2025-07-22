@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NityJS - Manual Spritesheet Example</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+        }
+        #gameCanvas {
+            border: 2px solid #333;
+            background: rgb(155, 155, 155);
+            display: block;
+            margin: 20px 0;
+        }
+        .info {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+            border-left: 4px solid #007acc;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 NityJS Manual Spritesheet Example</h1>
+    
+    <div class="info">
+        <h3>Features Demonstrated:</h3>
+        <ul>
+            <li><strong>Full Spritesheet Display</strong> - Shows the complete 24x8 spritesheet image</li>
+            <li><strong>Individual Sprites</strong> - Extracts and displays each 8x8 sprite with borders</li>
+            <li><strong>Pixel Coordinate Method</strong> - Uses startX, startY, endX, endY format</li>
+        </ul>
+    </div>
+
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
+
+    <script src="../../../dist/nity.module.js" type="module">
+    </script>
+    <script src="index.js" type="module"></script>
+</body>
+</html>
