@@ -45,6 +45,18 @@ class Player extends GameObject {
     }
 }
 
+// Unity-style Destroy system - exactly what you expect!
+Destroy(player);                              // Destroy GameObject
+DestroyComponent(player, RigidbodyComponent);  // Remove specific component
+DestroyAll();                                 // Clear entire scene
+
+// Metadata-driven components for visual editors
+const shape = Component.createFromMetadata(ShapeComponent, {
+    shapeType: "circle",
+    radius: 25,
+    color: "#00FF00",
+    filled: true
+});
 
 // Component - the new MonoBehavior but with more style! 😊
 class PlayerController extends Component {
@@ -77,6 +89,8 @@ class PlayerController extends Component {
 | System | Unity Equivalent | Status |
 |--------|------------------|--------|
 | **GameObject-Component** | GameObject/MonoBehaviour | ✅ Complete |
+| **Unity-Style Destroy** | Destroy/DestroyImmediate | ✅ Complete |
+| **Metadata Components** | Editor Inspector | ✅ Complete |
 | **Scene Management** | Scene System | ✅ Complete |
 | **Physics & Collision** | Rigidbody2D/Collider2D | ✅ Stable |
 | **Input System** | Input Manager | ✅ Enhanced |
@@ -132,7 +146,7 @@ npm run build:prod   # Production builds only (minified)
 
 ### Your First Game (Unity Style!)
 ```javascript
-import { Game, Scene, GameObject, SpriteAsset, SpritesheetAsset, SpriteRendererComponent } from './dist/nity.module.min.js';
+import { Game, Scene, GameObject, SpriteAsset, SpritesheetAsset, SpriteRendererComponent, ShapeComponent, Destroy } from './dist/nity.module.min.js';
 
 // Create game (like Unity's Game window)
 const canvas = document.getElementById('gameCanvas');
@@ -152,23 +166,36 @@ const gameScene = new Scene({
 
     // Create player (like Unity's GameObject)
     const player = new GameObject("Player");
-    player.x = 100;
-    player.y = 100;
+    player.position.set(100, 100);
     
     // Add sprite component (like Unity's AddComponent)
     player.addComponent(new SpriteRendererComponent("player"));
     
-    // Add enemy with spritesheet animation
+    // Create shape with metadata (perfect for visual editors!)
     const enemy = new GameObject("Enemy");
-    enemy.x = 200;
-    enemy.y = 100;
-    enemy.addComponent(new SpriteRendererComponent("enemies", "sprite_0")); 
-      height: 50, 
-      color: "blue"
-    }));
+    enemy.position.set(200, 100);
+    
+    // Multiple component creation methods:
+    // 1. Traditional constructor
+    enemy.addComponent(new ShapeComponent("circle", 25, { color: "red" }));
+    
+    // 2. Metadata-driven (ideal for editors)
+    const healthBar = Component.createFromMetadata(ShapeComponent, {
+      shapeType: "rectangle",
+      width: 50,
+      height: 8,
+      color: "#00FF00",
+      filled: true
+    });
+    
+    // Unity-style destruction
+    setTimeout(() => {
+      Destroy(enemy);  // Just like Unity!
+    }, 3000);
     
     // Add to scene (like Unity's Instantiate)
     Instantiate.create(player);
+    Instantiate.create(enemy);
   }
 });
 
@@ -232,10 +259,11 @@ Each example includes:
 - **Particle System** - Visual effects and animations
 - **Mobile Touch** - Touch input and gestures
 - **Debug Tools** - Visual debugging and profilers
+- **Visual Editor** - Browser-based scene editor with metadata integration
 
 ### 🌟 Future (v2.0+)
 - **3D Support** - Basic 3D rendering capabilities
-- **Visual Editor** - Browser-based scene editor
+- **Advanced Editor** - Full visual scripting with metadata system
 - **Plugin System** - Extend engine functionality
 - **WebXR Support** - VR/AR game development
 - **Performance Profiler** - Built-in optimization tools

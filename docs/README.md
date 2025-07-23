@@ -31,7 +31,7 @@ NityJS is a lightweight, Unity-inspired 2D game engine built in JavaScript. It p
 ### Basic Example
 
 ```javascript
-import { Game, Scene, GameObject, ShapeComponent } from './dist/nity.module.min.js';
+import { Game, Scene, GameObject, ShapeComponent, Destroy } from './dist/nity.module.min.js';
 
 // Create canvas
 const canvas = document.getElementById('gameCanvas');
@@ -40,10 +40,29 @@ const game = new Game(canvas);
 // Create scene
 const scene = new Scene({
   create(scene) {
-    // Create a red square
+    // Create shapes using multiple methods
+    
+    // 1. Traditional constructor
     const player = new GameObject(100, 100);
-    player.addComponent(new ShapeComponent(50, 50, '#ff0000'));
+    player.addComponent(new ShapeComponent("rectangle", 50, { color: '#ff0000' }));
+    
+    // 2. Metadata-driven creation (perfect for editors!)
+    const enemy = new GameObject(200, 100);
+    const enemyShape = Component.createFromMetadata(ShapeComponent, {
+      shapeType: "circle",
+      radius: 25,
+      color: "#00FF00",
+      filled: true
+    });
+    enemy.addComponent(enemyShape);
+    
+    // 3. Unity-style destruction
+    setTimeout(() => {
+      Destroy(enemy); // Just like Unity!
+    }, 3000);
+    
     scene.add(player);
+    scene.add(enemy);
   }
 });
 
@@ -64,10 +83,26 @@ NityJS follows Unity's GameObject-Component pattern:
 ### Key Classes
 
 1. **[Game](./docs/core/Game.md)** - Main game loop and canvas management
-2. **[Scene](./docs/core/Scene.md)** - Container for GameObjects
+2. **[Scene](./docs/core/Scene.md)** - Container for GameObjects  
 3. **[GameObject](./docs/core/GameObject.md)** - Base entity class
 4. **[Component](./docs/core/Component.md)** - Base class for all components
-5. **[Input](./docs/input/Input.md)** - Keyboard and mouse input handling
+5. **[Component Metadata](./docs/core/ComponentMetadata.md)** - Data-driven component creation
+6. **[Destroy System](./docs/core/Destroy.md)** - Unity-style GameObject destruction  
+7. **[Input](./docs/input/Input.md)** - Keyboard and mouse input handling
+
+### Unity-Style Features
+
+#### Destroy System
+- **Destroy(gameObject)** - Destroys a GameObject (exact Unity API)
+- **DestroyComponent(gameObject, ComponentClass)** - Removes specific component  
+- **DestroyAll()** - Destroys all GameObjects in current scene
+- **Function-based API** - Use `Destroy(obj)` not `obj.destroy()` to match Unity
+
+#### Metadata System  
+- **Component.createFromMetadata()** - Create components from data objects
+- **getDefaultMeta()** - Get default configuration for any component
+- **Visual Editor Ready** - Perfect for future browser-based editors
+- **JSON Configuration** - Define scenes and components declaratively
 
 ### Component Categories
 
@@ -92,6 +127,8 @@ NityJS follows Unity's GameObject-Component pattern:
 - [Scene](core/Scene.md) - Scene management and lifecycle
 - [GameObject](core/GameObject.md) - Base entity class
 - [Component](core/Component.md) - Base component class
+- [Component Metadata](core/ComponentMetadata.md) - Data-driven component creation and editor integration
+- [Destroy System](core/Destroy.md) - Unity-style GameObject destruction (Destroy, DestroyComponent, DestroyAll)
 - [Instantiate](Instantiate.md) - Object creation and destruction
 - [Time](core/Time.md) - Time and delta time utilities
 

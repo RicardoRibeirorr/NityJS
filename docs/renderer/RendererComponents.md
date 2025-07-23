@@ -1,13 +1,76 @@
 # Renderer Components
 
+> **Note:** This documentation has been split into individual component files for easier navigation. Please refer to the specific component documentation below.
+
 The renderer components in NityJS handle the visual display of GameObjects with Unity-style rendering patterns. They provide different ways to render graphics, from simple shapes to complex sprites and images, with built-in gizmos for debugging.
 
-## Overview
+## Component Documentation
+
+### 🎨 Individual Component Documentation
+- **[SpriteRendererComponent](SpriteRendererComponent.md)** - Complete sprite rendering with scaling, tinting, flipping, and opacity effects
+- **[ImageComponent](ImageComponent.md)** - Direct image file rendering with width/height control  
+- **[ShapeComponent](ShapeComponent.md)** - Geometric shape rendering with full metadata support
+
+### 🗃️ Asset Management
+- **[Sprite and Spritesheet](Sprite.md)** - Sprite asset loading and spritesheet management
+
+## Quick Overview
 
 - **SpriteRendererComponent**: Renders sprites with options object for scaling and effects
 - **ImageComponent**: Renders individual image files with width/height parameters  
-- **ShapeComponent**: Renders geometric shapes (rectangle, circle, triangle, polygon)
+- **ShapeComponent**: Renders geometric shapes (rectangle, circle, triangle, polygon) with metadata support
 - **Gizmos System**: All renderer components include debug visualization
+
+## Usage Examples
+
+### Basic Rendering Setup
+```javascript
+// Sprite rendering (recommended for game objects)
+gameObject.addComponent(new SpriteRendererComponent("player", {
+    width: 64,
+    height: 64,
+    opacity: 0.8,
+    color: "#FF0000"
+}));
+
+// Image rendering (for backgrounds and UI)
+gameObject.addComponent(new ImageComponent("assets/background.png", 800, 600));
+
+// Shape rendering (for UI and effects)
+gameObject.addComponent(new ShapeComponent("circle", 25, {
+    color: "#00FF00",
+    filled: true
+}));
+
+// Metadata-driven creation (perfect for visual editors)
+const shape = Component.createFromMetadata(ShapeComponent, {
+    shapeType: "rectangle",
+    width: 100,
+    height: 50,
+    color: "#0000FF",
+    filled: true
+});
+```
+
+## Unity Equivalents
+
+- **SpriteRendererComponent** = Unity's **SpriteRenderer**
+- **ImageComponent** = Unity's **Image** (UI) or custom image rendering
+- **ShapeComponent** = Unity's **Line Renderer** + custom geometry
+- **Gizmos System** = Unity's **Gizmos** for debug visualization
+
+## Next Steps
+
+For detailed documentation, examples, and API reference, please visit the individual component documentation:
+
+1. **[SpriteRendererComponent](SpriteRendererComponent.md)** - Start here for game object rendering
+2. **[ShapeComponent](ShapeComponent.md)** - Learn about geometric shapes and metadata system
+3. **[ImageComponent](ImageComponent.md)** - Understand direct image rendering
+4. **[Sprite Assets](Sprite.md)** - Master the sprite asset system
+
+---
+
+**Each component has its own comprehensive documentation with examples, best practices, and Unity comparisons.**
 
 ## SpriteRendererComponent Class
 

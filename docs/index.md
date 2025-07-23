@@ -9,10 +9,13 @@ This is a complete index of all available documentation for the NityJS game engi
 - [Scene](core/Scene.md) - Scene management, object lifecycle, and game state
 - [GameObject](core/GameObject.md) - Base entity class with Vector2 transform, rotation, and component system
 - [Component](core/Component.md) - Base class for all modular functionality (Unity's MonoBehaviour equivalent)
+- [MonoBehaviour](core/MonoBehaviour.md) - Unity-style alias for Component (exact same functionality)
+- [Component Metadata](core/ComponentMetadata.md) - Data-driven component creation and visual editor integration
+- [Destroy System](core/Destroy.md) - Unity-style GameObject destruction (Destroy, DestroyComponent, DestroyAll)
 - [Instantiate](Instantiate.md) - Object creation, destruction, and scene management
 - [Time](core/Time.md) - Enhanced timing with deltaTime, performance.now(), timeScale, FPS monitoring
 
-> **Unity Developers:** Component = MonoBehaviour, GameObject = GameObject with Vector2 position/rotation, Scene = Scene. GameObject.rotation uses radians. Note that `lateUpdate()` runs independently and does NOT pause when game is in pause mode.
+> **Unity Developers:** Component = MonoBehaviour, GameObject = GameObject with Vector2 position/rotation, Scene = Scene. GameObject.rotation uses radians. Note that `lateUpdate()` runs independently and does NOT pause when game is in pause mode. Use `Destroy(gameObject)` function exactly like Unity - not `gameObject.destroy()` method.
 
 ## Math System
 

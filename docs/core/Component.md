@@ -1,6 +1,78 @@
 # Component Class Documentation
 
-The `Component` class is the base class for all functionality in NityJS, equivalent to Unity's **MonoBehaviour**. Components provide modular behavior that can be attached to GameObjects using Unity-familiar patterns.
+The `Compon## Component Usage Patterns
+
+NityJS supports multiple ways to create and use components, offering flexibility for different coding styles and development workflows:
+
+### 1. Class Extension (Recommended)
+**Unity-style component classes** - Most similar to Unity MonoBehaviour scripts:
+
+```javascript
+class PlayerController extends Component {
+    constructor() {
+        super();
+        this.speed = 200;
+        this.jumpForce = 400;
+    }
+    
+    start() {
+        this.rigidbody = this.gameObject.getComponent(RigidbodyComponent);
+        this.collider = this.gameObject.getComponent(BoxColliderComponent);
+    }
+```
+
+### 2. Metadata-Driven Creation (NEW!)
+**Perfect for visual editors and data-driven workflows**:
+
+```javascript
+// Define metadata for your component
+class HealthComponent extends Component {
+    static getDefaultMeta() {
+        return {
+            maxHealth: 100,
+            currentHealth: 100,
+            regenerationRate: 5,
+            invulnerable: false
+        };
+    }
+    
+    applyMeta(metadata) {
+        this.maxHealth = metadata.maxHealth;
+        this.currentHealth = metadata.currentHealth;
+        this.regenerationRate = metadata.regenerationRate;
+        this.invulnerable = metadata.invulnerable;
+    }
+}
+
+// Create from metadata object
+const healthComp = Component.createFromMetadata(HealthComponent, {
+    maxHealth: 150,
+    currentHealth: 150,
+    regenerationRate: 8
+});
+
+// Apply metadata to existing component
+healthComp.applyMeta({ maxHealth: 200, invulnerable: true });
+```
+
+### 3. JSON Configuration
+**Declarative component definition from data**:
+
+```javascript
+// Define components in JSON
+const componentConfig = {
+    type: "HealthComponent",
+    metadata: {
+        maxHealth: 80,
+        currentHealth: 60,
+        regenerationRate: 3
+    }
+};
+
+// Create from configuration
+const ComponentClass = getComponentClass(componentConfig.type);
+const component = Component.createFromMetadata(ComponentClass, componentConfig.metadata);
+```ase class for all functionality in NityJS, equivalent to Unity's **MonoBehaviour**. Components provide modular behavior that can be attached to GameObjects using Unity-familiar patterns, with enhanced metadata support for visual editors and data-driven development.
 
 ## Overview
 
@@ -15,16 +87,32 @@ class MyCustomComponent extends Component {
   update() {
     // Component logic here
   }
+  
+  // NEW: Metadata support for visual editors
+  static getDefaultMeta() {
+    return {
+      speed: 100,
+      health: 50,
+      enabled: true
+    };
+  }
 }
+
+// Create from metadata (perfect for visual editors!)
+const component = Component.createFromMetadata(MyCustomComponent, {
+  speed: 150,
+  health: 75
+});
 ```
 
 ## Unity Equivalents
 
-- **Component** = Unity's **MonoBehaviour** - Base class for all game logic
+- **Component** = Unity's **MonoBehaviour** - Base class for all game logic with metadata system
 - **start()** = Unity's **Start()** - Initialization method
 - **update()** = Unity's **Update()** - Per-frame logic
 - **lateUpdate()** = Unity's **LateUpdate()** - Post-update logic
 - **gameObject** = Unity's **gameObject** - Reference to parent GameObject
+- **Metadata System** = Unity's **Inspector Properties** + **[SerializeField]** - Data-driven configuration
 
 > **⚠️ Important:** `lateUpdate()` runs independently and does **NOT** pause when the game is in pause mode.
 
@@ -147,6 +235,58 @@ class MoveComponent extends Component {
 #### `active`
 - **Type:** `boolean`
 - **Description:** Whether this component is active and updating
+
+## Metadata System (NEW!)
+
+### `static createFromMetadata(ComponentClass, metadata)`
+Creates a component instance from metadata object (perfect for visual editors).
+
+```javascript
+const healthComp = Component.createFromMetadata(HealthComponent, {
+    maxHealth: 150,
+    currentHealth: 100,
+    regenerationRate: 5
+});
+```
+
+### `static getDefaultMeta()`
+Returns the default metadata configuration for this component type.
+
+```javascript
+class HealthComponent extends Component {
+    static getDefaultMeta() {
+        return {
+            maxHealth: 100,
+            currentHealth: 100,
+            regenerationRate: 0,
+            invulnerable: false
+        };
+    }
+}
+
+const defaults = HealthComponent.getDefaultMeta();
+```
+
+### `applyMeta(metadata)`
+Applies metadata configuration to an existing component instance.
+
+```javascript
+const component = new HealthComponent();
+component.applyMeta({
+    maxHealth: 200,
+    invulnerable: true
+});
+```
+
+### `static meta(metadata)`
+Quick factory method for creating instances with metadata.
+
+```javascript
+const component = HealthComponent.meta({
+    maxHealth: 80,
+    currentHealth: 60
+});
+```
 
 ## Lifecycle Methods
 
