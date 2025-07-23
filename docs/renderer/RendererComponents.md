@@ -22,9 +22,10 @@ new SpriteRendererComponent(spriteKey, options = {})
 - `options` (Object, optional) - Rendering options:
   - `width` (number) - Custom width for scaling
   - `height` (number) - Custom height for scaling
-  - `flipX` (boolean) - Flip horizontally (future feature)
-  - `flipY` (boolean) - Flip vertically (future feature)
-  - `opacity` (number) - Transparency 0-1 (future feature)
+  - `opacity` (number) - Sprite opacity/alpha (0.0 to 1.0, default: 1.0)
+  - `color` (string) - Tint color in hex format (e.g., "#FF0000") or rgba format (e.g., "rgba(255, 0, 0, 0.5)", default: "#FFFFFF")
+  - `flipX` (boolean) - Flip sprite horizontally (default: false)
+  - `flipY` (boolean) - Flip sprite vertically (default: false)
 
 ### Examples
 
@@ -40,6 +41,30 @@ gameObject.addComponent(new SpriteRendererComponent("player", {
 
 // Spritesheet sprite
 gameObject.addComponent(new SpriteRendererComponent("enemies:orc"));
+
+// With opacity and color tinting
+gameObject.addComponent(new SpriteRendererComponent("player", {
+    width: 64,
+    height: 64,
+    opacity: 0.8,
+    color: "rgba(255, 68, 68, 0.7)" // Semi-transparent red tint
+}));
+
+// With flipping
+gameObject.addComponent(new SpriteRendererComponent("player", {
+    flipX: true,  // Flip horizontally
+    flipY: false  // No vertical flip
+}));
+
+// Complete example with all options
+gameObject.addComponent(new SpriteRendererComponent("tiles:tile1", { 
+    width: 128, 
+    height: 128,
+    opacity: 0.9,
+    color: "#FF6644", // Orange tint
+    flipX: false,
+    flipY: false 
+}));
 ```
 
 ### Methods
@@ -58,6 +83,26 @@ Convenience method to set width/height.
 
 #### getRenderedWidth() / getRenderedHeight()
 Returns the actual rendered dimensions (custom or natural).
+
+#### getOpacity() / setOpacity(opacity)
+Get or set the sprite opacity.
+- `opacity` (number) - Opacity value (0.0 to 1.0)
+
+#### getColor() / setColor(color)
+Get or set the sprite tint color.
+- `color` (string) - Tint color in hex format or rgba format
+
+#### getFlipX() / setFlipX(flipX)
+Get or set horizontal flip state.
+- `flipX` (boolean) - Whether to flip horizontally
+
+#### getFlipY() / setFlipY(flipY)
+Get or set vertical flip state.
+- `flipY` (boolean) - Whether to flip vertically
+
+#### setSprite(newSpriteKey)
+Change the sprite being rendered.
+- `newSpriteKey` (string) - New unified sprite key
 
 ## ImageComponent Class
 
@@ -515,7 +560,7 @@ class MultiStateSprite extends GameObject {
 
 ## Related Classes
 
-- [Sprite and Spritesheet](Sprite.md) - Core sprite management classes
+- [SpriteAsset and SpritesheetAsset](Sprite.md) - Core sprite asset management classes
 - [Component](../core/Component.md) - Base class for all renderer components
 - [GameObject](../core/GameObject.md) - Objects that use renderer components
 - [SpriteAnimationComponent](../animations/SpriteAnimation.md) - For animated sprites

@@ -105,7 +105,7 @@ NityJS follows Unity's GameObject-Component pattern:
 - [GravityComponent](physics/GravityComponent.md) - Gravity effects
 
 ### Rendering System
-- [Sprite and Spritesheet](renderer/Sprite.md) - Sprite management
+- [SpriteAsset and SpritesheetAsset](renderer/Sprite.md) - Sprite asset management
 - [SpriteRegistry](asset/SpriteRegistry.md) - Asset loading and management
 - [Renderer Components](renderer/RendererComponents.md) - Visual rendering components
   - SpriteRendererComponent
@@ -128,7 +128,7 @@ import { Game, Scene, GameObject, Component } from 'nity-engine';
 
 // Rendering
 import { ShapeComponent, SpriteRendererComponent, ImageComponent } from 'nity-engine';
-import { Sprite, Spritesheet, SpriteRegistry } from 'nity-engine';
+import { SpriteAsset, SpritesheetAsset, SpriteRegistry } from 'nity-engine';
 
 // Physics
 import { RigidbodyComponent, BoxColliderComponent, CircleColliderComponent } from 'nity-engine';

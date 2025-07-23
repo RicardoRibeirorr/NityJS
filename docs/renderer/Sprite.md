@@ -1,44 +1,62 @@
-# Sprite and Spritesheet Classes
+# SpriteAsset and SpritesheetAsset Classes
 
-The `Sprite` and `Spritesheet` classes work together to manage and render sprite-based graphics in NityJS.
+The `SpriteAsset` and `SpritesheetAsset` classes work together to manage and render sprite-based graphics in NityJS.
 
 ## Overview
 
-- **Sprite**: Represents a single sprite or image region within a larger image
-- **Spritesheet**: Manages a collection of sprites loaded from a single image file
+- **SpriteAsset**: Represents a single sprite image with automatic loading and registration
+- **SpritesheetAsset**: Manages a collection of sprites loaded from a single image file
 
-These classes provide an efficient way to handle sprite-based graphics, reducing the number of image files and improving performance.
+These classes provide an efficient way to handle sprite-based graphics, with automatic registration in the SpriteRegistry for unified access.
 
-## Sprite Class
+## SpriteAsset Class
 
 ### Constructor
 
 ```javascript
-new Sprite(image, x, y, width, height)
+new SpriteAsset(name, imagePath, config = {})
 ```
 
 **Parameters:**
-- `image` (HTMLImageElement) - The source image element
-- `x` (number) - X coordinate of the sprite region in the source image
-- `y` (number) - Y coordinate of the sprite region in the source image
-- `width` (number) - Width of the sprite region
-- `height` (number) - Height of the sprite region
+- `name` (string) - Name to register the sprite under (cannot contain colons)
+- `imagePath` (string) - Path to the sprite image
+- `config` (Object, optional) - Configuration options:
+  - `width` (number) - Override width
+  - `height` (number) - Override height
+  - `pivotX` (number) - Pivot point X (0-1, default: 0.5)
+  - `pivotY` (number) - Pivot point Y (0-1, default: 0.5)
 
-## Spritesheet Class
+### Methods
+
+#### async load()
+Loads the sprite image and sets up dimensions.
+**Returns:** Promise that resolves when image is loaded
+
+#### draw(ctx, x, y, width, height, rotation = 0, scaleX = 1, scaleY = 1)
+Draws the sprite to a canvas context with full transform support.
+
+**Parameters:**
+- `ctx` (CanvasRenderingContext2D) - Canvas context
+- `x` (number) - X position to draw at
+- `y` (number) - Y position to draw at  
+- `width` (number, optional) - Width to draw (defaults to sprite width)
+- `height` (number, optional) - Height to draw (defaults to sprite height)
+- `rotation` (number) - Rotation in radians
+- `scaleX` (number) - X scale factor (use -1 for horizontal flip)
+- `scaleY` (number) - Y scale factor (use -1 for vertical flip)
+
+## SpritesheetAsset Class
 
 ### Constructor
 
 ```javascript
-new Spritesheet(name, src, frameWidth, frameHeight, cols, rows)
+new SpritesheetAsset(name, imagePath, config)
 ```
 
 **Parameters:**
 - `name` (string) - Unique identifier for the spritesheet
-- `src` (string) - Path to the image file
-- `frameWidth` (number, optional) - Width of each frame in pixels
-- `frameHeight` (number, optional) - Height of each frame in pixels
-- `cols` (number, default: 1) - Number of columns in the spritesheet
-- `rows` (number, default: 1) - Number of rows in the spritesheet
+- `imagePath` (string) - Path to the image file
+- `config` (Object) - Spritesheet configuration (supports both grid-based and pixel coordinate-based definitions)
 
 ### Methods
 
