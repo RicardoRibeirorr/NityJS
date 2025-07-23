@@ -25,6 +25,7 @@ import { Vector2 } from '../../math/Vector2.js';
  *     width: 128, 
  *     height: 128,
  *     opacity: 0.8,
+ *     color: "rgba(255, 68, 68, 0.7)", // Semi-transparent red tint
  *     flipX: false,
  *     flipY: false 
  * });
@@ -39,6 +40,7 @@ export class SpriteRendererComponent extends Component {
      * @param {number} [options.width] - Custom width for scaling. If not provided, uses sprite's natural width
      * @param {number} [options.height] - Custom height for scaling. If not provided, uses sprite's natural height
      * @param {number} [options.opacity=1.0] - Sprite opacity/alpha (0.0 to 1.0)
+     * @param {string} [options.color="#FFFFFF"] - Tint color in hex format (e.g., "#FF0000") or rgba format (e.g., "rgba(255, 0, 0, 0.5)")
      * @param {boolean} [options.flipX=false] - Flip sprite horizontally
      * @param {boolean} [options.flipY=false] - Flip sprite vertically
      */
@@ -52,6 +54,7 @@ export class SpriteRendererComponent extends Component {
             width: options.width || null,
             height: options.height || null,
             opacity: options.opacity !== undefined ? options.opacity : 1.0,
+            color: options.color || "#FFFFFF",
             flipX: options.flipX || false,
             flipY: options.flipY || false
         };
@@ -71,7 +74,7 @@ export class SpriteRendererComponent extends Component {
     }
 
     /**
-     * Draws the sprite on the canvas at the GameObject's global position with optional custom scaling and opacity.
+     * Draws the sprite on the canvas at the GameObject's global position with optional custom scaling, opacity, and color tinting.
      * Called automatically during the render phase.
      * 
      * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
@@ -86,16 +89,45 @@ export class SpriteRendererComponent extends Component {
         const width = this.options.width || null;
         const height = this.options.height || null;
         
-        // Apply opacity if different from 1.0
+        // Check if we need any special rendering (opacity or color tinting)
         const needsOpacity = this.options.opacity !== 1.0;
+        const needsTinting = this.options.color !== "#FFFFFF";
+        
+        // Apply opacity if needed
         if (needsOpacity) {
             ctx.save();
-            ctx.globalAlpha = Math.max(0, Math.min(1, this.options.opacity)); // Clamp between 0 and 1
+            ctx.globalAlpha = Math.max(0, Math.min(1, this.options.opacity));
         }
         
-        // Use the sprite's draw method for simple cases (no flipping for now)
+        // Draw the sprite normally first
         this.sprite.draw(ctx, position.x, position.y, width, height, rotation);
         
+        // Apply color tinting if needed using source-atop blend mode
+        if (needsTinting) {
+            ctx.save();
+            
+            // Use source-atop to only tint existing pixels
+            ctx.globalCompositeOperation = 'source-atop';
+            ctx.fillStyle = this.options.color;
+            
+            // Get final dimensions for the color overlay
+            const finalWidth = width || this.sprite.width;
+            const finalHeight = height || this.sprite.height;
+            
+            // Sprites are drawn from center, so we need to adjust the tint rectangle position
+            if (rotation !== 0) {
+                ctx.translate(position.x, position.y);
+                ctx.rotate(rotation);
+                ctx.fillRect(-finalWidth / 2, -finalHeight / 2, finalWidth, finalHeight);
+            } else {
+                // Draw tint rectangle from center position (same as sprite)
+                ctx.fillRect(position.x - finalWidth / 2, position.y - finalHeight / 2, finalWidth, finalHeight);
+            }
+            
+            ctx.restore();
+        }
+        
+        // Restore opacity context if it was applied
         if (needsOpacity) {
             ctx.restore();
         }
@@ -164,6 +196,22 @@ export class SpriteRendererComponent extends Component {
      */
     setOpacity(opacity) {
         this.options.opacity = Math.max(0, Math.min(1, opacity));
+    }
+
+    /**
+     * Get the current tint color of the sprite
+     * @returns {string} The tint color in hex format
+     */
+    getColor() {
+        return this.options.color;
+    }
+
+    /**
+     * Set the tint color of the sprite
+     * @param {string} color - Tint color in hex format (e.g., "#FF0000") or rgba format (e.g., "rgba(255, 0, 0, 0.5)")
+     */
+    setColor(color) {
+        this.options.color = color;
     }
 
     /**

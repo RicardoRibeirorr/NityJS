@@ -1807,6 +1807,7 @@ var SpriteRendererComponent = class extends Component {
    * @param {number} [options.width] - Custom width for scaling. If not provided, uses sprite's natural width
    * @param {number} [options.height] - Custom height for scaling. If not provided, uses sprite's natural height
    * @param {number} [options.opacity=1.0] - Sprite opacity/alpha (0.0 to 1.0)
+   * @param {string} [options.color="#FFFFFF"] - Tint color in hex format (e.g., "#FF0000") or rgba format (e.g., "rgba(255, 0, 0, 0.5)")
    * @param {boolean} [options.flipX=false] - Flip sprite horizontally
    * @param {boolean} [options.flipY=false] - Flip sprite vertically
    */
@@ -1818,6 +1819,7 @@ var SpriteRendererComponent = class extends Component {
       width: options.width || null,
       height: options.height || null,
       opacity: options.opacity !== void 0 ? options.opacity : 1,
+      color: options.color || "#FFFFFF",
       flipX: options.flipX || false,
       flipY: options.flipY || false
     };
@@ -1834,7 +1836,7 @@ var SpriteRendererComponent = class extends Component {
     }
   }
   /**
-   * Draws the sprite on the canvas at the GameObject's global position with optional custom scaling and opacity.
+   * Draws the sprite on the canvas at the GameObject's global position with optional custom scaling, opacity, and color tinting.
    * Called automatically during the render phase.
    * 
    * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
@@ -1846,11 +1848,27 @@ var SpriteRendererComponent = class extends Component {
     const width = this.options.width || null;
     const height = this.options.height || null;
     const needsOpacity = this.options.opacity !== 1;
+    const needsTinting = this.options.color !== "#FFFFFF";
     if (needsOpacity) {
       ctx.save();
       ctx.globalAlpha = Math.max(0, Math.min(1, this.options.opacity));
     }
     this.sprite.draw(ctx, position.x, position.y, width, height, rotation);
+    if (needsTinting) {
+      ctx.save();
+      ctx.globalCompositeOperation = "source-atop";
+      ctx.fillStyle = this.options.color;
+      const finalWidth = width || this.sprite.width;
+      const finalHeight = height || this.sprite.height;
+      if (rotation !== 0) {
+        ctx.translate(position.x, position.y);
+        ctx.rotate(rotation);
+        ctx.fillRect(-finalWidth / 2, -finalHeight / 2, finalWidth, finalHeight);
+      } else {
+        ctx.fillRect(position.x - finalWidth / 2, position.y - finalHeight / 2, finalWidth, finalHeight);
+      }
+      ctx.restore();
+    }
     if (needsOpacity) {
       ctx.restore();
     }
@@ -1911,6 +1929,20 @@ var SpriteRendererComponent = class extends Component {
    */
   setOpacity(opacity) {
     this.options.opacity = Math.max(0, Math.min(1, opacity));
+  }
+  /**
+   * Get the current tint color of the sprite
+   * @returns {string} The tint color in hex format
+   */
+  getColor() {
+    return this.options.color;
+  }
+  /**
+   * Set the tint color of the sprite
+   * @param {string} color - Tint color in hex format (e.g., "#FF0000") or rgba format (e.g., "rgba(255, 0, 0, 0.5)")
+   */
+  setColor(color) {
+    this.options.color = color;
   }
   /**
    * Draws gizmos for the sprite renderer bounds.

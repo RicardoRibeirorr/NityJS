@@ -17,7 +17,8 @@ let spriteRenderer;
 let currentOptions = {
   width: 100,
   height: 100,
-  opacity: 1.0
+  opacity: 1.0,
+  color: "#FFFFFF"
 };
 
 const scene = new Scene({
@@ -53,6 +54,7 @@ function updateDisplayValues() {
   document.getElementById('widthValue').textContent = currentOptions.width;
   document.getElementById('heightValue').textContent = currentOptions.height;
   document.getElementById('opacityValue').textContent = currentOptions.opacity.toFixed(2);
+  document.getElementById('colorValue').textContent = currentOptions.color;
 }
 
 // Control functions
@@ -71,11 +73,17 @@ function changeOpacity(delta) {
   updateSpriteRenderer();
 }
 
+function setColor(color) {
+  currentOptions.color = color;
+  updateSpriteRenderer();
+}
+
 function resetAll() {
   currentOptions = {
     width: 100,
     height: 100,
-    opacity: 1.0
+    opacity: 1.0,
+    color: "#FFFFFF"
   };
   updateSpriteRenderer();
 }
@@ -84,6 +92,7 @@ function resetAll() {
 window.changeWidth = changeWidth;
 window.changeHeight = changeHeight;
 window.changeOpacity = changeOpacity;
+window.setColor = setColor;
 window.resetAll = resetAll;
 
 // Start the game
