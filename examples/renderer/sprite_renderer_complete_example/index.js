@@ -19,7 +19,9 @@ let currentOptions = {
   width: 100,
   height: 100,
   opacity: 1.0,
-  color: "#FFFFFF"
+  color: "#FFFFFF",
+  flipX: false,
+  flipY: false
 };
 
 const scene = new Scene({
@@ -56,6 +58,19 @@ function updateDisplayValues() {
   document.getElementById('heightValue').textContent = currentOptions.height;
   document.getElementById('opacityValue').textContent = currentOptions.opacity.toFixed(2);
   document.getElementById('colorValue').textContent = currentOptions.color;
+  document.getElementById('flipXValue').textContent = currentOptions.flipX;
+  document.getElementById('flipYValue').textContent = currentOptions.flipY;
+  
+  // Update flip button states
+  const flipXButton = document.getElementById('flipXButton');
+  const flipYButton = document.getElementById('flipYButton');
+  
+  if (flipXButton) {
+    flipXButton.classList.toggle('active', currentOptions.flipX);
+  }
+  if (flipYButton) {
+    flipYButton.classList.toggle('active', currentOptions.flipY);
+  }
   
   // Update rotation display (convert radians to degrees)
   if (gameObject) {
@@ -66,7 +81,7 @@ function updateDisplayValues() {
 
 // Control functions
 function changeWidth(delta) {
-  currentOptions.width = Math.max(10, currentOptions.width + delta);
+  currentOptions.width = Math.max(-100, currentOptions.width + delta);
   updateSpriteRenderer();
 }
 
@@ -99,12 +114,24 @@ function setRotation(degrees) {
   }
 }
 
+function toggleFlipX() {
+  currentOptions.flipX = !currentOptions.flipX;
+  updateSpriteRenderer();
+}
+
+function toggleFlipY() {
+  currentOptions.flipY = !currentOptions.flipY;
+  updateSpriteRenderer();
+}
+
 function resetAll() {
   currentOptions = {
     width: 100,
     height: 100,
     opacity: 1.0,
-    color: "#FFFFFF"
+    color: "#FFFFFF",
+    flipX: false,
+    flipY: false
   };
   if (gameObject) {
     gameObject.rotation = 0;
@@ -119,6 +146,8 @@ window.changeOpacity = changeOpacity;
 window.setColor = setColor;
 window.changeRotation = changeRotation;
 window.setRotation = setRotation;
+window.toggleFlipX = toggleFlipX;
+window.toggleFlipY = toggleFlipY;
 window.resetAll = resetAll;
 
 // Start the game

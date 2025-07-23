@@ -74,24 +74,30 @@ export class SpriteRendererComponent extends Component {
     }
 
     /**
-     * Draws the sprite on the canvas at the GameObject's global position with optional custom scaling, opacity, and color tinting.
+     * Draws the sprite on the canvas at the GameObject's global position with optional custom scaling, opacity, color tinting, and flipping.
      * Called automatically during the render phase.
      * 
      * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
      */
     __draw(ctx) {
-        if (!this.sprite || !this.sprite.image || !this.sprite.isLoaded) return;
+        if (!this.sprite || !this.sprite.image || !this.sprite.isLoaded) {
+            console.log(`Sprite '${this.spriteKey}' is not loaded or does not exist.`);
+            return;
+        }
         
         const position = this.gameObject.getGlobalPosition();
         const rotation = this.gameObject.getGlobalRotation();
         
         // Get dimensions (custom or natural)
-        const width = this.options.width || null;
-        const height = this.options.height || null;
+        const width = this.options.width || this.sprite.width;
+        const height = this.options.height || this.sprite.height;
         
-        // Check if we need any special rendering (opacity or color tinting)
+        // Check if we need any special rendering
         const needsOpacity = this.options.opacity !== 1.0;
         const needsTinting = this.options.color !== "#FFFFFF";
+        const needsFlipping = this.options.flipX || this.options.flipY;
+        
+        console.log(`Drawing sprite: flipX=${this.options.flipX}, flipY=${this.options.flipY}, needsFlipping=${needsFlipping}`);
         
         // Apply opacity if needed
         if (needsOpacity) {
@@ -99,8 +105,12 @@ export class SpriteRendererComponent extends Component {
             ctx.globalAlpha = Math.max(0, Math.min(1, this.options.opacity));
         }
         
-        // Draw the sprite normally first
-        this.sprite.draw(ctx, position.x, position.y, width, height, rotation);
+        // Draw the sprite with flipping support
+        let scaleX = 1, scaleY = 1;
+        if (this.options.flipX) scaleX = -1;
+        if (this.options.flipY) scaleY = -1;
+        // Simple case - use existing sprite draw method (handles rotation properly)
+        this.sprite.draw(ctx, position.x, position.y, width, height, rotation, scaleX, scaleY);
         
         // Apply color tinting if needed using source-atop blend mode
         if (needsTinting) {
@@ -110,18 +120,14 @@ export class SpriteRendererComponent extends Component {
             ctx.globalCompositeOperation = 'source-atop';
             ctx.fillStyle = this.options.color;
             
-            // Get final dimensions for the color overlay
-            const finalWidth = width || this.sprite.width;
-            const finalHeight = height || this.sprite.height;
-            
             // Sprites are drawn from center, so we need to adjust the tint rectangle position
             if (rotation !== 0) {
                 ctx.translate(position.x, position.y);
                 ctx.rotate(rotation);
-                ctx.fillRect(-finalWidth / 2, -finalHeight / 2, finalWidth, finalHeight);
+                ctx.fillRect(-width / 2, -height / 2, width, height);
             } else {
                 // Draw tint rectangle from center position (same as sprite)
-                ctx.fillRect(position.x - finalWidth / 2, position.y - finalHeight / 2, finalWidth, finalHeight);
+                ctx.fillRect(position.x - width / 2, position.y - height / 2, width, height);
             }
             
             ctx.restore();
@@ -212,6 +218,38 @@ export class SpriteRendererComponent extends Component {
      */
     setColor(color) {
         this.options.color = color;
+    }
+
+    /**
+     * Get the current flipX state
+     * @returns {boolean} Whether the sprite is flipped horizontally
+     */
+    getFlipX() {
+        return this.options.flipX;
+    }
+
+    /**
+     * Set the flipX state
+     * @param {boolean} flipX - Whether to flip the sprite horizontally
+     */
+    setFlipX(flipX) {
+        this.options.flipX = flipX;
+    }
+
+    /**
+     * Get the current flipY state
+     * @returns {boolean} Whether the sprite is flipped vertically
+     */
+    getFlipY() {
+        return this.options.flipY;
+    }
+
+    /**
+     * Set the flipY state
+     * @param {boolean} flipY - Whether to flip the sprite vertically
+     */
+    setFlipY(flipY) {
+        this.options.flipY = flipY;
     }
 
     /**

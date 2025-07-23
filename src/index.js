@@ -14,7 +14,7 @@ export * from './common/Scene.js';
 export * from './common/components/CameraComponent.js';
 export * from './extensions/movement/MovementController.js';
 export * from './input/Input.js';
-export * from './renderer/Sprite.js';
+// export * from './renderer/Sprite.js';
 export * from './asset/SpriteAsset.js';
 export * from './asset/SpritesheetAsset.js';
 export * from './renderer/components/ImageComponent.js';

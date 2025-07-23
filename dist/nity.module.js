@@ -1663,6 +1663,9 @@ var Time = class {
 // src/core/Game.js
 var Game = class _Game {
   #_forcedpaused = false;
+  #_initialized = false;
+  #_launching = false;
+  // Flag to prevent multiple launches
   #_lastTime = 0;
   // For tracking the last frame time
   constructor(canvas) {
@@ -1687,21 +1690,22 @@ var Game = class _Game {
     if (options.debug) this.#_debugMode();
   }
   launch(scene) {
+    if (!scene) throw new Error("No scene provided.");
+    if (this.#_launching) {
+      console.warn("Game is already launching or has been launched.");
+      return;
+    } else this.#_launching = true;
     if (!scene && !this.scene) throw new Error("No scene assigned to game.");
     this.#_initCanvas();
     this.#_launch(scene || this.scene);
   }
   async loadScene(scene) {
     if (!scene) throw new Error("No scene provided.");
-    this.scene = scene;
-    if (typeof scene._create === "function") {
-      scene._create(scene);
-      scene._create = null;
+    if (!this.#_initialized && !this.#_launching) {
+      await this.#_loadScene(scene);
+      return;
     }
-    await SpriteRegistry.preloadAll();
-    await this.scene.preload();
-    await this.scene.start();
-    this.#_start();
+    this.#_launch(scene);
   }
   pause() {
     this.paused = true;
@@ -1710,7 +1714,7 @@ var Game = class _Game {
     this.paused = false;
   }
   async #_launch(scene) {
-    await this.loadScene(scene);
+    await this.#_loadScene(scene);
     this.#_start();
   }
   #_start() {
@@ -1739,6 +1743,13 @@ var Game = class _Game {
       this.scene.__draw(this.ctx);
     }
     requestAnimationFrame(this.#_loop.bind(this));
+  }
+  async #_loadScene(scene) {
+    if (!scene) throw new Error("No scene provided.");
+    this.scene = scene;
+    await SpriteRegistry.preloadAll();
+    await this.scene.preload();
+    await this.scene.start();
   }
   #_forcedPause() {
     if (this.#_forcedpaused === true) return;
@@ -1836,36 +1847,42 @@ var SpriteRendererComponent = class extends Component {
     }
   }
   /**
-   * Draws the sprite on the canvas at the GameObject's global position with optional custom scaling, opacity, and color tinting.
+   * Draws the sprite on the canvas at the GameObject's global position with optional custom scaling, opacity, color tinting, and flipping.
    * Called automatically during the render phase.
    * 
    * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
    */
   __draw(ctx) {
-    if (!this.sprite || !this.sprite.image || !this.sprite.isLoaded) return;
+    if (!this.sprite || !this.sprite.image || !this.sprite.isLoaded) {
+      console.log(`Sprite '${this.spriteKey}' is not loaded or does not exist.`);
+      return;
+    }
     const position = this.gameObject.getGlobalPosition();
     const rotation = this.gameObject.getGlobalRotation();
-    const width = this.options.width || null;
-    const height = this.options.height || null;
+    const width = this.options.width || this.sprite.width;
+    const height = this.options.height || this.sprite.height;
     const needsOpacity = this.options.opacity !== 1;
     const needsTinting = this.options.color !== "#FFFFFF";
+    const needsFlipping = this.options.flipX || this.options.flipY;
+    console.log(`Drawing sprite: flipX=${this.options.flipX}, flipY=${this.options.flipY}, needsFlipping=${needsFlipping}`);
     if (needsOpacity) {
       ctx.save();
       ctx.globalAlpha = Math.max(0, Math.min(1, this.options.opacity));
     }
-    this.sprite.draw(ctx, position.x, position.y, width, height, rotation);
+    let scaleX = 1, scaleY = 1;
+    if (this.options.flipX) scaleX = -1;
+    if (this.options.flipY) scaleY = -1;
+    this.sprite.draw(ctx, position.x, position.y, width, height, rotation, scaleX, scaleY);
     if (needsTinting) {
       ctx.save();
       ctx.globalCompositeOperation = "source-atop";
       ctx.fillStyle = this.options.color;
-      const finalWidth = width || this.sprite.width;
-      const finalHeight = height || this.sprite.height;
       if (rotation !== 0) {
         ctx.translate(position.x, position.y);
         ctx.rotate(rotation);
-        ctx.fillRect(-finalWidth / 2, -finalHeight / 2, finalWidth, finalHeight);
+        ctx.fillRect(-width / 2, -height / 2, width, height);
       } else {
-        ctx.fillRect(position.x - finalWidth / 2, position.y - finalHeight / 2, finalWidth, finalHeight);
+        ctx.fillRect(position.x - width / 2, position.y - height / 2, width, height);
       }
       ctx.restore();
     }
@@ -1943,6 +1960,34 @@ var SpriteRendererComponent = class extends Component {
    */
   setColor(color) {
     this.options.color = color;
+  }
+  /**
+   * Get the current flipX state
+   * @returns {boolean} Whether the sprite is flipped horizontally
+   */
+  getFlipX() {
+    return this.options.flipX;
+  }
+  /**
+   * Set the flipX state
+   * @param {boolean} flipX - Whether to flip the sprite horizontally
+   */
+  setFlipX(flipX) {
+    this.options.flipX = flipX;
+  }
+  /**
+   * Get the current flipY state
+   * @returns {boolean} Whether the sprite is flipped vertically
+   */
+  getFlipY() {
+    return this.options.flipY;
+  }
+  /**
+   * Set the flipY state
+   * @param {boolean} flipY - Whether to flip the sprite vertically
+   */
+  setFlipY(flipY) {
+    this.options.flipY = flipY;
   }
   /**
    * Draws gizmos for the sprite renderer bounds.
@@ -2061,7 +2106,7 @@ var SpriteAnimationComponent = class extends Component {
 var Scene = class {
   constructor({ create } = {}) {
     this.objects = [];
-    this._create = create;
+    this._createFn = create;
   }
   /**
    * Adds an object to the scene before the game starts.
@@ -2083,9 +2128,9 @@ var Scene = class {
     return this.objects.filter((obj) => obj.hasTag(tag));
   }
   async preload() {
-    if (typeof this._create === "function") {
-      this._create(this);
-      this._create = null;
+    if (typeof this._createFn === "function") {
+      await this._createFn(this);
+      this._createFn = null;
     }
     const preloadPromises = this.objects.map((obj) => obj?.preload?.());
     await Promise.all(preloadPromises);
@@ -2364,71 +2409,6 @@ var MovementComponent = class extends Component {
   }
 };
 var MovementController = class extends MovementComponent {
-};
-
-// src/renderer/Sprite.js
-var Sprite = class {
-  /**
-   * Creates a new Sprite instance.
-   * 
-   * @param {HTMLImageElement} image - The source image element
-   * @param {number} x - The x coordinate of the sprite region in the source image
-   * @param {number} y - The y coordinate of the sprite region in the source image
-   * @param {number} width - The width of the sprite region
-   * @param {number} height - The height of the sprite region
-   */
-  constructor(image, x, y, width, height) {
-    this.image = image;
-    this.x = x;
-    this.y = y;
-    this.width = width;
-    this.height = height;
-    this.isLoaded = true;
-  }
-  /**
-   * Draws the sprite on the canvas with optional rotation.
-   * 
-   * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
-   * @param {number} drawX - The x coordinate to draw the sprite at
-   * @param {number} drawY - The y coordinate to draw the sprite at
-   * @param {number} [drawWidth] - Optional width to scale the sprite to
-   * @param {number} [drawHeight] - Optional height to scale the sprite to
-   * @param {number} [rotation=0] - Rotation in radians
-   */
-  draw(ctx, drawX, drawY, drawWidth, drawHeight, rotation = 0) {
-    if (!this.image) return;
-    const finalWidth = drawWidth || this.width;
-    const finalHeight = drawHeight || this.height;
-    ctx.save();
-    if (rotation !== 0) {
-      ctx.translate(drawX + finalWidth / 2, drawY + finalHeight / 2);
-      ctx.rotate(rotation);
-      ctx.drawImage(
-        this.image,
-        this.x,
-        this.y,
-        this.width,
-        this.height,
-        -finalWidth / 2,
-        -finalHeight / 2,
-        finalWidth,
-        finalHeight
-      );
-    } else {
-      ctx.drawImage(
-        this.image,
-        this.x,
-        this.y,
-        this.width,
-        this.height,
-        drawX,
-        drawY,
-        finalWidth,
-        finalHeight
-      );
-    }
-    ctx.restore();
-  }
 };
 
 // src/asset/SpriteAsset.js
@@ -3780,7 +3760,6 @@ export {
   RigidbodyComponent,
   Scene,
   ShapeComponent,
-  Sprite,
   SpriteAnimationClip,
   SpriteAnimationComponent,
   SpriteAsset,

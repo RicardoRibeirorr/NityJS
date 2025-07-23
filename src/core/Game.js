@@ -8,6 +8,8 @@ import { Time } from './Time.js';
 // === Game.js ===
 export class Game {
     #_forcedpaused = false;
+    #_initialized = false;
+    #_launching = false; // Flag to prevent multiple launches
     #_lastTime = 0; // For tracking the last frame time
 
     constructor(canvas) {
@@ -39,6 +41,13 @@ export class Game {
     }
 
     launch(scene) {
+        if (!scene) throw new Error("No scene provided.");
+
+        if( this.#_launching) {
+            console.warn("Game is already launching or has been launched.");
+            return;
+        }else this.#_launching = true; // Prevent multiple launches
+        
         if (!scene && !this.scene) throw new Error('No scene assigned to game.');
         this.#_initCanvas();
         this.#_launch(scene||this.scene);
@@ -46,15 +55,12 @@ export class Game {
 
     async loadScene(scene){
         if (!scene) throw new Error("No scene provided.");
-        this.scene = scene;
-        if (typeof scene._create === 'function') {
-            scene._create(scene);  // Build the objects
-            scene._create = null;
+
+        if(!this.#_initialized && !this.#_launching) {
+            await this.#_loadScene(scene);
+            return;
         }
-        await SpriteRegistry.preloadAll();
-        await this.scene.preload();
-        await this.scene.start();
-        this.#_start();
+        this.#_launch(scene);
     }
 
     pause(){
@@ -66,7 +72,7 @@ export class Game {
     }
 
     async #_launch(scene) {
-        await this.loadScene(scene);
+        await this.#_loadScene(scene);
         this.#_start();
     }
 
@@ -106,6 +112,17 @@ export class Game {
         requestAnimationFrame(this.#_loop.bind(this));
     }
 
+    async #_loadScene(scene) {
+        if (!scene) throw new Error("No scene provided.");
+        this.scene = scene;
+        // if (typeof scene._create === 'function') {
+        //     scene._create(scene);  // Build the objects
+        //     scene._create = null;
+        // }
+        await SpriteRegistry.preloadAll();
+        await this.scene.preload();
+        await this.scene.start();
+    }
 
     #_forcedPause() {
         if( this.#_forcedpaused === true) return; // Avoid unnecessary pause

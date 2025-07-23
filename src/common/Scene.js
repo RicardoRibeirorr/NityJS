@@ -7,7 +7,7 @@ import { GameObject } from "./GameObject.js";
 export class Scene {
     constructor({ create } = {}) {
         this.objects = [];
-        this._create = create;
+        this._createFn = create;
     }
 
     
@@ -36,9 +36,9 @@ export class Scene {
     }
 
     async preload() {
-        if (typeof this._create === 'function') {
-            this._create(this); // Now run creation logic only when game launches
-            this._create = null; // clear reference after use
+        if (typeof this._createFn === 'function') {
+            await this._createFn(this); // Now run creation logic only when game launches
+            this._createFn = null; // clear reference after use
         }
 
         const preloadPromises = this.objects.map(obj => obj?.preload?.());
