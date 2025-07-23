@@ -189,6 +189,29 @@
                 </div>
             </div>
             
+            <!-- Rotation Controls -->
+            <div class="control-group">
+                <h3>GameObject Rotation</h3>
+                <div class="control-row">
+                    <span>Current: <span id="rotationValue" class="value-display">0°</span></span>
+                    <div class="button-group">
+                        <button onclick="changeRotation(-45)">-45°</button>
+                        <button onclick="changeRotation(-15)">-15°</button>
+                        <button onclick="changeRotation(15)">+15°</button>
+                        <button onclick="changeRotation(45)">+45°</button>
+                    </div>
+                </div>
+                <div class="control-row">
+                    <span>Presets:</span>
+                    <div class="button-group">
+                        <button onclick="setRotation(0)">0°</button>
+                        <button onclick="setRotation(90)">90°</button>
+                        <button onclick="setRotation(180)">180°</button>
+                        <button onclick="setRotation(270)">270°</button>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Future Controls (Placeholders) -->
             <div class="control-group">
                 <h3>Future Features</h3>
@@ -198,10 +221,6 @@
                 </div>
                 <div class="control-row">
                     <span>Flip Y: Coming Soon</span>
-                    <button disabled>TBD</button>
-                </div>
-                <div class="control-row">
-                    <span>Rotation: Coming Soon</span>
                     <button disabled>TBD</button>
                 </div>
             </div>

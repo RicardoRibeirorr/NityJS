@@ -14,6 +14,7 @@ const game = new Game(canvas);
 
 // Global sprite renderer reference for controls
 let spriteRenderer;
+let gameObject; // Reference to the GameObject for rotation
 let currentOptions = {
   width: 100,
   height: 100,
@@ -28,10 +29,10 @@ const scene = new Scene({
     await arrowSprite.load();
 
     // Create game object with sprite renderer
-    const obj = new GameObject(new Vector2(0, 0));
+    gameObject = new GameObject(new Vector2(0, 0));
     spriteRenderer = new SpriteRendererComponent("SPS_Arrow", currentOptions);
-    obj.addComponent(spriteRenderer);
-    scene.add(obj);
+    gameObject.addComponent(spriteRenderer);
+    scene.add(gameObject);
 
     // Add camera
     const cameraObject = new GameObject(new Vector2(0, 0));
@@ -55,6 +56,12 @@ function updateDisplayValues() {
   document.getElementById('heightValue').textContent = currentOptions.height;
   document.getElementById('opacityValue').textContent = currentOptions.opacity.toFixed(2);
   document.getElementById('colorValue').textContent = currentOptions.color;
+  
+  // Update rotation display (convert radians to degrees)
+  if (gameObject) {
+    const degrees = Math.round((gameObject.rotation * 180 / Math.PI) % 360);
+    document.getElementById('rotationValue').textContent = degrees + '°';
+  }
 }
 
 // Control functions
@@ -78,6 +85,20 @@ function setColor(color) {
   updateSpriteRenderer();
 }
 
+function changeRotation(degrees) {
+  if (gameObject) {
+    gameObject.rotation += degrees * Math.PI / 180; // Convert degrees to radians
+    updateDisplayValues();
+  }
+}
+
+function setRotation(degrees) {
+  if (gameObject) {
+    gameObject.rotation = degrees * Math.PI / 180; // Convert degrees to radians
+    updateDisplayValues();
+  }
+}
+
 function resetAll() {
   currentOptions = {
     width: 100,
@@ -85,6 +106,9 @@ function resetAll() {
     opacity: 1.0,
     color: "#FFFFFF"
   };
+  if (gameObject) {
+    gameObject.rotation = 0;
+  }
   updateSpriteRenderer();
 }
 
@@ -93,6 +117,8 @@ window.changeWidth = changeWidth;
 window.changeHeight = changeHeight;
 window.changeOpacity = changeOpacity;
 window.setColor = setColor;
+window.changeRotation = changeRotation;
+window.setRotation = setRotation;
 window.resetAll = resetAll;
 
 // Start the game
