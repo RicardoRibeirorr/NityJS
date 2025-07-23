@@ -42,7 +42,7 @@ export class Game {
     }
 
     launch(scene) {
-        if (!scene) throw new Error("No scene provided.");
+        if (!scene && !this.scene) throw new Error("No scene provided.");
 
         if( this.#_launching) {
             console.warn("Game is already launching or has been launched.");

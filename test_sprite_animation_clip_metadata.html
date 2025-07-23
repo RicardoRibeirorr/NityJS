@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpriteAnimationClip Metadata Test</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 20px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #404040;
+            border-radius: 5px;
+            background-color: #252526;
+        }
+        .success { color: #4EC9B0; }
+        .error { color: #F48771; }
+        .info { color: #569CD6; }
+        pre {
+            background-color: #1e1e1e;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎬 SpriteAnimationClip Metadata Test</h1>
+    <div id="output"></div>
+
+    <script type="module">
+        import { SpriteAnimationClip } from './src/animations/SpriteAnimationClip.js';
+
+        const output = document.getElementById('output');
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.innerHTML = message;
+            output.appendChild(div);
+            console.log(message);
+        }
+
+        function createTestSection(title) {
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            section.innerHTML = `<h3>${title}</h3>`;
+            output.appendChild(section);
+            return section;
+        }
+
+        try {
+            // Test 1: Basic metadata creation
+            const section1 = createTestSection('📝 Test 1: Basic Metadata Creation');
+            
+            log('Creating animation clip with metadata...', 'info');
+            const walkClip = SpriteAnimationClip.meta({
+                name: "walk",
+                spriteNames: ["walk_0", "walk_1", "walk_2", "walk_3"],
+                fps: 8,
+                loop: true
+            });
+            
+            log(`✅ Created clip: ${walkClip.name}`, 'success');
+            log(`   Sprites: [${walkClip.spriteNames.join(', ')}]`, 'info');
+            log(`   FPS: ${walkClip.fps}`, 'info');
+            log(`   Loop: ${walkClip.loop}`, 'info');
+
+            // Test 2: Default metadata
+            const section2 = createTestSection('🔧 Test 2: Default Metadata');
+            
+            const defaults = SpriteAnimationClip.getDefaultMeta();
+            log('Default metadata:', 'info');
+            log(`<pre>${JSON.stringify(defaults, null, 2)}</pre>`, 'info');
+
+            // Test 3: Minimal metadata (using defaults)
+            const section3 = createTestSection('⚡ Test 3: Minimal Metadata');
+            
+            const idleClip = SpriteAnimationClip.meta({
+                name: "idle",
+                spriteNames: ["idle_0"]
+            });
+            
+            log(`✅ Created minimal clip: ${idleClip.name}`, 'success');
+            log(`   FPS (default): ${idleClip.fps}`, 'info');
+            log(`   Loop (default): ${idleClip.loop}`, 'info');
+
+            // Test 4: Validation errors
+            const section4 = createTestSection('❌ Test 4: Validation Errors');
+            
+            try {
+                SpriteAnimationClip.meta({
+                    name: "", // Empty name
+                    spriteNames: ["test"]
+                });
+                log('❌ Should have thrown error for empty name', 'error');
+            } catch (e) {
+                log(`✅ Caught validation error: ${e.message}`, 'success');
+            }
+
+            try {
+                SpriteAnimationClip.meta({
+                    name: "test",
+                    fps: -5 // Invalid FPS
+                });
+                log('❌ Should have thrown error for negative FPS', 'error');
+            } catch (e) {
+                log(`✅ Caught validation error: ${e.message}`, 'success');
+            }
+
+            try {
+                SpriteAnimationClip.meta({
+                    name: "test",
+                    spriteNames: ["valid", 123] // Invalid sprite name type
+                });
+                log('❌ Should have thrown error for non-string sprite name', 'error');
+            } catch (e) {
+                log(`✅ Caught validation error: ${e.message}`, 'success');
+            }
+
+            // Test 5: applyMeta and toMeta
+            const section5 = createTestSection('🔄 Test 5: Apply and Export Metadata');
+            
+            const clip = new SpriteAnimationClip("original", ["sprite1"], 10, false);
+            log(`Original clip: ${clip.name}, FPS: ${clip.fps}, Loop: ${clip.loop}`, 'info');
+            
+            clip.applyMeta({
+                name: "modified",
+                fps: 15,
+                loop: true,
+                spriteNames: ["new1", "new2"]
+            });
+            
+            log(`✅ Applied metadata`, 'success');
+            log(`Modified clip: ${clip.name}, FPS: ${clip.fps}, Loop: ${clip.loop}`, 'info');
+            log(`   Sprites: [${clip.spriteNames.join(', ')}]`, 'info');
+            
+            const exported = clip.toMeta();
+            log('Exported metadata:', 'info');
+            log(`<pre>${JSON.stringify(exported, null, 2)}</pre>`, 'info');
+
+            // Test 6: Clone functionality
+            const section6 = createTestSection('🔀 Test 6: Clone Functionality');
+            
+            const original = SpriteAnimationClip.meta({
+                name: "run",
+                spriteNames: ["run_0", "run_1", "run_2"],
+                fps: 12,
+                loop: true
+            });
+            
+            const cloned = original.clone();
+            log(`✅ Cloned animation clip`, 'success');
+            log(`Original: ${original.name} (${original.spriteNames.length} sprites)`, 'info');
+            log(`Clone: ${cloned.name} (${cloned.spriteNames.length} sprites)`, 'info');
+            
+            // Verify they're independent
+            cloned.name = "run_modified";
+            cloned.spriteNames.push("run_3");
+            
+            log(`After modifying clone:`, 'info');
+            log(`   Original: ${original.name} (${original.spriteNames.length} sprites)`, 'info');
+            log(`   Clone: ${cloned.name} (${cloned.spriteNames.length} sprites)`, 'info');
+            
+            if (original.spriteNames.length !== cloned.spriteNames.length) {
+                log(`✅ Clone is independent (arrays are separate)`, 'success');
+            } else {
+                log(`❌ Clone might share array reference`, 'error');
+            }
+
+            log('<br><h2 class="success">🎉 All SpriteAnimationClip metadata tests completed!</h2>', 'success');
+
+        } catch (error) {
+            log(`❌ Test failed with error: ${error.message}`, 'error');
+            console.error(error);
+        }
+    </script>
+</body>
+</html>

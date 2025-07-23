@@ -28,6 +28,48 @@ export class GravityComponent extends Component {
     }
 
     /**
+     * Get default metadata configuration for GravityComponent
+     * @returns {Object} Default metadata configuration
+     */
+    static getDefaultMeta() {
+        return {
+            gravityScale: 300
+        };
+    }
+
+    /**
+     * Apply constructor arguments to metadata format
+     * @private
+     */
+    _applyConstructorArgs(options = {}) {
+        const metadata = {
+            gravityScale: options.gravityScale || 300
+        };
+        
+        this.applyMeta(metadata);
+    }
+
+    /**
+     * Update component properties from current metadata
+     * @private
+     */
+    _updatePropertiesFromMeta() {
+        this.gravityScale = this.__meta.gravityScale;
+    }
+
+    /**
+     * Validate current metadata
+     * @private
+     */
+    _validateMeta() {
+        const meta = this.__meta;
+        
+        if (typeof meta.gravityScale !== 'number' || meta.gravityScale < 0) {
+            throw new Error('gravityScale must be a non-negative number');
+        }
+    }
+
+    /**
      * Updates the gravity effect. Called automatically each frame.
      * Increases the Y velocity based on gravity scale and delta time.
      */

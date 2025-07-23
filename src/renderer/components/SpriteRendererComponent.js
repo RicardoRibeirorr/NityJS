@@ -61,6 +61,95 @@ export class SpriteRendererComponent extends Component {
     }
 
     /**
+     * Get default metadata configuration for SpriteRendererComponent
+     * @returns {Object} Default metadata configuration
+     */
+    static getDefaultMeta() {
+        return {
+            spriteName: "",
+            width: null,
+            height: null,
+            opacity: 1.0,
+            color: "#FFFFFF",
+            flipX: false,
+            flipY: false
+        };
+    }
+
+    /**
+     * Apply constructor arguments to metadata format
+     * @private
+     */
+    _applyConstructorArgs(spriteName, options = {}) {
+        const metadata = {
+            spriteName: spriteName || "",
+            width: options.width || null,
+            height: options.height || null,
+            opacity: options.opacity !== undefined ? options.opacity : 1.0,
+            color: options.color || "#FFFFFF",
+            flipX: options.flipX || false,
+            flipY: options.flipY || false
+        };
+        
+        this.applyMeta(metadata);
+    }
+
+    /**
+     * Update component properties from current metadata
+     * @private
+     */
+    _updatePropertiesFromMeta() {
+        if (this.__meta.spriteName) {
+            this.spriteKey = this.__meta.spriteName;
+        }
+        
+        this.options = {
+            width: this.__meta.width,
+            height: this.__meta.height,
+            opacity: this.__meta.opacity,
+            color: this.__meta.color,
+            flipX: this.__meta.flipX,
+            flipY: this.__meta.flipY
+        };
+    }
+
+    /**
+     * Validate current metadata
+     * @private
+     */
+    _validateMeta() {
+        const meta = this.__meta;
+        
+        if (typeof meta.spriteName !== 'string') {
+            throw new Error('spriteName must be a string');
+        }
+        
+        if (meta.width !== null && (typeof meta.width !== 'number' || meta.width <= 0)) {
+            throw new Error('width must be null or a positive number');
+        }
+        
+        if (meta.height !== null && (typeof meta.height !== 'number' || meta.height <= 0)) {
+            throw new Error('height must be null or a positive number');
+        }
+        
+        if (typeof meta.opacity !== 'number' || meta.opacity < 0 || meta.opacity > 1) {
+            throw new Error('opacity must be a number between 0 and 1');
+        }
+        
+        if (typeof meta.color !== 'string') {
+            throw new Error('color must be a string');
+        }
+        
+        if (typeof meta.flipX !== 'boolean') {
+            throw new Error('flipX must be a boolean');
+        }
+        
+        if (typeof meta.flipY !== 'boolean') {
+            throw new Error('flipY must be a boolean');
+        }
+    }
+
+    /**
      * Preloads the sprite from the unified registry. Called automatically during GameObject preload.
      * 
      * @throws {Error} If the sprite is not found
@@ -96,8 +185,6 @@ export class SpriteRendererComponent extends Component {
         const needsOpacity = this.options.opacity !== 1.0;
         const needsTinting = this.options.color !== "#FFFFFF";
         const needsFlipping = this.options.flipX || this.options.flipY;
-        
-        console.log(`Drawing sprite: flipX=${this.options.flipX}, flipY=${this.options.flipY}, needsFlipping=${needsFlipping}`);
         
         // Apply opacity if needed
         if (needsOpacity) {

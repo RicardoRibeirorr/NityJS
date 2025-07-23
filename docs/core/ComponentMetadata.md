@@ -129,6 +129,48 @@ const component = ShapeComponent.meta({
 
 ## Component-Specific Metadata
 
+All NityJS components now support the metadata system for editor integration and data-driven development. Here are the metadata configurations for each component:
+
+### SpriteRendererComponent Metadata
+
+```javascript
+const spriteDefaults = {
+    spriteName: "",         // Sprite asset name ("name" or "sheet:sprite")
+    width: null,            // Display width (null = auto)
+    height: null,           // Display height (null = auto)
+    opacity: 1.0,           // Transparency (0-1)
+    color: "#FFFFFF",       // Tint color
+    flipX: false,           // Horizontal flip
+    flipY: false            // Vertical flip
+};
+
+// Create sprite with metadata
+const playerSprite = SpriteRendererComponent.meta({
+    spriteName: "player_idle",
+    width: 64,
+    height: 64,
+    opacity: 0.9,
+    flipX: true
+});
+```
+
+### ImageComponent Metadata
+
+```javascript
+const imageDefaults = {
+    src: "",                // Image source URL
+    width: null,            // Display width (null = natural width)
+    height: null            // Display height (null = natural height)
+};
+
+// Create image with metadata
+const background = ImageComponent.meta({
+    src: "assets/background.png",
+    width: 800,
+    height: 600
+});
+```
+
 ### ShapeComponent Metadata
 
 ```javascript
@@ -158,27 +200,96 @@ const triangle = ShapeComponent.meta({
 });
 ```
 
-### SpriteRendererComponent Metadata
+### RigidbodyComponent Metadata
 
 ```javascript
-const spriteDefaults = {
-    spriteName: "",         // Sprite asset name
-    width: null,            // Display width (null = auto)
-    height: null,           // Display height (null = auto)
-    opacity: 1.0,           // Transparency (0-1)
-    color: "#FFFFFF",       // Tint color
-    flipX: false,           // Horizontal flip
-    flipY: false            // Vertical flip
+const rigidbodyDefaults = {
+    gravity: false,         // Enable gravity
+    gravityScale: 300,      // Gravity strength
+    bounciness: 0           // Bounce factor (0-1)
 };
 
-// Create sprite with metadata
-const playerSprite = SpriteRendererComponent.meta({
-    spriteName: "player_idle",
-    width: 64,
-    height: 64,
-    opacity: 0.9,
-    flipX: true
+// Create physics body with metadata
+const physicsBall = RigidbodyComponent.meta({
+    gravity: true,
+    gravityScale: 500,
+    bounciness: 0.8
 });
+```
+
+### BoxColliderComponent Metadata
+
+```javascript
+const boxColliderDefaults = {
+    width: null,            // Collider width (null = auto from sprite)
+    height: null,           // Collider height (null = auto from sprite)
+    trigger: false          // Is trigger (no physics response)
+};
+
+// Create box collider with metadata
+const playerCollider = BoxColliderComponent.meta({
+    width: 32,
+    height: 48,
+    trigger: false
+});
+```
+
+### CircleColliderComponent Metadata
+
+```javascript
+const circleColliderDefaults = {
+    radius: null,           // Collider radius (null = auto from sprite)
+    trigger: false          // Is trigger (no physics response)
+};
+
+// Create circle collider with metadata
+const ballCollider = CircleColliderComponent.meta({
+    radius: 25,
+    trigger: true
+});
+```
+
+### GravityComponent Metadata
+
+```javascript
+const gravityDefaults = {
+    gravityScale: 300       // Gravity strength in pixels/second²
+};
+
+// Create gravity component with metadata
+const gravity = GravityComponent.meta({
+    gravityScale: 450
+});
+```
+
+### SpriteAnimationComponent Metadata
+
+```javascript
+const animationDefaults = {
+    defaultClipName: null,  // Default animation clip name
+    autoPlay: true          // Auto-play default clip on start
+};
+
+// Create animation component with metadata
+const animator = SpriteAnimationComponent.meta({
+    defaultClipName: "idle",
+    autoPlay: true
+});
+```
+
+### CameraComponent Metadata
+
+```javascript
+const cameraDefaults = {
+    zoom: 1                 // Camera zoom level
+};
+
+// Create camera with metadata
+const camera = CameraComponent.meta({
+    zoom: 1.5
+});
+// Note: Canvas must be set separately as it's not serializable
+camera.canvas = canvas;
 ```
 
 ## Validation System

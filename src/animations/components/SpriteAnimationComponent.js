@@ -30,6 +30,55 @@ export class SpriteAnimationComponent extends Component {
     }
 
     /**
+     * Get default metadata configuration for SpriteAnimationComponent
+     * @returns {Object} Default metadata configuration
+     */
+    static getDefaultMeta() {
+        return {
+            defaultClipName: null,
+            autoPlay: true
+        };
+    }
+
+    /**
+     * Apply constructor arguments to metadata format
+     * @private
+     */
+    _applyConstructorArgs(defaultClipName = null) {
+        const metadata = {
+            defaultClipName: defaultClipName,
+            autoPlay: true
+        };
+        
+        this.applyMeta(metadata);
+    }
+
+    /**
+     * Update component properties from current metadata
+     * @private
+     */
+    _updatePropertiesFromMeta() {
+        this.defaultClipName = this.__meta.defaultClipName;
+        this.autoPlay = this.__meta.autoPlay;
+    }
+
+    /**
+     * Validate current metadata
+     * @private
+     */
+    _validateMeta() {
+        const meta = this.__meta;
+        
+        if (meta.defaultClipName !== null && typeof meta.defaultClipName !== 'string') {
+            throw new Error('defaultClipName must be null or a string');
+        }
+        
+        if (typeof meta.autoPlay !== 'boolean') {
+            throw new Error('autoPlay must be a boolean');
+        }
+    }
+
+    /**
      * Called when the GameObject starts. Automatically plays the default clip if autoPlay is enabled.
      */
     start() {

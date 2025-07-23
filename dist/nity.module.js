@@ -165,7 +165,7 @@ var Component = class {
     this.enabled = true;
     this._started = false;
     this._internalGizmos = this._internalGizmos || (Game.instance?._internalGizmos ?? false);
-    this.__meta = this.getDefaultMeta();
+    this.__meta = this.constructor.getDefaultMeta();
     if (arguments.length > 0) {
       this._applyConstructorArgs(...arguments);
     }
@@ -195,7 +195,7 @@ var Component = class {
    * Override in subclasses to define component-specific defaults
    * @returns {Object} Default metadata object
    */
-  getDefaultMeta() {
+  static getDefaultMeta() {
     return {};
   }
   /**
@@ -617,6 +617,43 @@ var CameraComponent = class extends Component {
     super();
     this.canvas = canvas;
     this.zoom = zoom;
+  }
+  /**
+   * Get default metadata configuration for CameraComponent
+   * @returns {Object} Default metadata configuration
+   */
+  static getDefaultMeta() {
+    return {
+      zoom: 1
+    };
+  }
+  /**
+   * Apply constructor arguments to metadata format
+   * @private
+   */
+  _applyConstructorArgs(canvas, zoom = 1) {
+    const metadata = {
+      zoom
+    };
+    this.canvas = canvas;
+    this.applyMeta(metadata);
+  }
+  /**
+   * Update component properties from current metadata
+   * @private
+   */
+  _updatePropertiesFromMeta() {
+    this.zoom = this.__meta.zoom;
+  }
+  /**
+   * Validate current metadata
+   * @private
+   */
+  _validateMeta() {
+    const meta = this.__meta;
+    if (typeof meta.zoom !== "number" || meta.zoom <= 0) {
+      throw new Error("zoom must be a positive number");
+    }
   }
   applyTransform(ctx) {
     const position = this.gameObject.getGlobalPosition();
@@ -1841,7 +1878,7 @@ var Game = class _Game {
     if (options.debug) this.#_debugMode();
   }
   launch(scene) {
-    if (!scene) throw new Error("No scene provided.");
+    if (!scene && !this.scene) throw new Error("No scene provided.");
     if (this.#_launching) {
       console.warn("Game is already launching or has been launched.");
       return;
@@ -1944,7 +1981,7 @@ var Game = class _Game {
 Game.instance = null;
 
 // src/animations/SpriteAnimationClip.js
-var SpriteAnimationClip = class {
+var SpriteAnimationClip = class _SpriteAnimationClip {
   /**
    * Creates a new SpriteAnimationClip.
    * 
@@ -1958,6 +1995,116 @@ var SpriteAnimationClip = class {
     this.spriteNames = spriteNames;
     this.fps = fps;
     this.loop = loop;
+  }
+  /**
+   * Creates a SpriteAnimationClip from metadata configuration.
+   * 
+   * @param {Object} metadata - Configuration object for the animation clip
+   * @param {string} metadata.name - Unique identifier for the animation clip
+   * @param {string[]} [metadata.spriteNames=[]] - Array of sprite names that make up the animation sequence
+   * @param {number} [metadata.fps=10] - Frames per second for the animation playback
+   * @param {boolean} [metadata.loop=true] - Whether the animation should loop when it reaches the end
+   * @returns {SpriteAnimationClip} New SpriteAnimationClip instance
+   * 
+   * @example
+   * const walkClip = SpriteAnimationClip.meta({
+   *     name: "walk",
+   *     spriteNames: ["walk_0", "walk_1", "walk_2", "walk_3"],
+   *     fps: 8,
+   *     loop: true
+   * });
+   */
+  static meta(metadata = {}) {
+    const defaults = this.getDefaultMeta();
+    const config = { ...defaults, ...metadata };
+    this.validateMeta(config);
+    return new this(
+      config.name,
+      config.spriteNames,
+      config.fps,
+      config.loop
+    );
+  }
+  /**
+   * Returns the default metadata configuration for SpriteAnimationClip.
+   * 
+   * @returns {Object} Default metadata object
+   */
+  static getDefaultMeta() {
+    return {
+      name: "",
+      spriteNames: [],
+      fps: 10,
+      loop: true
+    };
+  }
+  /**
+   * Validates metadata configuration for SpriteAnimationClip.
+   * 
+   * @param {Object} metadata - Metadata to validate
+   * @throws {Error} If metadata is invalid
+   */
+  static validateMeta(metadata) {
+    if (typeof metadata.name !== "string") {
+      throw new Error("SpriteAnimationClip metadata: name must be a string");
+    }
+    if (metadata.name.trim() === "") {
+      throw new Error("SpriteAnimationClip metadata: name cannot be empty");
+    }
+    if (!Array.isArray(metadata.spriteNames)) {
+      throw new Error("SpriteAnimationClip metadata: spriteNames must be an array");
+    }
+    if (metadata.spriteNames.some((name) => typeof name !== "string")) {
+      throw new Error("SpriteAnimationClip metadata: all spriteNames must be strings");
+    }
+    if (typeof metadata.fps !== "number" || metadata.fps <= 0) {
+      throw new Error("SpriteAnimationClip metadata: fps must be a positive number");
+    }
+    if (typeof metadata.loop !== "boolean") {
+      throw new Error("SpriteAnimationClip metadata: loop must be a boolean");
+    }
+  }
+  /**
+   * Applies metadata to this SpriteAnimationClip instance.
+   * 
+   * @param {Object} metadata - Metadata to apply
+   */
+  applyMeta(metadata) {
+    const defaults = this.constructor.getDefaultMeta();
+    const config = { ...defaults, ...metadata };
+    this.constructor.validateMeta(config);
+    this.name = config.name;
+    this.spriteNames = config.spriteNames;
+    this.fps = config.fps;
+    this.loop = config.loop;
+  }
+  /**
+   * Converts this SpriteAnimationClip to a metadata object.
+   * 
+   * @returns {Object} Metadata representation of this clip
+   */
+  toMeta() {
+    return {
+      name: this.name,
+      spriteNames: [...this.spriteNames],
+      // Create a copy
+      fps: this.fps,
+      loop: this.loop
+    };
+  }
+  /**
+   * Creates a copy of this SpriteAnimationClip.
+   * 
+   * @returns {SpriteAnimationClip} New SpriteAnimationClip instance with the same properties
+   */
+  clone() {
+    return new _SpriteAnimationClip(
+      this.name,
+      [...this.spriteNames],
+      // Create a copy of the array
+      this.fps,
+      this.loop
+    );
   }
 };
 
@@ -1989,6 +2136,82 @@ var SpriteRendererComponent = class extends Component {
     };
   }
   /**
+   * Get default metadata configuration for SpriteRendererComponent
+   * @returns {Object} Default metadata configuration
+   */
+  static getDefaultMeta() {
+    return {
+      spriteName: "",
+      width: null,
+      height: null,
+      opacity: 1,
+      color: "#FFFFFF",
+      flipX: false,
+      flipY: false
+    };
+  }
+  /**
+   * Apply constructor arguments to metadata format
+   * @private
+   */
+  _applyConstructorArgs(spriteName, options = {}) {
+    const metadata = {
+      spriteName: spriteName || "",
+      width: options.width || null,
+      height: options.height || null,
+      opacity: options.opacity !== void 0 ? options.opacity : 1,
+      color: options.color || "#FFFFFF",
+      flipX: options.flipX || false,
+      flipY: options.flipY || false
+    };
+    this.applyMeta(metadata);
+  }
+  /**
+   * Update component properties from current metadata
+   * @private
+   */
+  _updatePropertiesFromMeta() {
+    if (this.__meta.spriteName) {
+      this.spriteKey = this.__meta.spriteName;
+    }
+    this.options = {
+      width: this.__meta.width,
+      height: this.__meta.height,
+      opacity: this.__meta.opacity,
+      color: this.__meta.color,
+      flipX: this.__meta.flipX,
+      flipY: this.__meta.flipY
+    };
+  }
+  /**
+   * Validate current metadata
+   * @private
+   */
+  _validateMeta() {
+    const meta = this.__meta;
+    if (typeof meta.spriteName !== "string") {
+      throw new Error("spriteName must be a string");
+    }
+    if (meta.width !== null && (typeof meta.width !== "number" || meta.width <= 0)) {
+      throw new Error("width must be null or a positive number");
+    }
+    if (meta.height !== null && (typeof meta.height !== "number" || meta.height <= 0)) {
+      throw new Error("height must be null or a positive number");
+    }
+    if (typeof meta.opacity !== "number" || meta.opacity < 0 || meta.opacity > 1) {
+      throw new Error("opacity must be a number between 0 and 1");
+    }
+    if (typeof meta.color !== "string") {
+      throw new Error("color must be a string");
+    }
+    if (typeof meta.flipX !== "boolean") {
+      throw new Error("flipX must be a boolean");
+    }
+    if (typeof meta.flipY !== "boolean") {
+      throw new Error("flipY must be a boolean");
+    }
+  }
+  /**
    * Preloads the sprite from the unified registry. Called automatically during GameObject preload.
    * 
    * @throws {Error} If the sprite is not found
@@ -2017,7 +2240,6 @@ var SpriteRendererComponent = class extends Component {
     const needsOpacity = this.options.opacity !== 1;
     const needsTinting = this.options.color !== "#FFFFFF";
     const needsFlipping = this.options.flipX || this.options.flipY;
-    console.log(`Drawing sprite: flipX=${this.options.flipX}, flipY=${this.options.flipY}, needsFlipping=${needsFlipping}`);
     if (needsOpacity) {
       ctx.save();
       ctx.globalAlpha = Math.max(0, Math.min(1, this.options.opacity));
@@ -2189,6 +2411,48 @@ var SpriteAnimationComponent = class extends Component {
     this.autoPlay = true;
     this.time = 0;
     this.defaultClipName = defaultClipName;
+  }
+  /**
+   * Get default metadata configuration for SpriteAnimationComponent
+   * @returns {Object} Default metadata configuration
+   */
+  static getDefaultMeta() {
+    return {
+      defaultClipName: null,
+      autoPlay: true
+    };
+  }
+  /**
+   * Apply constructor arguments to metadata format
+   * @private
+   */
+  _applyConstructorArgs(defaultClipName = null) {
+    const metadata = {
+      defaultClipName,
+      autoPlay: true
+    };
+    this.applyMeta(metadata);
+  }
+  /**
+   * Update component properties from current metadata
+   * @private
+   */
+  _updatePropertiesFromMeta() {
+    this.defaultClipName = this.__meta.defaultClipName;
+    this.autoPlay = this.__meta.autoPlay;
+  }
+  /**
+   * Validate current metadata
+   * @private
+   */
+  _validateMeta() {
+    const meta = this.__meta;
+    if (meta.defaultClipName !== null && typeof meta.defaultClipName !== "string") {
+      throw new Error("defaultClipName must be null or a string");
+    }
+    if (typeof meta.autoPlay !== "boolean") {
+      throw new Error("autoPlay must be a boolean");
+    }
   }
   /**
    * Called when the GameObject starts. Automatically plays the default clip if autoPlay is enabled.
@@ -2367,6 +2631,42 @@ var GravityComponent = class extends Component {
     this.velocity = new Vector2(0, 0);
   }
   /**
+   * Get default metadata configuration for GravityComponent
+   * @returns {Object} Default metadata configuration
+   */
+  static getDefaultMeta() {
+    return {
+      gravityScale: 300
+    };
+  }
+  /**
+   * Apply constructor arguments to metadata format
+   * @private
+   */
+  _applyConstructorArgs(options = {}) {
+    const metadata = {
+      gravityScale: options.gravityScale || 300
+    };
+    this.applyMeta(metadata);
+  }
+  /**
+   * Update component properties from current metadata
+   * @private
+   */
+  _updatePropertiesFromMeta() {
+    this.gravityScale = this.__meta.gravityScale;
+  }
+  /**
+   * Validate current metadata
+   * @private
+   */
+  _validateMeta() {
+    const meta = this.__meta;
+    if (typeof meta.gravityScale !== "number" || meta.gravityScale < 0) {
+      throw new Error("gravityScale must be a non-negative number");
+    }
+  }
+  /**
    * Updates the gravity effect. Called automatically each frame.
    * Increases the Y velocity based on gravity scale and delta time.
    */
@@ -2407,6 +2707,54 @@ var RigidbodyComponent = class _RigidbodyComponent extends GravityComponent {
     super(options);
     this.gravity = options.gravity != null ? options.gravity : false;
     this.bounciness = options.bounciness || 0;
+  }
+  /**
+   * Get default metadata configuration for RigidbodyComponent
+   * @returns {Object} Default metadata configuration
+   */
+  static getDefaultMeta() {
+    return {
+      gravity: false,
+      gravityScale: 300,
+      bounciness: 0
+    };
+  }
+  /**
+   * Apply constructor arguments to metadata format
+   * @private
+   */
+  _applyConstructorArgs(options = {}) {
+    const metadata = {
+      gravity: options.gravity !== null ? options.gravity : false,
+      gravityScale: options.gravityScale || 300,
+      bounciness: options.bounciness || 0
+    };
+    this.applyMeta(metadata);
+  }
+  /**
+   * Update component properties from current metadata
+   * @private
+   */
+  _updatePropertiesFromMeta() {
+    this.gravity = this.__meta.gravity;
+    this.gravityScale = this.__meta.gravityScale;
+    this.bounciness = this.__meta.bounciness;
+  }
+  /**
+   * Validate current metadata
+   * @private
+   */
+  _validateMeta() {
+    const meta = this.__meta;
+    if (typeof meta.gravity !== "boolean") {
+      throw new Error("gravity must be a boolean");
+    }
+    if (typeof meta.gravityScale !== "number" || meta.gravityScale < 0) {
+      throw new Error("gravityScale must be a non-negative number");
+    }
+    if (typeof meta.bounciness !== "number" || meta.bounciness < 0 || meta.bounciness > 1) {
+      throw new Error("bounciness must be a number between 0 and 1");
+    }
   }
   /**
    * Initializes the RigidbodyComponent, ensuring it has a collider.
@@ -2937,6 +3285,57 @@ var ImageComponent = class extends Component {
     this.height = height;
   }
   /**
+   * Get default metadata configuration for ImageComponent
+   * @returns {Object} Default metadata configuration
+   */
+  static getDefaultMeta() {
+    return {
+      src: "",
+      width: null,
+      height: null
+    };
+  }
+  /**
+   * Apply constructor arguments to metadata format
+   * @private
+   */
+  _applyConstructorArgs(src, width = null, height = null) {
+    const metadata = {
+      src: src || "",
+      width,
+      height
+    };
+    this.applyMeta(metadata);
+  }
+  /**
+   * Update component properties from current metadata
+   * @private
+   */
+  _updatePropertiesFromMeta() {
+    this.src = this.__meta.src;
+    this.width = this.__meta.width;
+    this.height = this.__meta.height;
+    if (this.image && this.image.src !== this.src) {
+      this.image = null;
+    }
+  }
+  /**
+   * Validate current metadata
+   * @private
+   */
+  _validateMeta() {
+    const meta = this.__meta;
+    if (typeof meta.src !== "string") {
+      throw new Error("src must be a string");
+    }
+    if (meta.width !== null && (typeof meta.width !== "number" || meta.width <= 0)) {
+      throw new Error("width must be null or a positive number");
+    }
+    if (meta.height !== null && (typeof meta.height !== "number" || meta.height <= 0)) {
+      throw new Error("height must be null or a positive number");
+    }
+  }
+  /**
    * Preloads the image from the source URL.
    * 
    * @returns {Promise<void>} A promise that resolves when the image is loaded.
@@ -3361,6 +3760,48 @@ var CircleColliderComponent = class _CircleColliderComponent extends AbstractCol
     this.trigger = trigger;
   }
   /**
+   * Get default metadata configuration for CircleColliderComponent
+   * @returns {Object} Default metadata configuration
+   */
+  static getDefaultMeta() {
+    return {
+      radius: null,
+      trigger: false
+    };
+  }
+  /**
+   * Apply constructor arguments to metadata format
+   * @private
+   */
+  _applyConstructorArgs(radius = null, trigger = false) {
+    const metadata = {
+      radius,
+      trigger
+    };
+    this.applyMeta(metadata);
+  }
+  /**
+   * Update component properties from current metadata
+   * @private
+   */
+  _updatePropertiesFromMeta() {
+    this.radius = this.__meta.radius;
+    this.trigger = this.__meta.trigger;
+  }
+  /**
+   * Validate current metadata
+   * @private
+   */
+  _validateMeta() {
+    const meta = this.__meta;
+    if (meta.radius !== null && (typeof meta.radius !== "number" || meta.radius <= 0)) {
+      throw new Error("radius must be null or a positive number");
+    }
+    if (typeof meta.trigger !== "boolean") {
+      throw new Error("trigger must be a boolean");
+    }
+  }
+  /**
    * Checks collision with another collider component.
    * 
    * @param {AbstractColliderComponent} other - The other collider to check against
@@ -3436,6 +3877,54 @@ var BoxColliderComponent = class _BoxColliderComponent extends AbstractColliderC
     this.width = width;
     this.height = height;
     this.trigger = trigger;
+  }
+  /**
+   * Get default metadata configuration for BoxColliderComponent
+   * @returns {Object} Default metadata configuration
+   */
+  static getDefaultMeta() {
+    return {
+      width: null,
+      height: null,
+      trigger: false
+    };
+  }
+  /**
+   * Apply constructor arguments to metadata format
+   * @private
+   */
+  _applyConstructorArgs(width = null, height = null, trigger = false) {
+    const metadata = {
+      width,
+      height,
+      trigger
+    };
+    this.applyMeta(metadata);
+  }
+  /**
+   * Update component properties from current metadata
+   * @private
+   */
+  _updatePropertiesFromMeta() {
+    this.width = this.__meta.width;
+    this.height = this.__meta.height;
+    this.trigger = this.__meta.trigger;
+  }
+  /**
+   * Validate current metadata
+   * @private
+   */
+  _validateMeta() {
+    const meta = this.__meta;
+    if (meta.width !== null && (typeof meta.width !== "number" || meta.width <= 0)) {
+      throw new Error("width must be null or a positive number");
+    }
+    if (meta.height !== null && (typeof meta.height !== "number" || meta.height <= 0)) {
+      throw new Error("height must be null or a positive number");
+    }
+    if (typeof meta.trigger !== "boolean") {
+      throw new Error("trigger must be a boolean");
+    }
   }
   checkCollisionWith(other) {
     if (other instanceof _BoxColliderComponent) {

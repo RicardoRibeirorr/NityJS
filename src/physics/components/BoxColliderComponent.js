@@ -12,6 +12,62 @@ export class BoxColliderComponent extends AbstractColliderComponent {
         this.trigger = trigger;
     }
 
+    /**
+     * Get default metadata configuration for BoxColliderComponent
+     * @returns {Object} Default metadata configuration
+     */
+    static getDefaultMeta() {
+        return {
+            width: null,
+            height: null,
+            trigger: false
+        };
+    }
+
+    /**
+     * Apply constructor arguments to metadata format
+     * @private
+     */
+    _applyConstructorArgs(width = null, height = null, trigger = false) {
+        const metadata = {
+            width: width,
+            height: height,
+            trigger: trigger
+        };
+        
+        this.applyMeta(metadata);
+    }
+
+    /**
+     * Update component properties from current metadata
+     * @private
+     */
+    _updatePropertiesFromMeta() {
+        this.width = this.__meta.width;
+        this.height = this.__meta.height;
+        this.trigger = this.__meta.trigger;
+    }
+
+    /**
+     * Validate current metadata
+     * @private
+     */
+    _validateMeta() {
+        const meta = this.__meta;
+        
+        if (meta.width !== null && (typeof meta.width !== 'number' || meta.width <= 0)) {
+            throw new Error('width must be null or a positive number');
+        }
+        
+        if (meta.height !== null && (typeof meta.height !== 'number' || meta.height <= 0)) {
+            throw new Error('height must be null or a positive number');
+        }
+        
+        if (typeof meta.trigger !== 'boolean') {
+            throw new Error('trigger must be a boolean');
+        }
+    }
+
     checkCollisionWith(other) {
         if (other instanceof BoxColliderComponent) {
             return this.checkBoxBoxCollision(other);

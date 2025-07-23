@@ -14,8 +14,8 @@ export class Component {
         this._started = false;
         this._internalGizmos = this._internalGizmos || (Game.instance?._internalGizmos ?? false);
         
-        // Initialize metadata system
-        this.__meta = this.getDefaultMeta();
+        // Initialize metadata system - call static method
+        this.__meta = this.constructor.getDefaultMeta();
         
         // Apply constructor args if provided
         if (arguments.length > 0) {
@@ -51,7 +51,7 @@ export class Component {
      * Override in subclasses to define component-specific defaults
      * @returns {Object} Default metadata object
      */
-    getDefaultMeta() {
+    static getDefaultMeta() {
         return {};
     }
 

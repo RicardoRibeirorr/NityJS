@@ -1,5 +1,5 @@
-import { AbstractColliderComponent } from "../AbstractColliderComponent";
-import { SpriteRendererComponent } from "../../renderer/components/SpriteRendererComponent";
+import { AbstractColliderComponent } from "../AbstractColliderComponent.js";
+import { SpriteRendererComponent } from "../../renderer/components/SpriteRendererComponent.js";
 
 /**
  * CircleColliderComponent provides circular collision detection for GameObjects.
@@ -22,6 +22,55 @@ export class CircleColliderComponent extends AbstractColliderComponent {
         super();
         this.radius = radius;
         this.trigger = trigger;
+    }
+
+    /**
+     * Get default metadata configuration for CircleColliderComponent
+     * @returns {Object} Default metadata configuration
+     */
+    static getDefaultMeta() {
+        return {
+            radius: null,
+            trigger: false
+        };
+    }
+
+    /**
+     * Apply constructor arguments to metadata format
+     * @private
+     */
+    _applyConstructorArgs(radius = null, trigger = false) {
+        const metadata = {
+            radius: radius,
+            trigger: trigger
+        };
+        
+        this.applyMeta(metadata);
+    }
+
+    /**
+     * Update component properties from current metadata
+     * @private
+     */
+    _updatePropertiesFromMeta() {
+        this.radius = this.__meta.radius;
+        this.trigger = this.__meta.trigger;
+    }
+
+    /**
+     * Validate current metadata
+     * @private
+     */
+    _validateMeta() {
+        const meta = this.__meta;
+        
+        if (meta.radius !== null && (typeof meta.radius !== 'number' || meta.radius <= 0)) {
+            throw new Error('radius must be null or a positive number');
+        }
+        
+        if (typeof meta.trigger !== 'boolean') {
+            throw new Error('trigger must be a boolean');
+        }
     }
 
     /**

@@ -19,6 +19,67 @@ export class ImageComponent extends Component {
     }
 
     /**
+     * Get default metadata configuration for ImageComponent
+     * @returns {Object} Default metadata configuration
+     */
+    static getDefaultMeta() {
+        return {
+            src: "",
+            width: null,
+            height: null
+        };
+    }
+
+    /**
+     * Apply constructor arguments to metadata format
+     * @private
+     */
+    _applyConstructorArgs(src, width = null, height = null) {
+        const metadata = {
+            src: src || "",
+            width: width,
+            height: height
+        };
+        
+        this.applyMeta(metadata);
+    }
+
+    /**
+     * Update component properties from current metadata
+     * @private
+     */
+    _updatePropertiesFromMeta() {
+        this.src = this.__meta.src;
+        this.width = this.__meta.width;
+        this.height = this.__meta.height;
+        
+        // Reset image when src changes
+        if (this.image && this.image.src !== this.src) {
+            this.image = null;
+        }
+    }
+
+    /**
+     * Validate current metadata
+     * @private
+     */
+    _validateMeta() {
+        const meta = this.__meta;
+        
+        if (typeof meta.src !== 'string') {
+            throw new Error('src must be a string');
+        }
+        
+        if (meta.width !== null && (typeof meta.width !== 'number' || meta.width <= 0)) {
+            throw new Error('width must be null or a positive number');
+        }
+        
+        if (meta.height !== null && (typeof meta.height !== 'number' || meta.height <= 0)) {
+            throw new Error('height must be null or a positive number');
+        }
+    }
+
+    /**
      * Preloads the image from the source URL.
      * 
      * @returns {Promise<void>} A promise that resolves when the image is loaded.

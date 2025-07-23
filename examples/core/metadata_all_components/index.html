@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NityJS - All Components Metadata Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: white;
+        }
+        
+        canvas {
+            background-color: #333;
+            border: 2px solid #555;
+            display: block;
+            margin: 20px auto;
+        }
+        
+        .info {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .test-section {
+            background-color: #2d2d2d;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .test-section h3 {
+            margin-top: 0;
+            color: #4CAF50;
+        }
+        
+        code {
+            background-color: #1e1e1e;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        pre {
+            background-color: #1e1e1e;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            text-align: left;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .button-secondary {
+            background-color: #2196F3;
+        }
+        
+        .button-secondary:hover {
+            background-color: #1976D2;
+        }
+        
+        .button-danger {
+            background-color: #f44336;
+        }
+        
+        .button-danger:hover {
+            background-color: #d32f2f;
+        }
+        
+        .component-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .component-card {
+            background-color: #2d2d2d;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #555;
+        }
+        
+        .component-card h4 {
+            margin: 0 0 10px 0;
+            color: #4CAF50;
+            font-size: 14px;
+        }
+        
+        .status {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .status.success {
+            color: #4CAF50;
+        }
+        
+        .status.error {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>🧪 All Components Metadata Test</h1>
+        <p>This example tests the metadata system implementation for all NityJS components.</p>
+        <p>Open the console to see detailed test results for each component type.</p>
+        
+        <div class="controls">
+            <button onclick="testValidation()" class="button-secondary">Test Validation</button>
+            <button onclick="testJSONSerialization()" class="button-secondary">Test JSON Serialization</button>
+            <button onclick="clearAll()" class="button-danger">Clear All</button>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="test-section">
+            <h3>🎯 Components with Metadata Support</h3>
+            <div class="component-list">
+                <div class="component-card">
+                    <h4>🎨 SpriteRendererComponent</h4>
+                    <div class="status success">✅ Metadata Implemented</div>
+                    <small>spriteName, width, height, opacity, color, flipX, flipY</small>
+                </div>
+                <div class="component-card">
+                    <h4>🖼️ ImageComponent</h4>
+                    <div class="status success">✅ Metadata Implemented</div>
+                    <small>src, width, height</small>
+                </div>
+                <div class="component-card">
+                    <h4>🔺 ShapeComponent</h4>
+                    <div class="status success">✅ Metadata Implemented</div>
+                    <small>shapeType, width, height, radius, color, filled, points</small>
+                </div>
+                <div class="component-card">
+                    <h4>⚽ RigidbodyComponent</h4>
+                    <div class="status success">✅ Metadata Implemented</div>
+                    <small>gravity, gravityScale, bounciness</small>
+                </div>
+                <div class="component-card">
+                    <h4>📦 BoxColliderComponent</h4>
+                    <div class="status success">✅ Metadata Implemented</div>
+                    <small>width, height, trigger</small>
+                </div>
+                <div class="component-card">
+                    <h4>⭕ CircleColliderComponent</h4>
+                    <div class="status success">✅ Metadata Implemented</div>
+                    <small>radius, trigger</small>
+                </div>
+                <div class="component-card">
+                    <h4>🎬 SpriteAnimationComponent</h4>
+                    <div class="status success">✅ Metadata Implemented</div>
+                    <small>defaultClipName, autoPlay</small>
+                </div>
+                <div class="component-card">
+                    <h4>📷 CameraComponent</h4>
+                    <div class="status success">✅ Metadata Implemented</div>
+                    <small>zoom</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔧 Metadata Creation Methods</h3>
+            <pre><code>// Method 1: Traditional Constructor
+const sprite = new SpriteRendererComponent("player", {
+    width: 64,
+    height: 64,
+    opacity: 0.8
+});
+
+// Method 2: Metadata Factory
+const sprite = SpriteRendererComponent.meta({
+    spriteName: "player",
+    width: 64,
+    height: 64,
+    opacity: 0.8
+});
+
+// Method 3: Component.createFromMetadata
+const sprite = Component.createFromMetadata(SpriteRendererComponent, {
+    spriteName: "player",
+    width: 64,
+    height: 64,
+    opacity: 0.8
+});</code></pre>
+        </div>
+        
+        <div class="test-section">
+            <h3>📊 Metadata Features</h3>
+            <ul style="text-align: left; max-width: 600px; margin: 0 auto;">
+                <li><strong>Default Values:</strong> Every component provides default metadata via <code>getDefaultMeta()</code></li>
+                <li><strong>Validation:</strong> All metadata is validated with helpful error messages</li>
+                <li><strong>JSON Serialization:</strong> Components can be serialized to/from JSON for visual editors</li>
+                <li><strong>Backward Compatibility:</strong> Traditional constructor usage still works perfectly</li>
+                <li><strong>Type Safety:</strong> Validation ensures correct data types and value ranges</li>
+                <li><strong>Unity Familiarity:</strong> Metadata design follows Unity Inspector patterns</li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <h3>🎮 Visual Editor Integration</h3>
+            <pre><code>// Perfect for visual editors and scene serialization
+const gameObjectData = {
+    name: "Player",
+    position: { x: 100, y: 150 },
+    rotation: 0,
+    components: [
+        {
+            type: "SpriteRendererComponent",
+            metadata: {
+                spriteName: "player_idle",
+                width: 64,
+                height: 64,
+                opacity: 1.0,
+                color: "#FFFFFF"
+            }
+        },
+        {
+            type: "BoxColliderComponent", 
+            metadata: {
+                width: 32,
+                height: 48,
+                trigger: false
+            }
+        }
+    ]
+};</code></pre>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔍 Validation Examples</h3>
+            <p>The system validates all metadata and provides helpful error messages:</p>
+            <pre><code>// ❌ This will throw an error
+SpriteRendererComponent.meta({
+    opacity: 2.0  // Must be between 0 and 1
+});
+
+// ❌ This will throw an error  
+BoxColliderComponent.meta({
+    width: -10  // Must be positive
+});
+
+// ✅ This will work perfectly
+SpriteRendererComponent.meta({
+    spriteName: "player",
+    opacity: 0.8,
+    flipX: true
+});</code></pre>
+        </div>
+        
+    </div>
+
+    <script type="module" src="index.js"></script>
+</body>
+</html>

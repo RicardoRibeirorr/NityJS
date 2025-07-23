@@ -40,6 +40,62 @@ export class RigidbodyComponent extends GravityComponent {
     }
 
     /**
+     * Get default metadata configuration for RigidbodyComponent
+     * @returns {Object} Default metadata configuration
+     */
+    static getDefaultMeta() {
+        return {
+            gravity: false,
+            gravityScale: 300,
+            bounciness: 0
+        };
+    }
+
+    /**
+     * Apply constructor arguments to metadata format
+     * @private
+     */
+    _applyConstructorArgs(options = {}) {
+        const metadata = {
+            gravity: options.gravity !== null ? options.gravity : false,
+            gravityScale: options.gravityScale || 300,
+            bounciness: options.bounciness || 0
+        };
+        
+        this.applyMeta(metadata);
+    }
+
+    /**
+     * Update component properties from current metadata
+     * @private
+     */
+    _updatePropertiesFromMeta() {
+        this.gravity = this.__meta.gravity;
+        this.gravityScale = this.__meta.gravityScale;
+        this.bounciness = this.__meta.bounciness;
+    }
+
+    /**
+     * Validate current metadata
+     * @private
+     */
+    _validateMeta() {
+        const meta = this.__meta;
+        
+        if (typeof meta.gravity !== 'boolean') {
+            throw new Error('gravity must be a boolean');
+        }
+        
+        if (typeof meta.gravityScale !== 'number' || meta.gravityScale < 0) {
+            throw new Error('gravityScale must be a non-negative number');
+        }
+        
+        if (typeof meta.bounciness !== 'number' || meta.bounciness < 0 || meta.bounciness > 1) {
+            throw new Error('bounciness must be a number between 0 and 1');
+        }
+    }
+
+    /**
      * Initializes the RigidbodyComponent, ensuring it has a collider.
      * @returns {void}
      */

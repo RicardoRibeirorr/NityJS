@@ -50,13 +50,40 @@ Destroy(player);                              // Destroy GameObject
 DestroyComponent(player, RigidbodyComponent);  // Remove specific component
 DestroyAll();                                 // Clear entire scene
 
-// Metadata-driven components for visual editors
-const shape = Component.createFromMetadata(ShapeComponent, {
-    shapeType: "circle",
-    radius: 25,
-    color: "#00FF00",
-    filled: true
+// Metadata-driven components - ALL components support this!
+const playerSprite = SpriteRendererComponent.meta({
+    spriteName: "player_idle",
+    width: 64,
+    height: 64,
+    opacity: 0.9,
+    flipX: true
 });
+
+const physics = RigidbodyComponent.meta({
+    gravity: true,
+    gravityScale: 400,
+    bounciness: 0.2
+});
+
+const collider = BoxColliderComponent.meta({
+    width: 32,
+    height: 48,
+    trigger: false
+});
+
+// Perfect for visual editors and JSON scene files
+const componentData = {
+    type: "SpriteRendererComponent",
+    metadata: {
+        spriteName: "enemy_walk",
+        width: 48,
+        height: 48,
+        color: "#FF6B6B"
+    }
+};
+
+// All components: SpriteRenderer, Image, Shape, Rigidbody, 
+// BoxCollider, CircleCollider, Gravity, Animation, Camera!
 
 // Component - the new MonoBehavior but with more style! 😊
 class PlayerController extends Component {
@@ -112,10 +139,17 @@ class PlayerController extends Component {
 #### 🔧 Core Systems
 - **[Game & Scene Management](./docs/core/)** - Game loop, scenes, lifecycle
 - **[GameObject & Components](./docs/core/GameObject.md)** - Entity-component architecture
+- **[Component Metadata System](./docs/core/ComponentMetadata.md)** - Data-driven development & visual editor integration
 - **[Input System](./docs/input/Input.md)** - Keyboard, mouse, events, callbacks
 - **[Physics System](./docs/physics/)** - Movement, collision, gravity
 - **[Rendering System](./docs/renderer/)** - Sprites, animations, shapes
 - **[Asset Management](./docs/asset/)** - Loading, caching, optimization
+
+#### ⚡ Advanced Features
+- **Universal Metadata Support** - All 9 component types support metadata creation
+- **JSON Scene Serialization** - Perfect for visual editors and level designers
+- **Unity-Style Validation** - Type-safe metadata with helpful error messages
+- **Backward Compatibility** - Traditional constructors still work perfectly
 
 #### 🎮 By Game Type
 - **Platformers** - Player movement, collision, gravity
