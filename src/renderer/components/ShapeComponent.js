@@ -30,8 +30,79 @@ export class ShapeComponent extends Component {
      */
     constructor(shape, options = { width:10, height:10, color:'white' }) {
         super();
-        this.shape = shape;
-        this.options = options;
+        // Set properties from metadata or default to constructor args
+        this.shape = this.__meta.shape || shape || 'rectangle';
+        this.options = { ...this.__meta.options, ...options };
+    }
+
+    /**
+     * Get default metadata for ShapeComponent
+     * @returns {Object} Default metadata object
+     */
+    getDefaultMeta() {
+        return {
+            shape: 'rectangle',
+            options: {
+                width: 10,
+                height: 10,
+                color: 'white',
+                radius: 10,
+                radiusX: 10,
+                radiusY: 5,
+                x2: 10,
+                y2: 0,
+                size: 20,
+                points: []
+            }
+        };
+    }
+
+    /**
+     * Apply constructor arguments to metadata format
+     * @private
+     */
+    _applyConstructorArgs(shape, options = {}) {
+        this.__meta = {
+            ...this.__meta,
+            shape: shape || this.__meta.shape,
+            options: { ...this.__meta.options, ...options }
+        };
+    }
+
+    /**
+     * Update component properties from current metadata
+     * @private
+     */
+    _updatePropertiesFromMeta() {
+        this.shape = this.__meta.shape;
+        this.options = { ...this.__meta.options };
+    }
+
+    /**
+     * Validate current metadata
+     * @private
+     */
+    _validateMeta() {
+        const validShapes = ['rectangle', 'square', 'circle', 'ellipse', 'line', 'triangle', 'polygon'];
+        
+        if (!validShapes.includes(this.__meta.shape)) {
+            throw new Error(`ShapeComponent: Invalid shape type "${this.__meta.shape}". Valid types: ${validShapes.join(', ')}`);
+        }
+
+        if (typeof this.__meta.options.color !== 'string') {
+            throw new Error('ShapeComponent: options.color must be a string');
+        }
+
+        // Shape-specific validation
+        if (['rectangle', 'square'].includes(this.__meta.shape)) {
+            if (this.__meta.options.width <= 0 || this.__meta.options.height <= 0) {
+                throw new Error('ShapeComponent: width and height must be greater than 0 for rectangles');
+            }
+        }
+        
+        if (this.__meta.shape === 'circle' && this.__meta.options.radius <= 0) {
+            throw new Error('ShapeComponent: radius must be greater than 0 for circles');
+        }
     }
     
     // Getter and setter methods for easy property access

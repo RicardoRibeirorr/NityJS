@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NityJS - Metadata Components Example</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: white;
+        }
+        
+        canvas {
+            background-color: #333;
+            border: 2px solid #555;
+            display: block;
+            margin: 20px auto;
+        }
+        
+        .info {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .example-section {
+            background-color: #2d2d2d;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .example-section h3 {
+            margin-top: 0;
+            color: #4CAF50;
+        }
+        
+        code {
+            background-color: #1e1e1e;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        pre {
+            background-color: #1e1e1e;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            text-align: left;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>🎯 Metadata Components System</h1>
+        <p>This example demonstrates the new metadata-driven component creation system in NityJS.</p>
+        <p>Components can now be created using <strong>traditional constructors</strong> or <strong>metadata objects</strong> for future editor integration.</p>
+        
+        <div class="controls">
+            <button onclick="addTraditionalShape()">Add Traditional Shape</button>
+            <button onclick="addMetadataShape()">Add Metadata Shape</button>
+            <button onclick="addFromJSON()">Add from JSON</button>
+            <button onclick="addDelayedDestroy()">Add + Destroy in 3s</button>
+            <button onclick="clearShapes()">Clear All</button>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="example-section">
+            <h3>🔧 Traditional Constructor</h3>
+            <pre><code>// Old way - still works perfectly
+const shape = new ShapeComponent("rectangle", {
+    width: 100,
+    height: 60,
+    color: "red"
+});
+gameObject.addComponent(shape);</code></pre>
+        </div>
+        
+        <div class="example-section">
+            <h3>📊 Metadata-Driven Creation</h3>
+            <pre><code>// New way - using metadata objects
+const shape = ShapeComponent.meta({
+    shape: "circle",
+    options: {
+        radius: 40,
+        color: "blue"
+    }
+});
+gameObject.addComponent(shape);</code></pre>
+        </div>
+        
+        <div class="example-section">
+            <h3>🌐 JSON Configuration (Future Editor Support)</h3>
+            <pre><code>// Perfect for visual editors and serialization
+const componentData = {
+    type: "ShapeComponent",
+    metadata: {
+        shape: "triangle",
+        options: {
+            size: 50,
+            color: "green"
+        }
+    }
+};
+
+// Dynamic creation from JSON
+const ComponentClass = window[componentData.type];
+const shape = ComponentClass.meta(componentData.metadata);
+gameObject.addComponent(shape);</code></pre>
+        </div>
+        
+        <div class="example-section">
+            <h3>🔄 Priority System</h3>
+            <p>When both constructor arguments and metadata are present:</p>
+            <p><strong>Constructor Arguments</strong> take priority over <strong>Metadata</strong></p>
+            <p>Perfect for overriding default configurations on a case-by-case basis.</p>
+        </div>
+        
+        <div class="example-section">
+            <h3>💥 Destruction System</h3>
+            <p>The new <strong>Destroy</strong> function provides Unity-like object destruction:</p>
+            <pre><code>// Immediate destruction (Unity style)
+Destroy(gameObject);
+
+// Delayed destruction (like Unity)
+Destroy(gameObject, 3.0); // Destroy after 3 seconds
+
+// Component destruction
+DestroyComponent(gameObject, ShapeComponent);</code></pre>
+        </div>
+    </div>
+
+    <script type="module" src="index.js"></script>
+</body>
+</html>

@@ -4,6 +4,7 @@ import { Input } from '../input/Input.js';
 import { CollisionSystem } from '../bin/CollisionSystem.js';
 import { Instantiate } from './Instantiate.js';
 import { Time } from './Time.js';
+import { _processPendingDestructions } from './Destroy.js';
 
 // === Game.js ===
 export class Game {
@@ -106,6 +107,10 @@ export class Game {
             }
             
             this.scene.__lateUpdate();
+            
+            // Process pending destructions (should be after updates but before drawing)
+            _processPendingDestructions();
+            
             this.scene.__draw(this.ctx);
         }
 
@@ -115,6 +120,7 @@ export class Game {
     async #_loadScene(scene) {
         if (!scene) throw new Error("No scene provided.");
         this.scene = scene;
+        this.currentScene = scene; // Add reference for Destroy class
         // if (typeof scene._create === 'function') {
         //     scene._create(scene);  // Build the objects
         //     scene._create = null;

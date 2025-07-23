@@ -165,6 +165,59 @@ var Component = class {
     this.enabled = true;
     this._started = false;
     this._internalGizmos = this._internalGizmos || (Game.instance?._internalGizmos ?? false);
+    this.__meta = this.getDefaultMeta();
+    if (arguments.length > 0) {
+      this._applyConstructorArgs(...arguments);
+    }
+  }
+  /**
+   * Static method to create component instance from metadata
+   * @param {Object} metadata - Component configuration object
+   * @returns {Component} - Configured component instance
+   */
+  static meta(metadata) {
+    const instance = new this();
+    instance.applyMeta(metadata);
+    return instance;
+  }
+  /**
+   * Apply metadata to this component instance
+   * @param {Object} metadata - Component configuration object
+   */
+  applyMeta(metadata) {
+    const merged = { ...this.__meta, ...metadata };
+    this.__meta = merged;
+    this._updatePropertiesFromMeta();
+    this._validateMeta();
+  }
+  /**
+   * Get default metadata for this component type
+   * Override in subclasses to define component-specific defaults
+   * @returns {Object} Default metadata object
+   */
+  getDefaultMeta() {
+    return {};
+  }
+  /**
+   * Apply constructor arguments to metadata format
+   * Override in subclasses to map constructor args to metadata
+   * @private
+   */
+  _applyConstructorArgs(...args) {
+  }
+  /**
+   * Update component properties from current metadata
+   * Override in subclasses to apply metadata to component properties
+   * @private
+   */
+  _updatePropertiesFromMeta() {
+  }
+  /**
+   * Validate current metadata
+   * Override in subclasses to add component-specific validation
+   * @private
+   */
+  _validateMeta() {
   }
   __lateStart() {
   }
@@ -196,6 +249,11 @@ var Component = class {
   destroy() {
   }
   lateUpdate() {
+  }
+};
+var MonoBehaviour = class extends Component {
+  constructor() {
+    super();
   }
 };
 
@@ -1660,6 +1718,99 @@ var Time = class {
   }
 };
 
+// src/core/Destroy.js
+var _pendingDestructions = [];
+function Destroy(target, delay = 0) {
+  if (delay <= 0) {
+    _destroyImmediate(target);
+  } else {
+    const destructionTime = performance.now() + delay * 1e3;
+    _pendingDestructions.push({
+      target,
+      time: destructionTime
+    });
+  }
+}
+function DestroyComponent(gameObject, componentType) {
+  if (!gameObject || !gameObject.components) {
+    console.warn("DestroyComponent: Invalid GameObject provided");
+    return;
+  }
+  const component = gameObject.getComponent(componentType);
+  if (component) {
+    if (typeof component.destroy === "function") {
+      component.destroy();
+    }
+    gameObject.removeComponent(componentType);
+    console.log(`DestroyComponent: Removed ${componentType.name} from ${gameObject.name || "GameObject"}`);
+  } else {
+    console.warn(`DestroyComponent: Component ${componentType.name} not found on GameObject`);
+  }
+}
+function DestroyAll() {
+  const game = Game.instance;
+  if (!game || !game.currentScene) {
+    console.warn("DestroyAll: No active scene found");
+    return;
+  }
+  const objectsToDestroy = [...game.currentScene.objects];
+  objectsToDestroy.forEach((obj) => _destroyImmediate(obj));
+  console.log(`DestroyAll: Destroyed ${objectsToDestroy.length} GameObjects`);
+}
+function _destroyImmediate(target) {
+  if (!target) {
+    console.warn("Destroy: Cannot destroy null or undefined target");
+    return;
+  }
+  if (target.components && Array.isArray(target.components) && target.position) {
+    _destroyGameObject(target);
+  } else if (target.gameObject) {
+    _destroyComponent(target);
+  } else {
+    console.warn("Destroy: Unknown target type, cannot destroy", target);
+    console.warn("Target properties:", Object.keys(target));
+  }
+}
+function _destroyGameObject(gameObject) {
+  const game = Game.instance;
+  if (!game || !game.currentScene) {
+    console.warn("Destroy: No active scene found for GameObject destruction");
+    return;
+  }
+  game.currentScene.remove(gameObject);
+  console.log(`Destroy: Destroyed GameObject "${gameObject.name || "Unnamed"}"`);
+}
+function _destroyComponent(component) {
+  if (!component.gameObject) {
+    console.warn("Destroy: Component has no associated GameObject");
+    return;
+  }
+  if (typeof component.destroy === "function") {
+    component.destroy();
+  }
+  const componentType = component.constructor;
+  component.gameObject.removeComponent(componentType);
+  console.log(`Destroy: Destroyed Component ${componentType.name}`);
+}
+function _processPendingDestructions() {
+  const currentTime = performance.now();
+  const toDestroy = [];
+  for (let i = _pendingDestructions.length - 1; i >= 0; i--) {
+    const pending = _pendingDestructions[i];
+    if (currentTime >= pending.time) {
+      toDestroy.push(pending.target);
+      _pendingDestructions.splice(i, 1);
+    }
+  }
+  toDestroy.forEach((target) => _destroyImmediate(target));
+}
+function getPendingDestructionCount() {
+  return _pendingDestructions.length;
+}
+function clearPendingDestructions() {
+  _pendingDestructions = [];
+}
+
 // src/core/Game.js
 var Game = class _Game {
   #_forcedpaused = false;
@@ -1740,6 +1891,7 @@ var Game = class _Game {
         }
       }
       this.scene.__lateUpdate();
+      _processPendingDestructions();
       this.scene.__draw(this.ctx);
     }
     requestAnimationFrame(this.#_loop.bind(this));
@@ -1747,6 +1899,7 @@ var Game = class _Game {
   async #_loadScene(scene) {
     if (!scene) throw new Error("No scene provided.");
     this.scene = scene;
+    this.currentScene = scene;
     await SpriteRegistry.preloadAll();
     await this.scene.preload();
     await this.scene.start();
@@ -2116,6 +2269,29 @@ var Scene = class {
    */
   add(obj) {
     Instantiate.create(obj);
+  }
+  /**
+   * Removes an object from the scene.
+   * You should use {@link Destroy.destroy} when removing objects during gameplay.
+   * 
+   * @param {GameObject} obj - The object to remove from the scene.
+   */
+  remove(obj) {
+    const index = this.objects.indexOf(obj);
+    if (index > -1) {
+      if (typeof obj.destroy === "function") {
+        obj.destroy();
+      }
+      if (obj.components) {
+        obj.components.forEach((component) => {
+          if (typeof component.destroy === "function") {
+            component.destroy();
+          }
+        });
+      }
+      this.objects.splice(index, 1);
+      obj.scene = null;
+    }
   }
   __addObjectToScene(obj) {
     if (!(obj instanceof GameObject)) throw new Error(`[Nity] Forbidden object '${obj ? obj.constructor.name : null}' added to the scene. Accepts only 'GameObject'.`);
@@ -2846,8 +3022,69 @@ var ShapeComponent = class extends Component {
    */
   constructor(shape, options = { width: 10, height: 10, color: "white" }) {
     super();
-    this.shape = shape;
-    this.options = options;
+    this.shape = this.__meta.shape || shape || "rectangle";
+    this.options = { ...this.__meta.options, ...options };
+  }
+  /**
+   * Get default metadata for ShapeComponent
+   * @returns {Object} Default metadata object
+   */
+  getDefaultMeta() {
+    return {
+      shape: "rectangle",
+      options: {
+        width: 10,
+        height: 10,
+        color: "white",
+        radius: 10,
+        radiusX: 10,
+        radiusY: 5,
+        x2: 10,
+        y2: 0,
+        size: 20,
+        points: []
+      }
+    };
+  }
+  /**
+   * Apply constructor arguments to metadata format
+   * @private
+   */
+  _applyConstructorArgs(shape, options = {}) {
+    this.__meta = {
+      ...this.__meta,
+      shape: shape || this.__meta.shape,
+      options: { ...this.__meta.options, ...options }
+    };
+  }
+  /**
+   * Update component properties from current metadata
+   * @private
+   */
+  _updatePropertiesFromMeta() {
+    this.shape = this.__meta.shape;
+    this.options = { ...this.__meta.options };
+  }
+  /**
+   * Validate current metadata
+   * @private
+   */
+  _validateMeta() {
+    const validShapes = ["rectangle", "square", "circle", "ellipse", "line", "triangle", "polygon"];
+    if (!validShapes.includes(this.__meta.shape)) {
+      throw new Error(`ShapeComponent: Invalid shape type "${this.__meta.shape}". Valid types: ${validShapes.join(", ")}`);
+    }
+    if (typeof this.__meta.options.color !== "string") {
+      throw new Error("ShapeComponent: options.color must be a string");
+    }
+    if (["rectangle", "square"].includes(this.__meta.shape)) {
+      if (this.__meta.options.width <= 0 || this.__meta.options.height <= 0) {
+        throw new Error("ShapeComponent: width and height must be greater than 0 for rectangles");
+      }
+    }
+    if (this.__meta.shape === "circle" && this.__meta.options.radius <= 0) {
+      throw new Error("ShapeComponent: radius must be greater than 0 for circles");
+    }
   }
   // Getter and setter methods for easy property access
   get color() {
@@ -3748,12 +3985,16 @@ export {
   CameraComponent,
   CircleColliderComponent,
   Component,
+  Destroy,
+  DestroyAll,
+  DestroyComponent,
   FollowTarget,
   Game,
   GameObject,
   ImageComponent,
   Input,
   Instantiate,
+  MonoBehaviour,
   MovementComponent,
   MovementController,
   Random,
@@ -3768,5 +4009,7 @@ export {
   SpritesheetAsset,
   Time,
   Vector2,
-  Vector3
+  Vector3,
+  clearPendingDestructions,
+  getPendingDestructionCount
 };

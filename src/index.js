@@ -4,6 +4,7 @@
 export * from './core/Game.js';
 export * from './core/Time.js';
 export * from './core/Instantiate.js';
+export { Destroy, DestroyComponent, DestroyAll, getPendingDestructionCount, clearPendingDestructions } from './core/Destroy.js';
 
 export * from './common/Component.js';
 export * from './animations/SpriteAnimationClip.js';

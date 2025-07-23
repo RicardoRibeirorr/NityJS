@@ -21,6 +21,37 @@ export class Scene {
         Instantiate.create(obj);
     }
 
+    /**
+     * Removes an object from the scene.
+     * You should use {@link Destroy.destroy} when removing objects during gameplay.
+     * 
+     * @param {GameObject} obj - The object to remove from the scene.
+     */
+    remove(obj) {
+        const index = this.objects.indexOf(obj);
+        if (index > -1) {
+            // Call destroy lifecycle method if it exists
+            if (typeof obj.destroy === 'function') {
+                obj.destroy();
+            }
+            
+            // Remove all components and call their destroy methods
+            if (obj.components) {
+                obj.components.forEach(component => {
+                    if (typeof component.destroy === 'function') {
+                        component.destroy();
+                    }
+                });
+            }
+            
+            // Remove from scene objects array
+            this.objects.splice(index, 1);
+            
+            // Clear parent reference
+            obj.scene = null;
+        }
+    }
+
 
     __addObjectToScene(obj) {
         if(!(obj instanceof GameObject)) throw new Error(`[Nity] Forbidden object '${obj ? obj.constructor.name : null}' added to the scene. Accepts only 'GameObject'.`);
