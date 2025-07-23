@@ -56,7 +56,9 @@ const playerSprite = SpriteRendererComponent.meta({
     width: 64,
     height: 64,
     opacity: 0.9,
-    flipX: true
+    color: "#FF6B6B",
+    flipX: true,
+    flipY: false
 });
 
 const physics = RigidbodyComponent.meta({
@@ -71,6 +73,14 @@ const collider = BoxColliderComponent.meta({
     trigger: false
 });
 
+// Animation clips with metadata too!
+const walkClip = SpriteAnimationClip.meta({
+    name: "walk",
+    spriteNames: ["player:walk_0", "player:walk_1", "player:walk_2"],
+    fps: 8,
+    loop: true
+});
+
 // Perfect for visual editors and JSON scene files
 const componentData = {
     type: "SpriteRendererComponent",
@@ -78,12 +88,14 @@ const componentData = {
         spriteName: "enemy_walk",
         width: 48,
         height: 48,
-        color: "#FF6B6B"
+        color: "#FF6B6B",
+        opacity: 0.8
     }
 };
 
-// All components: SpriteRenderer, Image, Shape, Rigidbody, 
-// BoxCollider, CircleCollider, Gravity, Animation, Camera!
+// ALL 8 components + SpriteAnimationClip support metadata:
+// SpriteRenderer, Image, Shape, Rigidbody, BoxCollider, 
+// CircleCollider, SpriteAnimation, Camera + SpriteAnimationClip!
 
 // Component - the new MonoBehavior but with more style! 😊
 class PlayerController extends Component {
@@ -146,9 +158,11 @@ class PlayerController extends Component {
 - **[Asset Management](./docs/asset/)** - Loading, caching, optimization
 
 #### ⚡ Advanced Features
-- **Universal Metadata Support** - All 9 component types support metadata creation
-- **JSON Scene Serialization** - Perfect for visual editors and level designers
+- **Universal Metadata Support** - All 8 component types + SpriteAnimationClip support metadata creation
+- **JSON Scene Serialization** - Perfect for visual editors and level designers  
 - **Unity-Style Validation** - Type-safe metadata with helpful error messages
+- **Static Factory Methods** - Component.meta() for declarative creation
+- **Runtime Metadata Application** - Update components with applyMeta()
 - **Backward Compatibility** - Traditional constructors still work perfectly
 
 #### 🎮 By Game Type
@@ -211,15 +225,32 @@ const gameScene = new Scene({
     
     // Multiple component creation methods:
     // 1. Traditional constructor
-    enemy.addComponent(new ShapeComponent("circle", 25, { color: "red" }));
+    enemy.addComponent(new ShapeComponent("circle", { radius: 25, color: "red" }));
     
     // 2. Metadata-driven (ideal for editors)
-    const healthBar = Component.createFromMetadata(ShapeComponent, {
-      shapeType: "rectangle",
-      width: 50,
-      height: 8,
-      color: "#00FF00",
-      filled: true
+    const healthBar = ShapeComponent.meta({
+        shapeType: "rectangle",
+        options: {
+            width: 50,
+            height: 8,
+            color: "#00FF00",
+            filled: true
+        }
+    });
+    
+    // 3. All components support metadata factory
+    const camera = CameraComponent.meta({ zoom: 1.5 });
+    const animation = SpriteAnimationComponent.meta({ 
+        defaultClipName: "idle", 
+        autoPlay: true 
+    });
+    
+    // 4. Animation clips with metadata
+    const idleClip = SpriteAnimationClip.meta({
+        name: "idle",
+        spriteNames: ["player:idle_0", "player:idle_1"],
+        fps: 4,
+        loop: true
     });
     
     // Unity-style destruction

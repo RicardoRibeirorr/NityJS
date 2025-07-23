@@ -31,7 +31,8 @@ NityJS is a lightweight, Unity-inspired 2D game engine built in JavaScript. It p
 ### Basic Example
 
 ```javascript
-import { Game, Scene, GameObject, ShapeComponent, Destroy } from './dist/nity.module.min.js';
+import { Game, Scene, GameObject, SpriteRendererComponent, ShapeComponent, 
+         SpriteAnimationClip, SpriteAnimationComponent, Destroy } from './dist/nity.module.min.js';
 
 // Create canvas
 const canvas = document.getElementById('gameCanvas');
@@ -40,23 +41,59 @@ const game = new Game(canvas);
 // Create scene
 const scene = new Scene({
   create(scene) {
-    // Create shapes using multiple methods
+    // ===== METADATA-DRIVEN CREATION (Recommended) =====
     
-    // 1. Traditional constructor
-    const player = new GameObject(100, 100);
-    player.addComponent(new ShapeComponent("rectangle", 50, { color: '#ff0000' }));
+    // Create player with sprite renderer using metadata
+    const player = new GameObject("Player", 100, 100);
+    const playerSprite = SpriteRendererComponent.meta({
+        spriteName: "player_idle",
+        width: 64,
+        height: 64,
+        opacity: 0.9,
+        color: "#FF6B6B"
+    });
+    player.addComponent(playerSprite);
     
-    // 2. Metadata-driven creation (perfect for editors!)
-    const enemy = new GameObject(200, 100);
-    const enemyShape = Component.createFromMetadata(ShapeComponent, {
-      shapeType: "circle",
-      radius: 25,
-      color: "#00FF00",
-      filled: true
+    // Create enemy with shape using metadata
+    const enemy = new GameObject("Enemy", 200, 100);
+    const enemyShape = ShapeComponent.meta({
+        shapeType: "circle",
+        options: {
+            radius: 25,
+            color: "#00FF00",
+            filled: true
+        }
     });
     enemy.addComponent(enemyShape);
     
-    // 3. Unity-style destruction
+    // Create animation clips with metadata
+    const walkClip = SpriteAnimationClip.meta({
+        name: "walk",
+        spriteNames: ["player:walk_0", "player:walk_1", "player:walk_2"],
+        fps: 8,
+        loop: true
+    });
+    
+    // Create animation component with metadata
+    const animator = SpriteAnimationComponent.meta({
+        defaultClipName: "walk",
+        autoPlay: true
+    });
+    animator.addClip(walkClip);
+    player.addComponent(animator);
+    
+    // ===== TRADITIONAL CREATION (Still Supported) =====
+    
+    // Traditional constructor approach
+    const platform = new GameObject("Platform", 300, 100);
+    platform.addComponent(new ShapeComponent("rectangle", { width: 100, height: 20, color: '#8B4513' }));
+    
+    // Add all objects to scene
+    scene.add(player);
+    scene.add(enemy);
+    scene.add(platform);
+    
+    // ===== UNITY-STYLE DESTRUCTION =====
     setTimeout(() => {
       Destroy(enemy); // Just like Unity!
     }, 3000);
@@ -99,10 +136,13 @@ NityJS follows Unity's GameObject-Component pattern:
 - **Function-based API** - Use `Destroy(obj)` not `obj.destroy()` to match Unity
 
 #### Metadata System  
-- **Component.createFromMetadata()** - Create components from data objects
-- **getDefaultMeta()** - Get default configuration for any component
+- **ComponentClass.meta()** - Static factory methods for all 8 components + SpriteAnimationClip
+- **ComponentClass.getDefaultMeta()** - Get default configuration for any component
+- **applyMeta()** - Runtime metadata application with validation
+- **toMeta()** - Export component state for serialization  
 - **Visual Editor Ready** - Perfect for future browser-based editors
 - **JSON Configuration** - Define scenes and components declaratively
+- **Type-Safe Validation** - Comprehensive validation with helpful error messages
 
 ### Component Categories
 

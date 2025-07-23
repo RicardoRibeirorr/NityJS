@@ -8,9 +8,9 @@ This is a complete index of all available documentation for the NityJS game engi
 - [Game](core/Game.md) - Main game engine, canvas management, and game loop
 - [Scene](core/Scene.md) - Scene management, object lifecycle, and game state
 - [GameObject](core/GameObject.md) - Base entity class with Vector2 transform, rotation, and component system
+- [Component Metadata System](core/ComponentMetadata.md) - Universal metadata support for all components and animation clips
 - [Component](core/Component.md) - Base class for all modular functionality (Unity's MonoBehaviour equivalent)
 - [MonoBehaviour](core/MonoBehaviour.md) - Unity-style alias for Component (exact same functionality)
-- [Component Metadata](core/ComponentMetadata.md) - Data-driven component creation and visual editor integration
 - [Destroy System](core/Destroy.md) - Unity-style GameObject destruction (Destroy, DestroyComponent, DestroyAll)
 - [Instantiate](Instantiate.md) - Object creation, destruction, and scene management
 - [Time](core/Time.md) - Enhanced timing with deltaTime, performance.now(), timeScale, FPS monitoring
@@ -82,7 +82,29 @@ This is a complete index of all available documentation for the NityJS game engi
 **Component Usage Patterns:**
 - **Class Extension** - `class PlayerController extends Component { ... }` (Unity-style)
 - **Inline Anonymous** - `gameObject.addComponent(new class extends Component { update() { ... } })`
-- **Options Objects** - `new SpriteRendererComponent("sprite", { width: 64, height: 64 })`
+- **Traditional Constructors** - `new SpriteRendererComponent("sprite", { width: 64, height: 64 })`
+- **Metadata Factory** - `SpriteRendererComponent.meta({ spriteName: "player", width: 64, height: 64 })`
+- **JSON Configuration** - Perfect for visual editors and scene serialization
+
+## Metadata System
+
+**ALL 8 components and SpriteAnimationClip support comprehensive metadata:**
+
+### Supported Components
+1. **SpriteRendererComponent** - spriteName, dimensions, opacity, color, flipping
+2. **ImageComponent** - src, width, height  
+3. **ShapeComponent** - shapeType, options (radius, width, height, color, filled)
+4. **RigidbodyComponent** - gravity, gravityScale, bounciness
+5. **BoxColliderComponent** - width, height, trigger
+6. **CircleColliderComponent** - radius, trigger
+7. **SpriteAnimationComponent** - defaultClipName, autoPlay
+8. **CameraComponent** - zoom
+
+### SpriteAnimationClip Metadata
+- **name** - Unique identifier (required)
+- **spriteNames** - Array of sprite names
+- **fps** - Frames per second (default: 10)
+- **loop** - Loop behavior (default: true)
 
 ## Current API Examples
 
@@ -91,11 +113,49 @@ This is a complete index of all available documentation for the NityJS game engi
 const obj = new GameObject(new Vector2(100, 50));
 obj.rotation = Math.PI / 4; // 45 degrees in radians
 
-// SpriteRendererComponent with options
+// ===== METADATA-DRIVEN CREATION =====
+// Static factory methods for all components
+const sprite = SpriteRendererComponent.meta({
+    spriteName: "player",
+    width: 64,
+    height: 64,
+    opacity: 0.9,
+    color: "#FF6B6B",
+    flipX: true
+});
+
+const physics = RigidbodyComponent.meta({
+    gravity: true,
+    gravityScale: 400,
+    bounciness: 0.2
+});
+
+const walkClip = SpriteAnimationClip.meta({
+    name: "walk",
+    spriteNames: ["player:walk_0", "player:walk_1", "player:walk_2"],
+    fps: 8,
+    loop: true
+});
+
+// ===== TRADITIONAL CREATION (still supported) =====
 obj.addComponent(new SpriteRendererComponent("player", { 
     width: 64, 
-    height: 64 
+    height: 64,
+    opacity: 0.8,
+    color: "#FF0000"
 }));
+
+// ===== METADATA UTILITIES =====
+// Get defaults for any component
+const defaults = SpriteRendererComponent.getDefaultMeta();
+
+// Runtime metadata application
+const renderer = obj.getComponent(SpriteRendererComponent);
+renderer.applyMeta({ opacity: 0.5, flipX: true });
+
+// Export/Import for serialization
+const metadata = renderer.toMeta();
+const recreated = SpriteRendererComponent.meta(metadata);
 
 // Spritesheet with pixel coordinate method
 const sheet = new SpritesheetAsset("tiles", "tiles.png", {
@@ -103,7 +163,6 @@ const sheet = new SpritesheetAsset("tiles", "tiles.png", {
         { name: "tile1", startX: 0, startY: 0, endX: 16, endY: 16 }
     ]
 });
-obj.addComponent(new SpriteRendererComponent("tiles:tile1"));
 
 // Vector math operations
 const velocity = Vector2.up.multiply(100);

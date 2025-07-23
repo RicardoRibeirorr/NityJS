@@ -1,15 +1,15 @@
 # Animation System Classes
 
-The animation system in NityJS consists of two main classes that work together to provide sprite-based animations: `SpriteAnimationClip` and `SpriteAnimationComponent`.
+The animation system in NityJS consists of two main classes that work together to provide sprite-based animations: `SpriteAnimationClip` and `SpriteAnimationComponent`. Both classes support comprehensive metadata functionality for declarative creation and configuration.
 
 ## Overview
 
-- **SpriteAnimationClip**: Defines an animation sequence using sprite names from a spritesheet
-- **SpriteAnimationComponent**: Manages and plays animation clips on GameObjects
+- **SpriteAnimationClip**: Defines an animation sequence using sprite names from a spritesheet with full metadata support
+- **SpriteAnimationComponent**: Manages and plays animation clips on GameObjects with metadata configuration
 
 ## SpriteAnimationClip Class
 
-### Constructor
+### Traditional Constructor
 
 ```javascript
 new SpriteAnimationClip(name, spriteNames, fps, loop)
@@ -21,6 +21,54 @@ new SpriteAnimationClip(name, spriteNames, fps, loop)
 - `fps` (number, default: 10) - Frames per second for playback
 - `loop` (boolean, default: true) - Whether to loop when reaching the end
 
+### Metadata Creation
+
+```javascript
+const walkClip = SpriteAnimationClip.meta({
+    name: "walk",
+    spriteNames: ["player:walk_0", "player:walk_1", "player:walk_2", "player:walk_3"],
+    fps: 8,
+    loop: true
+});
+```
+
+### Metadata Methods
+
+#### `static meta(metadata)`
+Creates a SpriteAnimationClip from metadata configuration.
+
+**Metadata Properties:**
+- `name` (string, required) - Unique identifier for the animation clip
+- `spriteNames` (string[], default: []) - Array of sprite names that make up the animation sequence
+- `fps` (number, default: 10) - Frames per second for the animation playback  
+- `loop` (boolean, default: true) - Whether the animation should loop when it reaches the end
+
+#### `static getDefaultMeta()`
+Returns default metadata configuration:
+```javascript
+{
+    name: "",
+    spriteNames: [],
+    fps: 10,
+    loop: true
+}
+```
+
+#### `applyMeta(metadata)`
+Applies metadata to existing SpriteAnimationClip instance with validation.
+
+#### `toMeta()`
+Exports current clip configuration as metadata object for serialization.
+
+#### `clone()`
+Creates an independent copy of the animation clip.
+
+### Validation Rules
+- **name**: Must be non-empty string
+- **spriteNames**: Must be array of strings
+- **fps**: Must be positive number
+- **loop**: Must be boolean
+
 ### Properties
 
 - `name` - The clip's unique identifier
@@ -30,7 +78,7 @@ new SpriteAnimationClip(name, spriteNames, fps, loop)
 
 ## SpriteAnimationComponent Class
 
-### Constructor
+### Traditional Constructor
 
 ```javascript
 new SpriteAnimationComponent(sheetName, defaultClipName)
@@ -39,6 +87,33 @@ new SpriteAnimationComponent(sheetName, defaultClipName)
 **Parameters:**
 - `sheetName` (string) - Name of the spritesheet to use
 - `defaultClipName` (string, optional) - Default clip to play on start
+
+### Metadata Creation
+
+```javascript
+const animator = SpriteAnimationComponent.meta({
+    defaultClipName: "idle",
+    autoPlay: true
+});
+```
+
+### Metadata Methods
+
+#### `static meta(metadata)`
+Creates a SpriteAnimationComponent from metadata configuration.
+
+**Metadata Properties:**
+- `defaultClipName` (string, default: null) - Default animation clip name to play on start
+- `autoPlay` (boolean, default: true) - Whether to automatically play the default clip
+
+#### `static getDefaultMeta()`
+Returns default metadata configuration:
+```javascript
+{
+    defaultClipName: null,
+    autoPlay: true
+}
+```
 
 ### Properties
 
@@ -72,25 +147,71 @@ const idleClip = new SpriteAnimationClip("idle", [
 ], 4, true);
 
 const walkClip = new SpriteAnimationClip("walk", [
+// ===== METADATA-DRIVEN ANIMATION CREATION =====
+
+// Create animation clips with metadata (recommended)
+const idleClip = SpriteAnimationClip.meta({
+    name: "idle",
+    spriteNames: ["sprite_0_0", "sprite_1_0"],
+    fps: 2,
+    loop: true
+});
+
+const walkClip = SpriteAnimationClip.meta({
+    name: "walk",
+    spriteNames: [
+        "sprite_0_1", "sprite_1_1", "sprite_2_1", "sprite_3_1", 
+        "sprite_4_1", "sprite_5_1", "sprite_6_1", "sprite_7_1"
+    ],
+    fps: 8,
+    loop: true
+});
+
+const jumpClip = SpriteAnimationClip.meta({
+    name: "jump",
+    spriteNames: ["sprite_0_2", "sprite_1_2", "sprite_2_2"],
+    fps: 12,
+    loop: false
+});
+
+// Create animation component with metadata
+const animator = SpriteAnimationComponent.meta({
+    defaultClipName: "idle",
+    autoPlay: true
+});
+
+// ===== TRADITIONAL CREATION (still supported) =====
+
+// Traditional animation clips
+const idleClipTraditional = new SpriteAnimationClip("idle", [
+    "sprite_0_0", "sprite_1_0"
+], 2, true);
+
+const walkClipTraditional = new SpriteAnimationClip("walk", [
     "sprite_0_1", "sprite_1_1", "sprite_2_1", "sprite_3_1", 
     "sprite_4_1", "sprite_5_1", "sprite_6_1", "sprite_7_1"
 ], 8, true);
 
-const jumpClip = new SpriteAnimationClip("jump", [
-    "sprite_0_2", "sprite_1_2", "sprite_2_2"
-], 12, false); // Don't loop
-
-// Create animated character
+// Create animated character with metadata
 class AnimatedCharacter extends GameObject {
     constructor() {
         super("Character");
         
-        // Add sprite renderer
-        const renderer = new SpriteRendererComponent("character", "sprite_0_0");
+        // Add sprite renderer with metadata
+        const renderer = SpriteRendererComponent.meta({
+            spriteName: "character:sprite_0_0",
+            width: 64,
+            height: 64
+        });
         this.addComponent(renderer);
         
-        // Add animation component
-        const animator = new SpriteAnimationComponent("character", "idle");
+        // Add animation component with metadata
+        const animator = SpriteAnimationComponent.meta({
+            defaultClipName: "idle",
+            autoPlay: true
+        });
+        
+        // Add clips created with metadata
         animator.addClip(idleClip);
         animator.addClip(walkClip);
         animator.addClip(jumpClip);
@@ -116,11 +237,34 @@ class CharacterAnimationController extends Component {
     }
     
     setupAnimations() {
-        // Create different animation clips
-        const idle = new SpriteAnimationClip("idle", ["sprite_0_0", "sprite_1_0"], 2, true);
-        const walk = new SpriteAnimationClip("walk", ["sprite_0_1", "sprite_1_1", "sprite_2_1", "sprite_3_1"], 8, true);
-        const run = new SpriteAnimationClip("run", ["sprite_0_2", "sprite_1_2", "sprite_2_2", "sprite_3_2"], 12, true);
-        const attack = new SpriteAnimationClip("attack", ["sprite_0_3", "sprite_1_3", "sprite_2_3"], 15, false);
+        // Create different animation clips with metadata
+        const idle = SpriteAnimationClip.meta({
+            name: "idle", 
+            spriteNames: ["sprite_0_0", "sprite_1_0"], 
+            fps: 2, 
+            loop: true
+        });
+        
+        const walk = SpriteAnimationClip.meta({
+            name: "walk", 
+            spriteNames: ["sprite_0_1", "sprite_1_1", "sprite_2_1", "sprite_3_1"], 
+            fps: 8, 
+            loop: true
+        });
+        
+        const run = SpriteAnimationClip.meta({
+            name: "run", 
+            spriteNames: ["sprite_0_2", "sprite_1_2", "sprite_2_2", "sprite_3_2"], 
+            fps: 12, 
+            loop: true
+        });
+        
+        const attack = SpriteAnimationClip.meta({
+            name: "attack", 
+            spriteNames: ["sprite_0_3", "sprite_1_3", "sprite_2_3"], 
+            fps: 15, 
+            loop: false
+        });
         
         this.animator.addClip(idle);
         this.animator.addClip(walk);

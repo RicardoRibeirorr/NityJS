@@ -1,33 +1,76 @@
 # Component Metadata System
 
-> **Unity Equivalent:** Inspector properties, `[SerializeField]` attributes, and Editor scripting
+The NityJS metadata system provides a comprehensive, type-safe approach to component creation and configuration. All 8 components and `SpriteAnimationClip` support full metadata functionality, enabling declarative object creation, runtime configuration, and seamless integration with visual editors.
 
-The metadata system enables data-driven component creation and configuration, perfect for visual editors and JSON-based scene definitions. All components can be created and configured through metadata objects instead of constructor parameters.
+## Overview
 
-## Core Concepts
+The metadata system transforms how you create and configure components, moving from imperative constructor calls to declarative configuration objects. This approach is perfect for:
 
-### What is Metadata?
+- **Visual Editors** - Property panels and drag-drop configuration
+- **JSON Scene Files** - Serializable scene definitions
+- **Configuration-Driven Development** - Data-driven component creation
+- **Runtime Modification** - Dynamic property updates with validation
 
-Metadata describes how a component should be configured without requiring code changes. It's perfect for:
+## Core Features
 
-- **Visual Editors** - Property panels and inspector windows
-- **JSON Scene Files** - Declarative scene definitions
-- **Runtime Configuration** - Dynamic component creation
-- **Template Systems** - Reusable component configurations
-
-### Three Creation Methods
-
-Components in NityJS can be created in three different ways:
+### 🏭 Static Factory Methods
+Every component supports `ComponentClass.meta(metadata)` for clean, declarative creation:
 
 ```javascript
-// 1. Traditional Constructor (code-first)
-const shape1 = new ShapeComponent("circle", 25, { color: "red" });
+// Instead of: new SpriteRendererComponent("player", { width: 64, height: 64, opacity: 0.8 })
+const sprite = SpriteRendererComponent.meta({
+    spriteName: "player",
+    width: 64,
+    height: 64,
+    opacity: 0.8,
+    color: "#FF6B6B",
+    flipX: true
+});
+```
 
-// 2. Metadata Creation (data-driven)
-const shape2 = Component.createFromMetadata(ShapeComponent, {
-    shapeType: "circle",
-    radius: 25,
-    color: "red",
+### 🔧 Default Configuration
+Access default metadata for any component with `ComponentClass.getDefaultMeta()`:
+
+```javascript
+const defaults = SpriteRendererComponent.getDefaultMeta();
+// Returns: { spriteName: '', width: null, height: null, opacity: 1, color: '#FFFFFF', flipX: false, flipY: false }
+
+const physicsDefaults = RigidbodyComponent.getDefaultMeta();
+// Returns: { gravity: false, gravityScale: 300, bounciness: 0 }
+```
+
+### ✅ Type-Safe Validation
+Comprehensive validation with helpful error messages:
+
+```javascript
+// ❌ These will throw descriptive errors:
+SpriteRendererComponent.meta({ opacity: 1.5 }); // "opacity must be between 0 and 1"
+BoxColliderComponent.meta({ width: -10 });       // "width must be positive"
+SpriteAnimationClip.meta({ name: "" });          // "name cannot be empty"
+```
+
+### 🔄 Runtime Configuration
+Update existing components with `applyMeta()`:
+
+```javascript
+const renderer = gameObject.getComponent(SpriteRendererComponent);
+renderer.applyMeta({
+    opacity: 0.5,
+    color: "#00FF00",
+    flipX: true
+});
+```
+
+### 📦 Serialization Support
+Export and import component state with `toMeta()`:
+
+```javascript
+const metadata = renderer.toMeta();
+const jsonString = JSON.stringify(metadata);
+
+// Later...
+const restored = SpriteRendererComponent.meta(JSON.parse(jsonString));
+```
     filled: true
 });
 
@@ -44,516 +87,260 @@ const componentData = {
 ```
 
 ## Base Component API
+## Supported Components
 
-All components inherit these metadata methods from the base `Component` class:
-
-### `static createFromMetadata(ComponentClass, metadata)`
-
-Creates a component instance from metadata object.
-
-**Parameters:**
-- `ComponentClass` (Class) - The component class to instantiate
-- `metadata` (Object) - Configuration data
-
-**Returns:**
-- Component instance with metadata applied
-
-**Example:**
+### 1. SpriteRendererComponent
 ```javascript
-const sprite = Component.createFromMetadata(SpriteRendererComponent, {
+const sprite = SpriteRendererComponent.meta({
+    spriteName: "player_idle",    // Sprite name (required)
+    width: 64,                    // Width in pixels (null = auto)
+    height: 64,                   // Height in pixels (null = auto)
+    opacity: 0.9,                 // Opacity 0-1 (default: 1)
+    color: "#FF6B6B",             // Color tint (default: "#FFFFFF")
+    flipX: true,                  // Horizontal flip (default: false)
+    flipY: false                  // Vertical flip (default: false)
+});
+```
+
+### 2. ImageComponent
+```javascript
+const image = ImageComponent.meta({
+    src: "path/to/image.png",     // Image source (required)
+    width: 100,                   // Width in pixels (null = auto)
+    height: 80                    // Height in pixels (null = auto)
+});
+```
+
+### 3. ShapeComponent
+```javascript
+const shape = ShapeComponent.meta({
+    shapeType: "circle",          // "rectangle", "circle", "triangle", "polygon"
+    options: {
+        radius: 25,               // For circles
+        width: 50,                // For rectangles
+        height: 30,               // For rectangles
+        color: "#00FF00",         // Fill/stroke color
+        filled: true              // Filled or outline
+    }
+});
+```
+
+### 4. RigidbodyComponent
+```javascript
+const physics = RigidbodyComponent.meta({
+    gravity: true,                // Enable gravity (default: false)
+    gravityScale: 400,            // Gravity strength (default: 300)
+    bounciness: 0.2               // Bounce factor (default: 0)
+});
+```
+
+### 5. BoxColliderComponent
+```javascript
+const boxCollider = BoxColliderComponent.meta({
+    width: 32,                    // Collision width (null = auto)
+    height: 48,                   // Collision height (null = auto)
+    trigger: false                // Is trigger (default: false)
+});
+```
+
+### 6. CircleColliderComponent
+```javascript
+const circleCollider = CircleColliderComponent.meta({
+    radius: 20,                   // Collision radius (null = auto)
+    trigger: true                 // Is trigger (default: false)
+});
+```
+
+### 7. SpriteAnimationComponent
+```javascript
+const animator = SpriteAnimationComponent.meta({
+    defaultClipName: "idle",      // Default animation (null = none)
+    autoPlay: true                // Auto-start animation (default: true)
+});
+```
+
+### 8. CameraComponent
+```javascript
+const camera = CameraComponent.meta({
+    zoom: 1.5                     // Camera zoom level (default: 1)
+});
+// Note: canvas must be set manually after creation
+camera.canvas = canvas;
+```
+
+## SpriteAnimationClip Metadata
+
+Animation clips also support the full metadata system:
+
+```javascript
+const walkClip = SpriteAnimationClip.meta({
+    name: "walk",                 // Unique identifier (required)
+    spriteNames: [                // Array of sprite names
+        "player:walk_0",
+        "player:walk_1", 
+        "player:walk_2",
+        "player:walk_3"
+    ],
+    fps: 8,                       // Frames per second (default: 10)
+    loop: true                    // Loop animation (default: true)
+});
+
+// Use with animation component
+const animator = SpriteAnimationComponent.meta({
+    defaultClipName: "walk",
+    autoPlay: true
+});
+animator.addClip(walkClip);
+```
+
+## Usage Patterns
+
+### Configuration-Driven Development
+Perfect for JSON-based scene definitions:
+
+```javascript
+const sceneConfig = {
+    "entities": [
+        {
+            "name": "Player",
+            "position": { "x": 100, "y": 100 },
+            "components": [
+                {
+                    "type": "SpriteRendererComponent",
+                    "metadata": {
+                        "spriteName": "player_idle",
+                        "width": 64,
+                        "height": 64,
+                        "opacity": 0.9
+                    }
+                },
+                {
+                    "type": "RigidbodyComponent", 
+                    "metadata": {
+                        "gravity": true,
+                        "gravityScale": 400
+                    }
+                }
+            ]
+        }
+    ]
+};
+
+// Create from configuration
+sceneConfig.entities.forEach(entityData => {
+    const gameObject = new GameObject(entityData.name);
+    gameObject.position.set(entityData.position.x, entityData.position.y);
+    
+    entityData.components.forEach(compData => {
+        const ComponentClass = getComponentClass(compData.type);
+        const component = ComponentClass.meta(compData.metadata);
+        gameObject.addComponent(component);
+    });
+});
+```
+
+### Visual Editor Integration
+The metadata system is designed for visual editors:
+
+```javascript
+// Property panel would call getDefaultMeta() to build UI
+const defaults = SpriteRendererComponent.getDefaultMeta();
+
+// Build form fields based on metadata schema
+Object.entries(defaults).forEach(([property, defaultValue]) => {
+    createPropertyField(property, typeof defaultValue, defaultValue);
+});
+
+// Apply changes in real-time
+function onPropertyChange(property, value) {
+    const currentMeta = selectedComponent.toMeta();
+    currentMeta[property] = value;
+    selectedComponent.applyMeta(currentMeta);
+}
+```
+
+### Runtime Modification
+Dynamic property updates with validation:
+
+```javascript
+// Safe runtime updates
+function fadeOut(gameObject, duration) {
+    const renderer = gameObject.getComponent(SpriteRendererComponent);
+    const startOpacity = renderer.opacity;
+    
+    // Animate using metadata for validation
+    animateValue(startOpacity, 0, duration, (value) => {
+        renderer.applyMeta({ opacity: value });
+    });
+}
+
+function changeColor(gameObject, newColor) {
+    const renderer = gameObject.getComponent(SpriteRendererComponent);
+    renderer.applyMeta({ color: newColor }); // Validates color format
+}
+```
+
+## Validation Rules
+
+### SpriteRendererComponent
+- `spriteName`: Must be non-empty string
+- `width/height`: Must be positive number or null
+- `opacity`: Must be between 0 and 1
+- `color`: Must be valid CSS color string
+- `flipX/flipY`: Must be boolean
+
+### RigidbodyComponent  
+- `gravity`: Must be boolean
+- `gravityScale`: Must be positive number
+- `bounciness`: Must be non-negative number
+
+### Collider Components
+- `width/height/radius`: Must be positive number or null
+- `trigger`: Must be boolean
+
+### SpriteAnimationClip
+- `name`: Must be non-empty string
+- `spriteNames`: Must be array of strings
+- `fps`: Must be positive number
+- `loop`: Must be boolean
+
+## Migration Guide
+
+### From Traditional to Metadata
+```javascript
+// Old way
+const sprite = new SpriteRendererComponent("player", {
+    width: 64,
+    height: 64,
+    opacity: 0.8,
+    color: "#FF0000"
+});
+
+// New way (both work!)
+const sprite = SpriteRendererComponent.meta({
     spriteName: "player",
     width: 64,
     height: 64,
     opacity: 0.8,
-    flipX: true
+    color: "#FF0000"
 });
 ```
 
-### `getDefaultMeta()`
-
-Returns the default metadata configuration for this component type.
-
-**Returns:**
-- Object with default values for all configurable properties
-
-**Example:**
-```javascript
-const defaults = ShapeComponent.getDefaultMeta();
-console.log(defaults);
-// {
-//     shapeType: "rectangle",
-//     width: 50,
-//     height: 50,
-//     radius: 25,
-//     color: "#FF0000",
-//     filled: true
-// }
-```
-
-### `applyMeta(metadata)`
-
-Applies metadata to an existing component instance.
-
-**Parameters:**
-- `metadata` (Object) - Configuration to apply
-
-**Example:**
-```javascript
-const shape = new ShapeComponent();
-shape.applyMeta({
-    shapeType: "circle",
-    radius: 30,
-    color: "#0066FF"
-});
-```
-
-### `static meta(metadata)`
-
-Static method for quickly creating instances with metadata.
-
-**Parameters:**
-- `metadata` (Object) - Configuration data
-
-**Returns:**
-- Component instance
-
-**Example:**
-```javascript
-const component = ShapeComponent.meta({
-    shapeType: "triangle",
-    width: 40,
-    height: 60,
-    color: "yellow"
-});
-```
-
-## Component-Specific Metadata
-
-All NityJS components now support the metadata system for editor integration and data-driven development. Here are the metadata configurations for each component:
-
-### SpriteRendererComponent Metadata
-
-```javascript
-const spriteDefaults = {
-    spriteName: "",         // Sprite asset name ("name" or "sheet:sprite")
-    width: null,            // Display width (null = auto)
-    height: null,           // Display height (null = auto)
-    opacity: 1.0,           // Transparency (0-1)
-    color: "#FFFFFF",       // Tint color
-    flipX: false,           // Horizontal flip
-    flipY: false            // Vertical flip
-};
-
-// Create sprite with metadata
-const playerSprite = SpriteRendererComponent.meta({
-    spriteName: "player_idle",
-    width: 64,
-    height: 64,
-    opacity: 0.9,
-    flipX: true
-});
-```
-
-### ImageComponent Metadata
-
-```javascript
-const imageDefaults = {
-    src: "",                // Image source URL
-    width: null,            // Display width (null = natural width)
-    height: null            // Display height (null = natural height)
-};
-
-// Create image with metadata
-const background = ImageComponent.meta({
-    src: "assets/background.png",
-    width: 800,
-    height: 600
-});
-```
-
-### ShapeComponent Metadata
-
-```javascript
-const shapeDefaults = {
-    shapeType: "rectangle",  // "rectangle", "circle", "triangle", "polygon"
-    width: 50,              // Rectangle/triangle width
-    height: 50,             // Rectangle/triangle height  
-    radius: 25,             // Circle radius
-    color: "#FF0000",       // Fill/stroke color
-    filled: true,           // Whether shape is filled
-    points: []              // Polygon points (array of {x, y})
-};
-
-// Create different shapes
-const circle = ShapeComponent.meta({
-    shapeType: "circle",
-    radius: 35,
-    color: "#00FF00"
-});
-
-const triangle = ShapeComponent.meta({
-    shapeType: "triangle", 
-    width: 60,
-    height: 80,
-    color: "#0000FF",
-    filled: false
-});
-```
-
-### RigidbodyComponent Metadata
-
-```javascript
-const rigidbodyDefaults = {
-    gravity: false,         // Enable gravity
-    gravityScale: 300,      // Gravity strength
-    bounciness: 0           // Bounce factor (0-1)
-};
-
-// Create physics body with metadata
-const physicsBall = RigidbodyComponent.meta({
-    gravity: true,
-    gravityScale: 500,
-    bounciness: 0.8
-});
-```
-
-### BoxColliderComponent Metadata
-
-```javascript
-const boxColliderDefaults = {
-    width: null,            // Collider width (null = auto from sprite)
-    height: null,           // Collider height (null = auto from sprite)
-    trigger: false          // Is trigger (no physics response)
-};
-
-// Create box collider with metadata
-const playerCollider = BoxColliderComponent.meta({
-    width: 32,
-    height: 48,
-    trigger: false
-});
-```
-
-### CircleColliderComponent Metadata
-
-```javascript
-const circleColliderDefaults = {
-    radius: null,           // Collider radius (null = auto from sprite)
-    trigger: false          // Is trigger (no physics response)
-};
-
-// Create circle collider with metadata
-const ballCollider = CircleColliderComponent.meta({
-    radius: 25,
-    trigger: true
-});
-```
-
-### GravityComponent Metadata
-
-```javascript
-const gravityDefaults = {
-    gravityScale: 300       // Gravity strength in pixels/second²
-};
-
-// Create gravity component with metadata
-const gravity = GravityComponent.meta({
-    gravityScale: 450
-});
-```
-
-### SpriteAnimationComponent Metadata
-
-```javascript
-const animationDefaults = {
-    defaultClipName: null,  // Default animation clip name
-    autoPlay: true          // Auto-play default clip on start
-};
-
-// Create animation component with metadata
-const animator = SpriteAnimationComponent.meta({
-    defaultClipName: "idle",
-    autoPlay: true
-});
-```
-
-### CameraComponent Metadata
-
-```javascript
-const cameraDefaults = {
-    zoom: 1                 // Camera zoom level
-};
-
-// Create camera with metadata
-const camera = CameraComponent.meta({
-    zoom: 1.5
-});
-// Note: Canvas must be set separately as it's not serializable
-camera.canvas = canvas;
-```
-
-## Validation System
-
-The metadata system includes built-in validation to catch configuration errors:
-
-### Automatic Validation
-
-```javascript
-// This will throw an error - invalid shape type
-try {
-    const shape = ShapeComponent.meta({
-        shapeType: "hexagon"  // Not a valid shape type
-    });
-} catch (error) {
-    console.error("Invalid metadata:", error.message);
-}
-```
-
-### Custom Validation
-
-Components can implement custom validation:
-
-```javascript
-class MyComponent extends Component {
-    static getDefaultMeta() {
-        return {
-            health: 100,
-            speed: 5.0,
-            level: 1
-        };
-    }
-    
-    _validateMeta(meta) {
-        if (meta.health < 0) {
-            throw new Error("Health cannot be negative");
-        }
-        if (meta.level < 1 || meta.level > 99) {
-            throw new Error("Level must be between 1 and 99");
-        }
-        if (meta.speed <= 0) {
-            throw new Error("Speed must be positive");
-        }
-    }
-}
-```
-
-## Visual Editor Integration
-
-The metadata system is designed for future visual editor support:
-
-### Property Panels
-
-```javascript
-// Visual editor can generate property panels from metadata
-class EditorPropertyPanel {
-    static generateFor(ComponentClass) {
-        const defaults = ComponentClass.getDefaultMeta();
-        const panel = document.createElement('div');
-        
-        for (const [key, defaultValue] of Object.entries(defaults)) {
-            const input = this.createInputFor(key, defaultValue);
-            panel.appendChild(input);
-        }
-        
-        return panel;
-    }
-    
-    static createInputFor(property, defaultValue) {
-        if (typeof defaultValue === 'boolean') {
-            return this.createCheckbox(property, defaultValue);
-        } else if (typeof defaultValue === 'number') {
-            return this.createNumberInput(property, defaultValue);
-        } else if (typeof defaultValue === 'string') {
-            return this.createTextInput(property, defaultValue);
-        }
-    }
-}
-```
-
-### Scene Serialization
-
-```javascript
-// Save scene to JSON with metadata
-class SceneSerializer {
-    static saveScene(scene) {
-        const sceneData = {
-            gameObjects: scene.gameObjects.map(obj => ({
-                name: obj.name,
-                position: { x: obj.position.x, y: obj.position.y },
-                rotation: obj.rotation,
-                components: obj.components.map(comp => ({
-                    type: comp.constructor.name,
-                    metadata: comp.getMetadata()
-                }))
-            }))
-        };
-        
-        return JSON.stringify(sceneData, null, 2);
-    }
-    
-    static loadScene(sceneJson) {
-        const data = JSON.parse(sceneJson);
-        const scene = new Scene();
-        
-        for (const objData of data.gameObjects) {
-            const obj = new GameObject(objData.name);
-            obj.position.set(objData.position.x, objData.position.y);
-            obj.rotation = objData.rotation;
-            
-            for (const compData of objData.components) {
-                const ComponentClass = this.getComponentClass(compData.type);
-                const component = Component.createFromMetadata(
-                    ComponentClass, 
-                    compData.metadata
-                );
-                obj.addComponent(component);
-            }
-            
-            scene.addGameObject(obj);
-        }
-        
-        return scene;
-    }
-}
-```
-
-## Performance Considerations
-
-### Metadata Caching
-
-```javascript
-// Components cache their metadata for efficiency
-class OptimizedComponent extends Component {
-    constructor() {
-        super();
-        this._metadataCache = null;
-    }
-    
-    getMetadata() {
-        if (!this._metadataCache) {
-            this._metadataCache = this._generateMetadata();
-        }
-        return { ...this._metadataCache }; // Return copy
-    }
-    
-    applyMeta(metadata) {
-        super.applyMeta(metadata);
-        this._metadataCache = null; // Invalidate cache
-    }
-}
-```
-
-### Batch Creation
-
-```javascript
-// Efficient batch creation from metadata
-class BatchFactory {
-    static createComponents(metadataArray) {
-        return metadataArray.map(({ type, metadata }) => {
-            const ComponentClass = this.getComponentClass(type);
-            return Component.createFromMetadata(ComponentClass, metadata);
-        });
-    }
-    
-    static createGameObjects(gameObjectsData) {
-        return gameObjectsData.map(objData => {
-            const obj = new GameObject(objData.name);
-            obj.position.set(objData.x, objData.y);
-            
-            const components = this.createComponents(objData.components);
-            components.forEach(comp => obj.addComponent(comp));
-            
-            return obj;
-        });
-    }
-}
-```
-
-## Common Patterns
-
-### Template System
-
-```javascript
-// Define component templates
-const ComponentTemplates = {
-    player: {
-        SpriteRendererComponent: {
-            spriteName: "player_idle",
-            width: 64,
-            height: 64
-        },
-        RigidbodyComponent: {
-            mass: 1.0,
-            gravityScale: 1.0
-        },
-        BoxColliderComponent: {
-            width: 32,
-            height: 48
-        }
-    },
-    
-    enemy: {
-        SpriteRendererComponent: {
-            spriteName: "enemy",
-            width: 48,
-            height: 48
-        },
-        AIComponent: {
-            speed: 2.0,
-            detectRange: 100
-        }
-    }
-};
-
-// Create from template
-function createFromTemplate(templateName) {
-    const template = ComponentTemplates[templateName];
-    const obj = new GameObject(templateName);
-    
-    for (const [componentType, metadata] of Object.entries(template)) {
-        const ComponentClass = getComponentClass(componentType);
-        const component = Component.createFromMetadata(ComponentClass, metadata);
-        obj.addComponent(component);
-    }
-    
-    return obj;
-}
-```
-
-### Configuration Files
-
-```javascript
-// Load components from JSON config
-async function loadFromConfig(configPath) {
-    const response = await fetch(configPath);
-    const config = await response.json();
-    
-    return config.components.map(compConfig => 
-        Component.createFromMetadata(
-            getComponentClass(compConfig.type),
-            compConfig.metadata
-        )
-    );
-}
-```
-
-## Creating Custom Metadata Components
-
-When creating your own components, implement these methods:
-
-```javascript
-class CustomComponent extends Component {
-    constructor(param1, param2, options = {}) {
-        super();
-        
-        // Store constructor parameters
-        this._constructorArgs = [param1, param2, options];
-        
-        // Apply constructor arguments as metadata
-        this._applyConstructorArgs(param1, param2, options);
-    }
-    
-    static getDefaultMeta() {
+### Benefits of Migration
+- **Type Safety** - Validation catches errors early
+- **Consistency** - Same pattern across all components
+- **Tooling** - Better IDE support and debugging
+- **Future-Proof** - Ready for visual editors
+
+## Best Practices
+
+1. **Use metadata for new components** - Cleaner and more maintainable
+2. **Leverage defaults** - Only specify non-default values
+3. **Validate early** - Let the system catch configuration errors
+4. **Export for debugging** - Use `toMeta()` to inspect component state
+5. **Document metadata schemas** - Help team members understand options
+
+The metadata system represents the future of NityJS development, enabling powerful tooling while maintaining the familiar Unity-like experience developers love.
         return {
             param1: "default",
             param2: 100,
