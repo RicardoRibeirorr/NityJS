@@ -66,6 +66,61 @@ export class GameObject {
     }
 
     /**
+     * Adds multiple components to the GameObject at once.
+     * Each component must be an instance of Component.
+     * If any component of the same type already exists, it will throw an error.
+     * This is a convenience method for adding multiple components efficiently.
+     * 
+     * @param {Component[]} components - Array of components to add
+     * @returns {Component[]} Array of added components for chaining
+     * @throws {Error} If any component is not an instance of Component
+     * @throws {Error} If any component of the same type already exists
+     * 
+     * @example
+     * // Add multiple components at once
+     * const obj = new GameObject();
+     * obj.addComponents([
+     *     new SpriteRendererComponent("player"),
+     *     new RigidbodyComponent(),
+     *     new BoxColliderComponent(32, 48)
+     * ]);
+     * 
+     * @example
+     * // With method chaining
+     * const components = obj.addComponents([
+     *     SpriteRendererComponent.meta({ spriteName: "enemy", width: 64 }),
+     *     new CircleColliderComponent(20)
+     * ]);
+     */
+    addComponents(components) {
+        if (!Array.isArray(components)) {
+            throw new Error('addComponents: property "components" must be an array of Component instances');
+        }
+
+        // Validate all components first before adding any
+        for (const component of components) {
+            if (!(component instanceof Component)) {
+                throw new Error('addComponents: all items must be instances of Component');
+            }
+            
+            const existing = this.getComponent(component.constructor);
+            if (existing) {
+                throw new Error(`Component of type ${component.constructor.name} already exists on this GameObject.`);
+            }
+        }
+
+        // Add all components if validation passes
+        const addedComponents = [];
+        for (const component of components) {
+            component.gameObject = this;
+            this.components.push(component);
+            addedComponents.push(component);
+        }
+
+        return addedComponents;
+    }
+
+    /**
      * Retrieves a component of the specified type from the GameObject.
      * @param {Function} type - The class of the component to retrieve.
      * @returns {Component|null} The component if found, otherwise null.

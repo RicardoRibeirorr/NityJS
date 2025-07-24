@@ -13,33 +13,89 @@ import { Component } from '../../common/Component.js';
 // === ShapeComponent.js ===
 export class ShapeComponent extends Component {
     /**
-     * Creates a new ShapeComponent.
+     * Creates a new ShapeComponent with specified shape type and rendering options.
      * 
-     * @param {string} shape - Type of shape to render ("rectangle", "circle", "ellipse", "line", "triangle", "polygon")
+     * Initializes the component with a shape type and comprehensive rendering options.
+     * Supports multiple geometric shapes including rectangles, circles, ellipses, lines,
+     * triangles, and custom polygons. Each shape type has its own specific options
+     * while sharing common properties like color. Integrates with the metadata system
+     * for configuration management and validation.
+     * 
+     * The component provides an efficient way to render geometric shapes without
+     * requiring image assets, making it ideal for prototyping, UI elements, debug
+     * visualization, and simple graphics.
+     * 
+     * @param {string} shape - Type of shape to render
+     *   - "rectangle" - Rectangular shape with width/height
+     *   - "square" - Square shape (uses width for both dimensions)
+     *   - "circle" - Circular shape with radius
+     *   - "ellipse" - Elliptical shape with radiusX/radiusY
+     *   - "line" - Line segment with start/end coordinates
+     *   - "triangle" - Triangular shape with size
+     *   - "polygon" - Custom polygon with points array
+     * 
      * @param {Object} [options={ width:10, height:10, color:'white' }] - Shape-specific rendering options
-     * @param {number} [options.width=10] - Width for rectangles
-     * @param {number} [options.height=10] - Height for rectangles
-     * @param {string} [options.color='white'] - Fill color for the shape
+     * @param {number} [options.width=10] - Width for rectangles and squares
+     * @param {number} [options.height=10] - Height for rectangles  
+     * @param {string} [options.color='white'] - Fill color for the shape (any CSS color)
      * @param {number} [options.radius=10] - Radius for circles
      * @param {number} [options.radiusX=10] - X radius for ellipses
      * @param {number} [options.radiusY=5] - Y radius for ellipses
-     * @param {number} [options.x2] - End X coordinate for lines
-     * @param {number} [options.y2] - End Y coordinate for lines
+     * @param {number} [options.x2] - End X coordinate for lines (relative to shape position)
+     * @param {number} [options.y2] - End Y coordinate for lines (relative to shape position)
      * @param {number} [options.size=20] - Size for triangles
-     * @param {Array<{x: number, y: number}>} [options.points=[]] - Points for polygons
+     * @param {Array<{x: number, y: number}>} [options.points=[]] - Points array for polygons
+     * 
+     * @example
+     * // Basic rectangle
+     * const rect = obj.addComponent(ShapeComponent, "rectangle", { 
+     *     width: 50, height: 30, color: "red" 
+     * });
+     * 
+     * @example
+     * // Circle with custom radius
+     * const circle = obj.addComponent(ShapeComponent, "circle", {
+     *     radius: 25, color: "#4ECDC4"
+     * });
+     * 
+     * @example
+     * // Custom polygon shape
+     * const star = obj.addComponent(ShapeComponent, "polygon", {
+     *     points: [[0,-20], [6,-6], [20,-6], [10,2], [16,14], [0,8], [-16,14], [-10,2], [-20,-6], [-6,-6]],
+     *     color: "gold"
+     * });
+     * 
+     * @throws {Error} Via metadata validation if parameters are invalid
      */
     constructor(shape, options = { width:10, height:10, color:'white' }) {
         super();
-        // Set properties from metadata or default to constructor args
-        this.shape = this.__meta.shape || shape || 'rectangle';
-        this.options = { ...this.__meta.options, ...options };
+        // Properties will be set by _updatePropertiesFromMeta after metadata is applied
     }
 
     /**
-     * Get default metadata for ShapeComponent
-     * @returns {Object} Default metadata object
+     * Provides default metadata configuration for ShapeComponent instances.
+     * 
+     * This static method returns the baseline configuration that defines the structure
+     * and default values for all ShapeComponent metadata. Includes comprehensive
+     * options for all supported shape types to ensure consistent configuration
+     * regardless of which shape type is selected.
+     * 
+     * @static
+     * @returns {Object} Default metadata configuration object
+     * @returns {string} returns.shape - Default shape type ("rectangle")
+     * @returns {Object} returns.options - Shape rendering options
+     * @returns {number} returns.options.width - Default width for rectangles (10)
+     * @returns {number} returns.options.height - Default height for rectangles (10)
+     * @returns {string} returns.options.color - Default fill color ("white")
+     * @returns {number} returns.options.radius - Default radius for circles (10)
+     * @returns {number} returns.options.radiusX - Default X radius for ellipses (10)
+     * @returns {number} returns.options.radiusY - Default Y radius for ellipses (5)
+     * @returns {number} returns.options.x2 - Default end X coordinate for lines (10)
+     * @returns {number} returns.options.y2 - Default end Y coordinate for lines (0)
+     * @returns {number} returns.options.size - Default size for triangles (20)
+     * @returns {Array} returns.options.points - Default points array for polygons ([])
      */
-    getDefaultMeta() {
+    static getDefaultMeta() {
         return {
             shape: 'rectangle',
             options: {
@@ -58,20 +114,39 @@ export class ShapeComponent extends Component {
     }
 
     /**
-     * Apply constructor arguments to metadata format
+     * Converts constructor arguments to metadata format for internal processing.
+     * 
+     * This private method bridges the gap between traditional constructor calls and
+     * the metadata system. It takes the constructor parameters and converts them to
+     * a standardized metadata object that can be validated and applied consistently.
+     * Handles the complex options object by merging with default options.
+     * 
      * @private
+     * @param {string} shape - The shape type to render
+     * @param {Object} [options={}] - Shape-specific rendering options
+     * 
+     * @internal This method is part of the metadata system infrastructure
      */
     _applyConstructorArgs(shape, options = {}) {
-        this.__meta = {
-            ...this.__meta,
-            shape: shape || this.__meta.shape,
+        const metadata = {
+            shape: shape || "rectangle",
             options: { ...this.__meta.options, ...options }
         };
+        
+        this.applyMeta(metadata);
     }
 
     /**
-     * Update component properties from current metadata
+     * Updates component properties from current metadata configuration.
+     * 
+     * This private method synchronizes the component's internal properties with the
+     * current metadata state. Called automatically when metadata is applied or updated,
+     * ensuring the component reflects the latest configuration. Creates a new options
+     * object to prevent unwanted mutations of the metadata.
+     * 
      * @private
+     * 
+     * @internal Ensures proper isolation between metadata and component properties
      */
     _updatePropertiesFromMeta() {
         this.shape = this.__meta.shape;
@@ -79,8 +154,24 @@ export class ShapeComponent extends Component {
     }
 
     /**
-     * Validate current metadata
+     * Validates current metadata configuration for type safety and shape-specific requirements.
+     * 
+     * This private method ensures all metadata properties conform to expected types
+     * and valid value ranges for each shape type. Called automatically when metadata
+     * is applied or updated to provide immediate feedback on configuration errors.
+     * Includes comprehensive validation for all supported shape types and their
+     * specific requirements.
+     * 
      * @private
+     * @throws {Error} If shape type is not supported
+     * @throws {Error} If color is not a string
+     * @throws {Error} If rectangle/square dimensions are invalid
+     * @throws {Error} If circle radius is invalid
+     * @throws {Error} If ellipse radii are invalid
+     * @throws {Error} If triangle size is invalid
+     * @throws {Error} If polygon has insufficient points
+     * 
+     * @internal Part of metadata validation system for comprehensive shape validation
      */
     _validateMeta() {
         const validShapes = ['rectangle', 'square', 'circle', 'ellipse', 'line', 'triangle', 'polygon'];

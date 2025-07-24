@@ -1156,6 +1156,54 @@ var Nity = (() => {
       return component;
     }
     /**
+     * Adds multiple components to the GameObject at once.
+     * Each component must be an instance of Component.
+     * If any component of the same type already exists, it will throw an error.
+     * This is a convenience method for adding multiple components efficiently.
+     * 
+     * @param {Component[]} components - Array of components to add
+     * @returns {Component[]} Array of added components for chaining
+     * @throws {Error} If any component is not an instance of Component
+     * @throws {Error} If any component of the same type already exists
+     * 
+     * @example
+     * // Add multiple components at once
+     * const obj = new GameObject();
+     * obj.addComponents([
+     *     new SpriteRendererComponent("player"),
+     *     new RigidbodyComponent(),
+     *     new BoxColliderComponent(32, 48)
+     * ]);
+     * 
+     * @example
+     * // With method chaining
+     * const components = obj.addComponents([
+     *     SpriteRendererComponent.meta({ spriteName: "enemy", width: 64 }),
+     *     new CircleColliderComponent(20)
+     * ]);
+     */
+    addComponents(components) {
+      if (!Array.isArray(components)) {
+        throw new Error('addComponents: property "components" must be an array of Component instances');
+      }
+      for (const component of components) {
+        if (!(component instanceof Component)) {
+          throw new Error("addComponents: all items must be instances of Component");
+        }
+        const existing = this.getComponent(component.constructor);
+        if (existing) {
+          throw new Error(`Component of type ${component.constructor.name} already exists on this GameObject.`);
+        }
+      }
+      const addedComponents = [];
+      for (const component of components) {
+        component.gameObject = this;
+        this.components.push(component);
+        addedComponents.push(component);
+      }
+      return addedComponents;
+    }
+    /**
      * Retrieves a component of the specified type from the GameObject.
      * @param {Function} type - The class of the component to retrieve.
      * @returns {Component|null} The component if found, otherwise null.
@@ -2166,16 +2214,44 @@ var Nity = (() => {
   // src/renderer/components/SpriteRendererComponent.js
   var SpriteRendererComponent = class extends Component {
     /**
-     * Creates a new SpriteRendererComponent.
+     * Creates a new SpriteRendererComponent instance.
      * 
-     * @param {string} spriteName - Unified sprite key ("name" or "sheet:sprite") or legacy assetName
-     * @param {Object} [options={}] - Rendering options
-     * @param {number} [options.width] - Custom width for scaling. If not provided, uses sprite's natural width
-     * @param {number} [options.height] - Custom height for scaling. If not provided, uses sprite's natural height
-     * @param {number} [options.opacity=1.0] - Sprite opacity/alpha (0.0 to 1.0)
-     * @param {string} [options.color="#FFFFFF"] - Tint color in hex format (e.g., "#FF0000") or rgba format (e.g., "rgba(255, 0, 0, 0.5)")
-     * @param {boolean} [options.flipX=false] - Flip sprite horizontally
-     * @param {boolean} [options.flipY=false] - Flip sprite vertically
+     * Initializes the component with a sprite reference and rendering options. The sprite
+     * is referenced by key from the SpriteRegistry, supporting both single sprites and
+     * spritesheet notation ("sheet:sprite"). All rendering options are optional and will
+     * fall back to sensible defaults.
+     * 
+     * @param {string} spriteName - Unified sprite key for SpriteRegistry lookup
+     *                             Format: "spriteName" for single sprites or "sheet:sprite" for spritesheets
+     * @param {Object} [options={}] - Rendering configuration options
+     * @param {number} [options.width] - Custom width override in pixels (null = use sprite's natural width)
+     * @param {number} [options.height] - Custom height override in pixels (null = use sprite's natural height)  
+     * @param {number} [options.opacity=1.0] - Sprite transparency/alpha value (0.0 = fully transparent, 1.0 = fully opaque)
+     * @param {string} [options.color="#FFFFFF"] - Color tint to apply to sprite (hex "#FF0000" or rgba "rgba(255,0,0,0.5)")
+     * @param {boolean} [options.flipX=false] - Horizontally flip the sprite (mirror effect)
+     * @param {boolean} [options.flipY=false] - Vertically flip the sprite (upside-down effect)
+     * 
+     * @throws {Error} Will throw during preload() if the specified sprite is not found in SpriteRegistry
+     * 
+     * @example
+     * // Basic sprite with natural dimensions
+     * const basic = new SpriteRendererComponent("player");
+     * 
+     * @example
+     * // Scaled sprite with transparency
+     * const scaled = new SpriteRendererComponent("enemy", {
+     *     width: 64,
+     *     height: 64, 
+     *     opacity: 0.7
+     * });
+     * 
+     * @example
+     * // Tinted and flipped sprite from spritesheet
+     * const advanced = new SpriteRendererComponent("characters:warrior", {
+     *     color: "#FF6B6B",
+     *     flipX: true,
+     *     opacity: 0.9
+     * });
      */
     constructor(spriteName, options = {}) {
       super();
@@ -2191,8 +2267,34 @@ var Nity = (() => {
       };
     }
     /**
-     * Get default metadata configuration for SpriteRendererComponent
-     * @returns {Object} Default metadata configuration
+     * Returns the default metadata configuration for SpriteRendererComponent.
+     * 
+     * This static method provides the baseline configuration used by the metadata system
+     * for creating components declaratively. These defaults ensure consistent behavior
+     * across all SpriteRendererComponent instances when properties are not explicitly specified.
+     * 
+     * @static
+     * @returns {Object} Default metadata configuration object
+     * @returns {string} returns.spriteName - Empty string (must be set during creation)
+     * @returns {number|null} returns.width - null (use sprite's natural width)
+     * @returns {number|null} returns.height - null (use sprite's natural height)  
+     * @returns {number} returns.opacity - 1.0 (fully opaque)
+     * @returns {string} returns.color - "#FFFFFF" (white, no tinting)
+     * @returns {boolean} returns.flipX - false (no horizontal flip)
+     * @returns {boolean} returns.flipY - false (no vertical flip)
+     * 
+     * @example
+     * // Get defaults for property panel generation
+     * const defaults = SpriteRendererComponent.getDefaultMeta();
+     * console.log(defaults.opacity); // 1.0
+     * 
+     * @example
+     * // Use in metadata creation with partial overrides
+     * const sprite = SpriteRendererComponent.meta({
+     *     ...SpriteRendererComponent.getDefaultMeta(),
+     *     spriteName: "player",
+     *     opacity: 0.8
+     * });
      */
     static getDefaultMeta() {
       return {
@@ -2206,8 +2308,24 @@ var Nity = (() => {
       };
     }
     /**
-     * Apply constructor arguments to metadata format
+     * Converts constructor arguments to metadata format for internal processing.
+     * 
+     * This private method bridges the gap between traditional constructor-based creation
+     * and the metadata system. It takes constructor arguments and converts them to a
+     * standardized metadata object that can be validated and applied consistently.
+     * Used internally by the component's metadata system integration.
+     * 
      * @private
+     * @param {string} spriteName - The sprite key for SpriteRegistry lookup
+     * @param {Object} [options={}] - Constructor options object
+     * @param {number} [options.width] - Custom width override
+     * @param {number} [options.height] - Custom height override
+     * @param {number} [options.opacity] - Opacity value (0.0 to 1.0)
+     * @param {string} [options.color] - Color tint
+     * @param {boolean} [options.flipX] - Horizontal flip state
+     * @param {boolean} [options.flipY] - Vertical flip state
+     * 
+     * @internal This method is part of the metadata system infrastructure
      */
     _applyConstructorArgs(spriteName, options = {}) {
       const metadata = {
@@ -2239,8 +2357,23 @@ var Nity = (() => {
       };
     }
     /**
-     * Validate current metadata
+     * Validates current metadata configuration.
+     * 
+     * This private method ensures all metadata properties conform to expected types
+     * and value ranges. Called automatically when metadata is applied or updated.
+     * Provides clear error messages for invalid configurations to aid debugging.
+     * Part of the metadata system's type safety and validation infrastructure.
+     * 
      * @private
+     * @throws {Error} If spriteName is not a string
+     * @throws {Error} If width is not null or a positive number
+     * @throws {Error} If height is not null or a positive number
+     * @throws {Error} If opacity is not between 0 and 1
+     * @throws {Error} If color is not a string
+     * @throws {Error} If flipX is not a boolean
+     * @throws {Error} If flipY is not a boolean
+     * 
+     * @internal Part of metadata validation system
      */
     _validateMeta() {
       const meta = this.__meta;
@@ -2267,9 +2400,21 @@ var Nity = (() => {
       }
     }
     /**
-     * Preloads the sprite from the unified registry. Called automatically during GameObject preload.
+     * Preloads the sprite from the unified registry.
      * 
-     * @throws {Error} If the sprite is not found
+     * This method retrieves the sprite resource from SpriteRegistry using the configured
+     * sprite key. Called automatically during GameObject preload phase to ensure all
+     * required assets are available before rendering begins. Supports both individual
+     * sprites and spritesheet sprites using the unified colon notation system.
+     * 
+     * @throws {Error} If the sprite is not found in SpriteRegistry
+     * 
+     * @example
+     * // Preload is called automatically, but the process loads:
+     * // - Individual sprites: "player_idle"
+     * // - Spritesheet sprites: "characters:player_idle"
+     * 
+     * @see {@link SpriteRegistry} For sprite registration and management
      */
     preload() {
       this.sprite = SpriteRegistry.getSprite(this.spriteKey);
@@ -2278,10 +2423,34 @@ var Nity = (() => {
       }
     }
     /**
-     * Draws the sprite on the canvas at the GameObject's global position with optional custom scaling, opacity, color tinting, and flipping.
-     * Called automatically during the render phase.
+     * Renders the sprite to the canvas with full feature support.
      * 
-     * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
+     * This is the core rendering method that draws the sprite at the GameObject's
+     * global position with support for:
+     * - Custom dimensions (width/height overrides)
+     * - Opacity/transparency rendering
+     * - Color tinting with multiple format support
+     * - Horizontal and vertical flipping
+     * - Rotation following GameObject transform
+     * - Automatic sprite center-point alignment
+     * 
+     * Called automatically during the engine's render phase. Handles missing or
+     * unloaded sprites gracefully with debug logging. Uses canvas transform
+     * operations for efficient rendering with proper state management.
+     * 
+     * @param {CanvasRenderingContext2D} ctx - The canvas rendering context to draw on
+     * 
+     * @example
+     * // Rendering happens automatically, but this method provides:
+     * // - Sprite positioning at GameObject.position
+     * // - Rotation from GameObject.rotation
+     * // - Custom scaling from width/height options
+     * // - Opacity blending from opacity option
+     * // - Color tinting from color option
+     * // - Sprite flipping from flipX/flipY options
+     * 
+     * @see {@link GameObject#getGlobalPosition} For position calculation
+     * @see {@link GameObject#getGlobalRotation} For rotation handling
      */
     __draw(ctx) {
       if (!this.sprite || !this.sprite.image || !this.sprite.isLoaded) {
@@ -2294,7 +2463,6 @@ var Nity = (() => {
       const height = this.options.height || this.sprite.height;
       const needsOpacity = this.options.opacity !== 1;
       const needsTinting = this.options.color !== "#FFFFFF";
-      const needsFlipping = this.options.flipX || this.options.flipY;
       if (needsOpacity) {
         ctx.save();
         ctx.globalAlpha = Math.max(0, Math.min(1, this.options.opacity));
@@ -2321,8 +2489,32 @@ var Nity = (() => {
       }
     }
     /**
-     * Change the sprite being rendered using unified sprite key
-     * @param {string} newSpriteKey - New sprite key ("name" or "sheet:sprite")
+     * Changes the sprite being rendered using unified sprite key.
+     * 
+     * Dynamically updates the sprite resource while preserving all other rendering
+     * options like scale, opacity, color tinting, and flipping. Supports both
+     * individual sprites and spritesheet sprites using the unified colon notation.
+     * Useful for sprite swapping, animation frame changes, or state-based visuals.
+     * 
+     * @param {string} newSpriteKey - New sprite key for SpriteRegistry lookup
+     *   - Individual sprite: "player_idle"
+     *   - Spritesheet sprite: "characters:player_idle"
+     * 
+     * @example
+     * // Change to different sprite
+     * spriteRenderer.setSprite("player_running");
+     * 
+     * @example
+     * // Change to spritesheet sprite
+     * spriteRenderer.setSprite("characters:enemy_walk");
+     * 
+     * @example
+     * // Dynamic sprite switching based on game state
+     * if (player.isMoving) {
+     *     spriteRenderer.setSprite("player_walk");
+     * } else {
+     *     spriteRenderer.setSprite("player_idle");
+     * }
      */
     setSprite(newSpriteKey) {
       this.spriteKey = newSpriteKey;
@@ -2332,97 +2524,410 @@ var Nity = (() => {
       }
     }
     /**
-     * Set custom scale dimensions for the sprite
-     * @param {number} width - Custom width for scaling
-     * @param {number} height - Custom height for scaling
+     * Sets custom scale dimensions for the sprite.
+     * 
+     * Overrides the sprite's natural dimensions with custom width and height values.
+     * Useful for consistent sizing across different sprite assets or dynamic scaling
+     * effects. Does not affect the sprite's aspect ratio unless both dimensions
+     * are provided. Set to null to revert to natural sprite dimensions.
+     * 
+     * @param {number} width - Custom width in pixels (or null for natural width)
+     * @param {number} height - Custom height in pixels (or null for natural height)
+     * 
+     * @example
+     * // Set custom dimensions
+     * spriteRenderer.setScale(64, 64);
+     * 
+     * @example
+     * // Scale sprite to 2x size while maintaining aspect ratio
+     * const sprite = spriteRenderer.sprite;
+     * spriteRenderer.setScale(sprite.width * 2, sprite.height * 2);
+     * 
+     * @example
+     * // Dynamic scaling based on game state
+     * const scale = player.powerLevel * 1.2;
+     * spriteRenderer.setScale(32 * scale, 32 * scale);
      */
     setScale(width, height) {
       this.options.width = width;
       this.options.height = height;
     }
     /**
-     * Update sprite rendering options
-     * @param {Object} newOptions - New options to merge with existing ones
+     * Updates sprite rendering options with new values.
+     * 
+     * Merges new options with existing configuration, allowing partial updates
+     * of rendering properties. Useful for batch updates or when you want to
+     * change multiple properties at once while preserving others. Accepts the
+     * same options object structure as the constructor.
+     * 
+     * @param {Object} newOptions - New options to merge with existing configuration
+     * @param {number} [newOptions.width] - Custom width override
+     * @param {number} [newOptions.height] - Custom height override
+     * @param {number} [newOptions.opacity] - Opacity value (0.0 to 1.0)
+     * @param {string} [newOptions.color] - Color tint
+     * @param {boolean} [newOptions.flipX] - Horizontal flip state
+     * @param {boolean} [newOptions.flipY] - Vertical flip state
+     * 
+     * @example
+     * // Update multiple properties at once
+     * spriteRenderer.setOptions({
+     *     opacity: 0.8,
+     *     color: "#FF6B6B",
+     *     flipX: true
+     * });
+     * 
+     * @example
+     * // Conditional property updates
+     * const damageEffect = { color: "#FF0000", opacity: 0.6 };
+     * if (player.isHurt) {
+     *     spriteRenderer.setOptions(damageEffect);
+     * }
      */
     setOptions(newOptions) {
       this.options = { ...this.options, ...newOptions };
     }
     /**
-     * Get the actual rendered width of the sprite (custom or natural)
-     * @returns {number} The rendered width
+     * Gets the actual rendered width of the sprite.
+     * 
+     * Returns the effective width that will be used for rendering, which is either
+     * the custom width override (if set) or the sprite's natural width. Useful for
+     * collision detection, UI layout calculations, or positioning other elements
+     * relative to the sprite's visual bounds.
+     * 
+     * @returns {number} The rendered width in pixels, or 0 if no sprite is loaded
+     * 
+     * @example
+     * // Get current rendered size for positioning
+     * const width = spriteRenderer.getRenderedWidth();
+     * const height = spriteRenderer.getRenderedHeight();
+     * 
+     * @example
+     * // Center another object relative to this sprite
+     * const spriteWidth = spriteRenderer.getRenderedWidth();
+     * otherObject.position.x = this.gameObject.position.x + spriteWidth / 2;
+     * 
+     * @see {@link getRenderedHeight} For height equivalent
      */
     getRenderedWidth() {
       if (!this.sprite) return 0;
       return this.options.width || this.sprite.width;
     }
     /**
-     * Get the actual rendered height of the sprite (custom or natural)
-     * @returns {number} The rendered height
+     * Gets the actual rendered height of the sprite.
+     * 
+     * Returns the effective height that will be used for rendering, which is either
+     * the custom height override (if set) or the sprite's natural height. Useful for
+     * collision detection, UI layout calculations, or positioning other elements
+     * relative to the sprite's visual bounds.
+     * 
+     * @returns {number} The rendered height in pixels, or 0 if no sprite is loaded
+     * 
+     * @example
+     * // Get current rendered size for collision bounds
+     * const width = spriteRenderer.getRenderedWidth();
+     * const height = spriteRenderer.getRenderedHeight();
+     * const bounds = { width, height };
+     * 
+     * @example
+     * // Stack objects vertically with proper spacing
+     * const spriteHeight = spriteRenderer.getRenderedHeight();
+     * nextObject.position.y = this.gameObject.position.y + spriteHeight + padding;
+     * 
+     * @see {@link getRenderedWidth} For width equivalent
      */
     getRenderedHeight() {
       if (!this.sprite) return 0;
       return this.options.height || this.sprite.height;
     }
     /**
-     * Get the current opacity of the sprite
-     * @returns {number} The opacity value (0.0 to 1.0)
+     * Gets the current opacity of the sprite.
+     * 
+     * Returns the transparency level being applied to the sprite during rendering.
+     * Opacity affects how transparent or opaque the sprite appears, with 1.0 being
+     * fully opaque and 0.0 being fully transparent. Useful for fade effects,
+     * UI state indication, or visual feedback systems.
+     * 
+     * @returns {number} The opacity value between 0.0 (transparent) and 1.0 (opaque)
+     * 
+     * @example
+     * // Check current visibility level
+     * const currentOpacity = spriteRenderer.getOpacity();
+     * if (currentOpacity < 0.5) {
+     *     console.log("Sprite is fading out");
+     * }
+     * 
+     * @example
+     * // Fade effect implementation
+     * const fadeSpeed = 2.0 * Time.deltaTime;
+     * const newOpacity = Math.max(0, spriteRenderer.getOpacity() - fadeSpeed);
+     * spriteRenderer.setOpacity(newOpacity);
+     * 
+     * @see {@link setOpacity} For updating opacity
      */
     getOpacity() {
       return this.options.opacity;
     }
     /**
-     * Set the opacity of the sprite
-     * @param {number} opacity - Opacity value (0.0 to 1.0)
+     * Sets the opacity of the sprite.
+     * 
+     * Controls the transparency level for sprite rendering. Values are automatically
+     * clamped to the valid range of 0.0 to 1.0. Opacity affects the entire sprite
+     * uniformly and can be combined with color tinting. Commonly used for fade
+     * effects, UI state changes, damage indication, or object highlighting.
+     * 
+     * @param {number} opacity - Opacity value between 0.0 (transparent) and 1.0 (opaque)
+     *   Values outside this range are automatically clamped
+     * 
+     * @example
+     * // Fade out effect
+     * spriteRenderer.setOpacity(0.3);
+     * 
+     * @example
+     * // Dynamic opacity based on health
+     * const healthPercent = player.health / player.maxHealth;
+     * spriteRenderer.setOpacity(0.3 + (healthPercent * 0.7)); // 30% to 100% opacity
+     * 
+     * @example
+     * // Blinking effect for invincibility
+     * const blinkSpeed = 5.0;
+     * const opacity = Math.abs(Math.sin(Time.time * blinkSpeed));
+     * spriteRenderer.setOpacity(opacity);
+     * 
+     * @see {@link getOpacity} For reading current opacity
      */
     setOpacity(opacity) {
       this.options.opacity = Math.max(0, Math.min(1, opacity));
     }
     /**
-     * Get the current tint color of the sprite
-     * @returns {string} The tint color in hex format
+     * Gets the current tint color of the sprite.
+     * 
+     * Returns the color being applied as a tint overlay to the sprite during
+     * rendering. The tint color modifies the sprite's appearance while preserving
+     * its original transparency and details. White (#FFFFFF) means no tinting
+     * is applied, while other colors will blend with the sprite's pixels.
+     * 
+     * @returns {string} The tint color in the format it was set (hex, rgb, rgba, or color name)
+     * 
+     * @example
+     * // Check current tint state
+     * const currentColor = spriteRenderer.getColor();
+     * if (currentColor !== "#FFFFFF") {
+     *     console.log("Sprite is currently tinted");
+     * }
+     * 
+     * @example
+     * // Save and restore color state
+     * const originalColor = spriteRenderer.getColor();
+     * spriteRenderer.setColor("#FF0000"); // Apply damage effect
+     * setTimeout(() => {
+     *     spriteRenderer.setColor(originalColor); // Restore
+     * }, 500);
+     * 
+     * @see {@link setColor} For updating the tint color
      */
     getColor() {
       return this.options.color;
     }
     /**
-     * Set the tint color of the sprite
-     * @param {string} color - Tint color in hex format (e.g., "#FF0000") or rgba format (e.g., "rgba(255, 0, 0, 0.5)")
+     * Sets the tint color of the sprite.
+     * 
+     * Applies a color overlay to the sprite during rendering, allowing for visual
+     * effects like damage indication, power-ups, team colors, or environmental
+     * lighting. Supports multiple color formats including hex, rgb, rgba, and
+     * named colors. The tinting preserves the sprite's original alpha channel
+     * and detail while blending the color multiplicatively.
+     * 
+     * @param {string} color - Tint color in various formats:
+     *   - Hex: "#FF0000", "#F00"
+     *   - RGB: "rgb(255, 0, 0)"
+     *   - RGBA: "rgba(255, 0, 0, 0.8)"
+     *   - Named: "red", "blue", "green"
+     *   - No tint: "#FFFFFF" or "white"
+     * 
+     * @example
+     * // Apply red damage tint
+     * spriteRenderer.setColor("#FF0000");
+     * 
+     * @example
+     * // Team-based coloring
+     * const teamColors = { red: "#FF6B6B", blue: "#4ECDC4", green: "#45B7D1" };
+     * spriteRenderer.setColor(teamColors[player.team]);
+     * 
+     * @example
+     * // Dynamic environmental tinting
+     * const timeOfDay = Game.getTimeOfDay();
+     * if (timeOfDay === "night") {
+     *     spriteRenderer.setColor("rgba(100, 100, 200, 0.7)"); // Blue night tint
+     * } else {
+     *     spriteRenderer.setColor("#FFFFFF"); // No tint during day
+     * }
+     * 
+     * @example
+     * // Power-up glow effect
+     * spriteRenderer.setColor("#FFD700"); // Golden tint for power-up
+     * 
+     * @see {@link getColor} For reading current tint color
      */
     setColor(color) {
       this.options.color = color;
     }
     /**
-     * Get the current flipX state
-     * @returns {boolean} Whether the sprite is flipped horizontally
+     * Gets the current horizontal flip state of the sprite.
+     * 
+     * Returns whether the sprite is currently being rendered flipped horizontally
+     * (mirrored along the Y-axis). Horizontal flipping is commonly used for
+     * character facing direction, creating sprite variations, or mirror effects
+     * without requiring separate sprite assets.
+     * 
+     * @returns {boolean} True if the sprite is flipped horizontally, false otherwise
+     * 
+     * @example
+     * // Check current facing direction
+     * const facingLeft = spriteRenderer.getFlipX();
+     * if (facingLeft) {
+     *     console.log("Character is facing left");
+     * }
+     * 
+     * @example
+     * // Conditional movement logic based on flip state
+     * const isFlipped = spriteRenderer.getFlipX();
+     * const moveDirection = isFlipped ? -1 : 1;
+     * this.gameObject.position.x += moveSpeed * moveDirection;
+     * 
+     * @see {@link setFlipX} For updating horizontal flip state
+     * @see {@link getFlipY} For vertical flip state
      */
     getFlipX() {
       return this.options.flipX;
     }
     /**
-     * Set the flipX state
-     * @param {boolean} flipX - Whether to flip the sprite horizontally
+     * Sets the horizontal flip state of the sprite.
+     * 
+     * Controls whether the sprite is rendered flipped horizontally (mirrored along
+     * the Y-axis). This is an efficient way to create directional sprites without
+     * needing separate left/right facing assets. Commonly used for character
+     * movement, projectile direction, or creating mirror effects.
+     * 
+     * @param {boolean} flipX - True to flip horizontally, false for normal orientation
+     * 
+     * @example
+     * // Character facing direction
+     * const movingRight = velocity.x > 0;
+     * spriteRenderer.setFlipX(!movingRight); // Flip when moving left
+     * 
+     * @example
+     * // Projectile direction based on shooter's facing
+     * const bullet = new GameObject();
+     * const bulletSprite = bullet.addComponent(SpriteRendererComponent, "bullet");
+     * bulletSprite.setFlipX(shooter.facingLeft);
+     * 
+     * @example
+     * // Mirror effect for reflections
+     * const reflection = player.clone();
+     * const reflectionSprite = reflection.getComponent(SpriteRendererComponent);
+     * reflectionSprite.setFlipX(true);
+     * reflectionSprite.setOpacity(0.5);
+     * 
+     * @see {@link getFlipX} For reading current horizontal flip state
+     * @see {@link setFlipY} For vertical flip control
      */
     setFlipX(flipX) {
       this.options.flipX = flipX;
     }
     /**
-     * Get the current flipY state
-     * @returns {boolean} Whether the sprite is flipped vertically
+     * Gets the current vertical flip state of the sprite.
+     * 
+     * Returns whether the sprite is currently being rendered flipped vertically
+     * (mirrored along the X-axis). Vertical flipping is useful for effects like
+     * upside-down states, gravity inversion, reflection effects, or creating
+     * sprite variations without additional assets.
+     * 
+     * @returns {boolean} True if the sprite is flipped vertically, false otherwise
+     * 
+     * @example
+     * // Check if sprite is upside down
+     * const upsideDown = spriteRenderer.getFlipY();
+     * if (upsideDown) {
+     *     console.log("Sprite is inverted");
+     * }
+     * 
+     * @example
+     * // Gravity-based flipping logic
+     * const gravityReversed = spriteRenderer.getFlipY();
+     * const gravityDirection = gravityReversed ? -1 : 1;
+     * 
+     * @see {@link setFlipY} For updating vertical flip state
+     * @see {@link getFlipX} For horizontal flip state
      */
     getFlipY() {
       return this.options.flipY;
     }
     /**
-     * Set the flipY state
-     * @param {boolean} flipY - Whether to flip the sprite vertically
+     * Sets the vertical flip state of the sprite.
+     * 
+     * Controls whether the sprite is rendered flipped vertically (mirrored along
+     * the X-axis). This creates an upside-down effect and is useful for gravity
+     * inversion mechanics, ceiling walking, reflection effects, or special game
+     * states. Can be combined with horizontal flipping for complete orientation.
+     * 
+     * @param {boolean} flipY - True to flip vertically, false for normal orientation
+     * 
+     * @example
+     * // Gravity inversion effect
+     * if (player.gravityReversed) {
+     *     spriteRenderer.setFlipY(true);
+     * } else {
+     *     spriteRenderer.setFlipY(false);
+     * }
+     * 
+     * @example
+     * // Ceiling walking mechanic
+     * const onCeiling = player.position.y < ceilingThreshold;
+     * spriteRenderer.setFlipY(onCeiling);
+     * 
+     * @example
+     * // Water reflection effect
+     * const waterReflection = player.clone();
+     * const reflectionSprite = waterReflection.getComponent(SpriteRendererComponent);
+     * reflectionSprite.setFlipY(true);
+     * reflectionSprite.setOpacity(0.3);
+     * waterReflection.position.y = waterSurface + (waterSurface - player.position.y);
+     * 
+     * @see {@link getFlipY} For reading current vertical flip state
+     * @see {@link setFlipX} For horizontal flip control
      */
     setFlipY(flipY) {
       this.options.flipY = flipY;
     }
     /**
-     * Draws gizmos for the sprite renderer bounds.
-     * Shows the sprite's bounding box and center point for debugging.
-     * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
+     * Draws visual debugging gizmos for the sprite renderer.
+     * 
+     * This internal method renders debugging information to help developers visualize
+     * sprite bounds, positioning, and configuration. Shows a magenta dashed rectangle
+     * around the sprite's rendered area, a center point indicator, the sprite key
+     * label, and actual dimensions. Only visible when internal gizmos are enabled
+     * in the Game instance settings.
+     * 
+     * Gizmo elements displayed:
+     * - Dashed magenta rectangle showing rendered sprite bounds
+     * - Solid center point circle for position reference
+     * - Sprite key text label above the sprite
+     * - Dimensions text below the sprite
+     * - Proper rotation handling to match sprite orientation
+     * 
+     * @param {CanvasRenderingContext2D} ctx - The canvas rendering context for drawing gizmos
+     * 
+     * @private
+     * @internal This method is part of the debugging visualization system
+     * 
+     * @example
+     * // Gizmos are automatically drawn when enabled:
+     * // Game.instance._internalGizmos = true;
+     * // - Magenta dashed border shows sprite bounds
+     * // - Center dot shows exact position
+     * // - Labels show sprite key and dimensions
+     * 
+     * @see {@link Game#_internalGizmos} For enabling gizmo rendering
      */
     __internalGizmos(ctx) {
       if (!this.sprite || !this.sprite.image || !this.sprite.isLoaded) return;
@@ -3328,9 +3833,44 @@ var Nity = (() => {
   // src/renderer/components/ImageComponent.js
   var ImageComponent = class extends Component {
     /**
-     * @param {string} src - The source URL of the image to be loaded.
-     * @param {number} [width] - Optional width to draw the image.
-     * @param {number} [height] - Optional height to draw the image.
+     * Creates a new ImageComponent with specified source URL and optional dimensions.
+     * 
+     * Initializes the component with a source URL for image loading and optional custom
+     * dimensions. If width/height are not provided, the component will use the image's
+     * natural dimensions after loading. The component integrates with the metadata system
+     * for configuration management and validation.
+     * 
+     * The image is not loaded immediately - call preload() or let the GameObject's
+     * preload phase handle it automatically. This allows for proper async loading
+     * management and prevents blocking the main thread.
+     * 
+     * @param {string} src - The source URL of the image to be loaded
+     *   - Relative paths: "./assets/image.png"
+     *   - Absolute URLs: "https://example.com/image.jpg"  
+     *   - Data URLs: "data:image/png;base64,..."
+     * @param {number} [width=null] - Custom width for rendering (pixels)
+     *   - If null, uses image's natural width after loading
+     *   - If specified, scales the image to this width
+     * @param {number} [height=null] - Custom height for rendering (pixels)
+     *   - If null, uses image's natural height after loading
+     *   - If specified, scales the image to this height
+     * 
+     * @example
+     * // Basic image with natural dimensions
+     * const logo = obj.addComponent(ImageComponent, "./assets/logo.png");
+     * 
+     * @example
+     * // Scaled image with custom dimensions
+     * const banner = obj.addComponent(ImageComponent, "./assets/banner.jpg", 400, 100);
+     * 
+     * @example
+     * // External image with aspect ratio preservation
+     * const avatar = obj.addComponent(ImageComponent, avatarUrl, 64, 64);
+     * 
+     * @throws {Error} Via metadata validation if parameters are invalid types
+     * 
+     * @see {@link preload} For async image loading
+     * @see {@link ImageComponent.meta} For metadata-based creation
      */
     constructor(src, width = null, height = null) {
       super();
@@ -3340,8 +3880,28 @@ var Nity = (() => {
       this.height = height;
     }
     /**
-     * Get default metadata configuration for ImageComponent
-     * @returns {Object} Default metadata configuration
+     * Provides default metadata configuration for ImageComponent instances.
+     * 
+     * This static method returns the baseline configuration that defines the structure
+     * and default values for all ImageComponent metadata. Used by the metadata system
+     * for initialization, validation, and ensuring consistent component configuration.
+     * Forms the foundation for both constructor-based and factory-based component creation.
+     * 
+     * @static
+     * @returns {Object} Default metadata configuration object
+     * @returns {string} returns.src - Default empty source URL ("")
+     * @returns {number|null} returns.width - Default width (null = use natural width)
+     * @returns {number|null} returns.height - Default height (null = use natural height)
+     * 
+     * @example
+     * // Get default configuration structure
+     * const defaults = ImageComponent.getDefaultMeta();
+     * console.log(defaults); // { src: "", width: null, height: null }
+     * 
+     * @example
+     * // Use as template for custom configuration
+     * const config = { ...ImageComponent.getDefaultMeta(), src: "./my-image.png" };
+     * const imageComp = ImageComponent.meta(config);
      */
     static getDefaultMeta() {
       return {
@@ -3351,8 +3911,20 @@ var Nity = (() => {
       };
     }
     /**
-     * Apply constructor arguments to metadata format
+     * Converts constructor arguments to metadata format for internal processing.
+     * 
+     * This private method bridges the gap between traditional constructor calls and
+     * the metadata system. It takes the constructor parameters and converts them to
+     * a standardized metadata object that can be validated and applied consistently.
+     * Essential for ensuring constructor-based creation works seamlessly with the
+     * metadata infrastructure.
+     * 
      * @private
+     * @param {string} src - The source URL of the image to be loaded
+     * @param {number} [width=null] - Optional custom width for rendering
+     * @param {number} [height=null] - Optional custom height for rendering
+     * 
+     * @internal This method is part of the metadata system infrastructure
      */
     _applyConstructorArgs(src, width = null, height = null) {
       const metadata = {
@@ -3363,8 +3935,16 @@ var Nity = (() => {
       this.applyMeta(metadata);
     }
     /**
-     * Update component properties from current metadata
+     * Updates component properties from current metadata configuration.
+     * 
+     * This private method synchronizes the component's internal properties with the
+     * current metadata state. Called automatically when metadata is applied or updated,
+     * ensuring the component reflects the latest configuration. Handles image resource
+     * management by resetting the loaded image when the source URL changes.
+     * 
      * @private
+     * 
+     * @internal Handles automatic image reset when src changes to prevent stale resources
      */
     _updatePropertiesFromMeta() {
       this.src = this.__meta.src;
@@ -3375,8 +3955,19 @@ var Nity = (() => {
       }
     }
     /**
-     * Validate current metadata
+     * Validates current metadata configuration for type safety and value ranges.
+     * 
+     * This private method ensures all metadata properties conform to expected types
+     * and valid value ranges. Called automatically when metadata is applied or updated
+     * to provide immediate feedback on configuration errors. Essential for maintaining
+     * component integrity and preventing runtime errors during rendering.
+     * 
      * @private
+     * @throws {Error} If src is not a string
+     * @throws {Error} If width is not null or a positive number  
+     * @throws {Error} If height is not null or a positive number
+     * 
+     * @internal Part of metadata validation system for type safety
      */
     _validateMeta() {
       const meta = this.__meta;
@@ -3391,9 +3982,40 @@ var Nity = (() => {
       }
     }
     /**
-     * Preloads the image from the source URL.
+     * Asynchronously preloads the image from the source URL.
      * 
-     * @returns {Promise<void>} A promise that resolves when the image is loaded.
+     * This method handles the async loading of the image resource, creating a new Image
+     * object and waiting for it to fully load before resolving. Called automatically
+     * during the GameObject's preload phase, but can also be called manually for
+     * explicit loading control. Sets up automatic fallback to natural dimensions
+     * if custom width/height were not specified.
+     * 
+     * The loading is promise-based to ensure proper async handling and prevent
+     * rendering attempts on unloaded images. Essential for smooth gameplay and
+     * preventing visual glitches from missing assets.
+     * 
+     * @async
+     * @returns {Promise<void>} A promise that resolves when the image is fully loaded
+     *   and ready for rendering
+     * 
+     * @example
+     * // Manual preloading with error handling
+     * try {
+     *     await imageComponent.preload();
+     *     console.log("Image loaded successfully");
+     * } catch (error) {
+     *     console.error("Failed to load image:", error);
+     * }
+     * 
+     * @example
+     * // Preload before adding to scene
+     * const imageComp = new ImageComponent("./assets/player.png");
+     * await imageComp.preload();
+     * gameObject.addComponent(imageComp);
+     * 
+     * @throws {Error} Implicitly if the image fails to load (network error, invalid URL, etc.)
+     * 
+     * @see {@link GameObject#preload} For automatic preloading during scene setup
      */
     async preload() {
       return new Promise((resolve) => {
@@ -3408,9 +4030,35 @@ var Nity = (() => {
       });
     }
     /**
-     * Draws the image on the canvas at the GameObject's global position with rotation support.
+     * Renders the image to the canvas with full transform support.
      * 
-     * @param {CanvasRenderingContext2D} ctx - The canvas rendering context to draw on.
+     * This is the core rendering method that draws the loaded image at the GameObject's
+     * global position with complete transform support including rotation. The image is
+     * drawn centered on the position (Unity-style) rather than from the top-left corner,
+     * providing intuitive positioning behavior for game objects.
+     * 
+     * Features:
+     * - Center-based positioning for intuitive object placement
+     * - Full rotation support following GameObject transform
+     * - Custom or natural dimension rendering
+     * - Proper canvas state management with save/restore
+     * - Graceful handling of unloaded images
+     * 
+     * Called automatically during the engine's render phase. Only renders if the
+     * image has been successfully loaded via preload().
+     * 
+     * @param {CanvasRenderingContext2D} ctx - The canvas rendering context to draw on
+     * 
+     * @example
+     * // Drawing happens automatically, but this method provides:
+     * // - Image positioning at GameObject.position (center-based)
+     * // - Rotation from GameObject.rotation  
+     * // - Scaling from width/height properties
+     * // - Proper layering with canvas state management
+     * 
+     * @see {@link GameObject#getGlobalPosition} For position calculation
+     * @see {@link GameObject#getGlobalRotation} For rotation handling
+     * @see {@link preload} For ensuring image is loaded before rendering
      */
     draw(ctx) {
       if (this.image) {
@@ -3426,9 +4074,37 @@ var Nity = (() => {
       }
     }
     /**
-     * Draws gizmos for the image component bounds.
-     * Shows the image's bounding box and center point for debugging.
-     * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
+     * Draws visual debugging gizmos for the image component.
+     * 
+     * This internal method renders debugging information to help developers visualize
+     * image bounds, positioning, and configuration. Shows a magenta dashed rectangle
+     * around the image's rendered area, a center point indicator, the filename label,
+     * and actual dimensions. Only visible when internal gizmos are enabled in the
+     * Game instance settings.
+     * 
+     * Gizmo elements displayed:
+     * - Dashed magenta rectangle showing rendered image bounds
+     * - Solid center point circle for position reference  
+     * - Filename text label above the image (extracted from src URL)
+     * - Dimensions text below the image showing current width x height
+     * - Proper rotation handling to match image orientation
+     * 
+     * Uses a distinctive dash pattern (4,2) to differentiate from other component gizmos
+     * while maintaining the standard magenta color scheme for visual consistency.
+     * 
+     * @param {CanvasRenderingContext2D} ctx - The canvas rendering context for drawing gizmos
+     * 
+     * @private
+     * @internal This method is part of the debugging visualization system
+     * 
+     * @example
+     * // Gizmos are automatically drawn when enabled:
+     * // Game.instance._internalGizmos = true;
+     * // - Magenta dashed border shows image bounds
+     * // - Center dot shows exact position
+     * // - Filename and dimensions provide asset information
+     * 
+     * @see {@link Game#_internalGizmos} For enabling gizmo rendering
      */
     __internalGizmos(ctx) {
       if (!this.image) return;
@@ -3459,31 +4135,87 @@ var Nity = (() => {
   // src/renderer/components/ShapeComponent.js
   var ShapeComponent = class extends Component {
     /**
-     * Creates a new ShapeComponent.
+     * Creates a new ShapeComponent with specified shape type and rendering options.
      * 
-     * @param {string} shape - Type of shape to render ("rectangle", "circle", "ellipse", "line", "triangle", "polygon")
+     * Initializes the component with a shape type and comprehensive rendering options.
+     * Supports multiple geometric shapes including rectangles, circles, ellipses, lines,
+     * triangles, and custom polygons. Each shape type has its own specific options
+     * while sharing common properties like color. Integrates with the metadata system
+     * for configuration management and validation.
+     * 
+     * The component provides an efficient way to render geometric shapes without
+     * requiring image assets, making it ideal for prototyping, UI elements, debug
+     * visualization, and simple graphics.
+     * 
+     * @param {string} shape - Type of shape to render
+     *   - "rectangle" - Rectangular shape with width/height
+     *   - "square" - Square shape (uses width for both dimensions)
+     *   - "circle" - Circular shape with radius
+     *   - "ellipse" - Elliptical shape with radiusX/radiusY
+     *   - "line" - Line segment with start/end coordinates
+     *   - "triangle" - Triangular shape with size
+     *   - "polygon" - Custom polygon with points array
+     * 
      * @param {Object} [options={ width:10, height:10, color:'white' }] - Shape-specific rendering options
-     * @param {number} [options.width=10] - Width for rectangles
-     * @param {number} [options.height=10] - Height for rectangles
-     * @param {string} [options.color='white'] - Fill color for the shape
+     * @param {number} [options.width=10] - Width for rectangles and squares
+     * @param {number} [options.height=10] - Height for rectangles  
+     * @param {string} [options.color='white'] - Fill color for the shape (any CSS color)
      * @param {number} [options.radius=10] - Radius for circles
      * @param {number} [options.radiusX=10] - X radius for ellipses
      * @param {number} [options.radiusY=5] - Y radius for ellipses
-     * @param {number} [options.x2] - End X coordinate for lines
-     * @param {number} [options.y2] - End Y coordinate for lines
+     * @param {number} [options.x2] - End X coordinate for lines (relative to shape position)
+     * @param {number} [options.y2] - End Y coordinate for lines (relative to shape position)
      * @param {number} [options.size=20] - Size for triangles
-     * @param {Array<{x: number, y: number}>} [options.points=[]] - Points for polygons
+     * @param {Array<{x: number, y: number}>} [options.points=[]] - Points array for polygons
+     * 
+     * @example
+     * // Basic rectangle
+     * const rect = obj.addComponent(ShapeComponent, "rectangle", { 
+     *     width: 50, height: 30, color: "red" 
+     * });
+     * 
+     * @example
+     * // Circle with custom radius
+     * const circle = obj.addComponent(ShapeComponent, "circle", {
+     *     radius: 25, color: "#4ECDC4"
+     * });
+     * 
+     * @example
+     * // Custom polygon shape
+     * const star = obj.addComponent(ShapeComponent, "polygon", {
+     *     points: [[0,-20], [6,-6], [20,-6], [10,2], [16,14], [0,8], [-16,14], [-10,2], [-20,-6], [-6,-6]],
+     *     color: "gold"
+     * });
+     * 
+     * @throws {Error} Via metadata validation if parameters are invalid
      */
     constructor(shape, options = { width: 10, height: 10, color: "white" }) {
       super();
-      this.shape = this.__meta.shape || shape || "rectangle";
-      this.options = { ...this.__meta.options, ...options };
     }
     /**
-     * Get default metadata for ShapeComponent
-     * @returns {Object} Default metadata object
+     * Provides default metadata configuration for ShapeComponent instances.
+     * 
+     * This static method returns the baseline configuration that defines the structure
+     * and default values for all ShapeComponent metadata. Includes comprehensive
+     * options for all supported shape types to ensure consistent configuration
+     * regardless of which shape type is selected.
+     * 
+     * @static
+     * @returns {Object} Default metadata configuration object
+     * @returns {string} returns.shape - Default shape type ("rectangle")
+     * @returns {Object} returns.options - Shape rendering options
+     * @returns {number} returns.options.width - Default width for rectangles (10)
+     * @returns {number} returns.options.height - Default height for rectangles (10)
+     * @returns {string} returns.options.color - Default fill color ("white")
+     * @returns {number} returns.options.radius - Default radius for circles (10)
+     * @returns {number} returns.options.radiusX - Default X radius for ellipses (10)
+     * @returns {number} returns.options.radiusY - Default Y radius for ellipses (5)
+     * @returns {number} returns.options.x2 - Default end X coordinate for lines (10)
+     * @returns {number} returns.options.y2 - Default end Y coordinate for lines (0)
+     * @returns {number} returns.options.size - Default size for triangles (20)
+     * @returns {Array} returns.options.points - Default points array for polygons ([])
      */
-    getDefaultMeta() {
+    static getDefaultMeta() {
       return {
         shape: "rectangle",
         options: {
@@ -3501,27 +4233,61 @@ var Nity = (() => {
       };
     }
     /**
-     * Apply constructor arguments to metadata format
+     * Converts constructor arguments to metadata format for internal processing.
+     * 
+     * This private method bridges the gap between traditional constructor calls and
+     * the metadata system. It takes the constructor parameters and converts them to
+     * a standardized metadata object that can be validated and applied consistently.
+     * Handles the complex options object by merging with default options.
+     * 
      * @private
+     * @param {string} shape - The shape type to render
+     * @param {Object} [options={}] - Shape-specific rendering options
+     * 
+     * @internal This method is part of the metadata system infrastructure
      */
     _applyConstructorArgs(shape, options = {}) {
-      this.__meta = {
-        ...this.__meta,
-        shape: shape || this.__meta.shape,
+      const metadata = {
+        shape: shape || "rectangle",
         options: { ...this.__meta.options, ...options }
       };
+      this.applyMeta(metadata);
     }
     /**
-     * Update component properties from current metadata
+     * Updates component properties from current metadata configuration.
+     * 
+     * This private method synchronizes the component's internal properties with the
+     * current metadata state. Called automatically when metadata is applied or updated,
+     * ensuring the component reflects the latest configuration. Creates a new options
+     * object to prevent unwanted mutations of the metadata.
+     * 
      * @private
+     * 
+     * @internal Ensures proper isolation between metadata and component properties
      */
     _updatePropertiesFromMeta() {
       this.shape = this.__meta.shape;
       this.options = { ...this.__meta.options };
     }
     /**
-     * Validate current metadata
+     * Validates current metadata configuration for type safety and shape-specific requirements.
+     * 
+     * This private method ensures all metadata properties conform to expected types
+     * and valid value ranges for each shape type. Called automatically when metadata
+     * is applied or updated to provide immediate feedback on configuration errors.
+     * Includes comprehensive validation for all supported shape types and their
+     * specific requirements.
+     * 
      * @private
+     * @throws {Error} If shape type is not supported
+     * @throws {Error} If color is not a string
+     * @throws {Error} If rectangle/square dimensions are invalid
+     * @throws {Error} If circle radius is invalid
+     * @throws {Error} If ellipse radii are invalid
+     * @throws {Error} If triangle size is invalid
+     * @throws {Error} If polygon has insufficient points
+     * 
+     * @internal Part of metadata validation system for comprehensive shape validation
      */
     _validateMeta() {
       const validShapes = ["rectangle", "square", "circle", "ellipse", "line", "triangle", "polygon"];
