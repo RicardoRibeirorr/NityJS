@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NityJS - Tilemap Example</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #2c3e50;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 2px solid #34495e;
+            background: #ecf0f1;
+            display: block;
+            margin: 20px auto;
+        }
+        .info {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .controls {
+            margin: 20px 0;
+            padding: 15px;
+            background: #34495e;
+            border-radius: 5px;
+        }
+        .grid-info {
+            font-family: monospace;
+            background: #2c3e50;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+            white-space: pre-line;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>🎮 NityJS Engine - Tilemap System</h1>
+        <p>Demonstrating the new Tile, TileAsset, TileRegistry, and TilemapComponent system</p>
+        
+        <div class="controls">
+            <h3>🏗️ Features Demonstrated:</h3>
+            <ul style="text-align: left; display: inline-block;">
+                <li>✅ Spritesheet-based tiles (3 tiles: wood, wall, grass)</li>
+                <li>✅ TileAsset auto-registration system</li>
+                <li>✅ TileRegistry management</li>
+                <li>✅ Mixed tile references in TilemapComponent</li>
+                <li>✅ Grid-based level design</li>
+                <li>✅ Collision metadata integration</li>
+            </ul>
+        </div>
+
+        <div class="grid-info">
+Grid Layout:
+[W][W][W][W][W][W][W][W][W][W]
+[W][ ][G][G][G][G][G][ ][W]
+[W][ ][G][O][O][O][G][ ][W]
+[W][ ][G][O][O][O][G][ ][W]
+[W][ ][G][O][O][O][G][ ][W]
+[W][ ][G][G][G][G][G][ ][W]
+[W][W][W][W][W][W][W][W][W][W]
+
+Legend: W=Wall, G=Grass, O=Wood, [ ]=Empty
+        </div>
+    </div>
+
+    <canvas id="gameCanvas" width="640" height="448"></canvas>
+
+    <script type="module" src="index.js"></script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Environment Tiles</title>
+</head>
+<body>
+    <canvas id="canvas" width="24" height="8" style="image-rendering: pixelated; width: 240px; height: 80px;"></canvas>
+    <br>
+    <button onclick="downloadImage()">Download environment_tiles.png</button>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Disable image smoothing for pixel art
+        ctx.imageSmoothingEnabled = false;
+        
+        // Create 3 tiles: wood, wall, grass (each 8x8 pixels)
+        
+        // Tile 1: Wood (brown pattern)
+        ctx.fillStyle = '#8B4513'; // Dark brown
+        ctx.fillRect(0, 0, 8, 8);
+        ctx.fillStyle = '#A0522D'; // Medium brown
+        ctx.fillRect(1, 1, 6, 2);
+        ctx.fillRect(1, 4, 6, 2);
+        ctx.fillStyle = '#CD853F'; // Light brown
+        ctx.fillRect(2, 0, 1, 8);
+        ctx.fillRect(5, 0, 1, 8);
+        
+        // Tile 2: Wall (gray stone pattern)
+        ctx.fillStyle = '#696969'; // Dark gray
+        ctx.fillRect(8, 0, 8, 8);
+        ctx.fillStyle = '#808080'; // Medium gray
+        ctx.fillRect(9, 1, 6, 6);
+        ctx.fillStyle = '#A9A9A9'; // Light gray
+        ctx.fillRect(10, 2, 4, 4);
+        ctx.fillStyle = '#2F4F4F'; // Dark lines
+        ctx.fillRect(8, 3, 8, 1);
+        ctx.fillRect(11, 0, 1, 8);
+        
+        // Tile 3: Grass (green pattern)
+        ctx.fillStyle = '#228B22'; // Forest green
+        ctx.fillRect(16, 0, 8, 8);
+        ctx.fillStyle = '#32CD32'; // Lime green
+        ctx.fillRect(17, 1, 6, 6);
+        ctx.fillStyle = '#90EE90'; // Light green
+        ctx.fillRect(18, 2, 4, 4);
+        // Add some grass texture
+        ctx.fillStyle = '#006400'; // Dark green
+        ctx.fillRect(17, 1, 1, 1);
+        ctx.fillRect(19, 2, 1, 1);
+        ctx.fillRect(21, 1, 1, 1);
+        ctx.fillRect(18, 4, 1, 1);
+        ctx.fillRect(20, 5, 1, 1);
+        
+        function downloadImage() {
+            const link = document.createElement('a');
+            link.download = 'environment_tiles.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+</html>

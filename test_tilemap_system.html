@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NityJS - Tilemap System Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            background: #fff;
+        }
+        .info {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>NityJS Engine - Tilemap System Test</h1>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div class="info">
+        <p>Testing the new TileRegistry and TilemapComponent system:</p>
+        <ul>
+            <li>✅ Tile class (data container only)</li>
+            <li>✅ TileAsset class (auto-registration)</li>
+            <li>✅ TileRegistry system (mirrors SpriteRegistry)</li>
+            <li>✅ TilemapComponent with mixed tile references</li>
+            <li>📝 Collision system integration (placeholder)</li>
+        </ul>
+    </div>
+
+    <script type="module">
+        import { 
+            Game, 
+            Scene, 
+            GameObject, 
+            SpriteAsset, 
+            SpritesheetAsset,
+            Tile,
+            TileAsset, 
+            TileRegistry,
+            TilemapComponent 
+        } from './src/index.js';
+
+        class TilemapTestScene extends Scene {
+            preload() {
+                console.log("Preloading assets...");
+                
+                // Create some test sprites (you'd normally use real image files)
+                // For this test, we'll create simple colored sprites
+                
+                // Single sprite assets
+                new SpriteAsset("grass", "./examples/_assets/background_platform.png");
+                new SpriteAsset("stone", "./examples/_assets/background_platform.png");
+                
+                // Create a simple spritesheet for variety
+                new SpritesheetAsset("terrain", "./examples/_assets/background_platform.png", {
+                    spriteWidth: 32,
+                    spriteHeight: 32,
+                    columns: 2,
+                    rows: 2
+                });
+            }
+
+            start() {
+                console.log("Creating tilemap...");
+                
+                // Create various tile types
+                console.log("Registering tiles...");
+                
+                // Basic tiles
+                const grassTile = new TileAsset("grass", "grass");
+                const stoneTile = new TileAsset("stone", "stone", {
+                    collider: {
+                        width: 32,
+                        height: 32,
+                        trigger: false
+                    }
+                });
+                
+                // Tiles from spritesheet
+                const terrainTile1 = new TileAsset("terrain1", "terrain:sprite_0");
+                const terrainTile2 = new TileAsset("terrain2", "terrain:sprite_1", {
+                    opacity: 0.8,
+                    collider: {
+                        width: 32,
+                        height: 32,
+                        trigger: true
+                    }
+                });
+                
+                // Direct tile (not in registry)
+                const skyTile = new Tile("sky", "terrain:sprite_2", {
+                    opacity: 0.5
+                });
+                
+                // Debug: Print registered tiles
+                console.log("TileRegistry contents:");
+                TileRegistry.debugPrint(true);
+                
+                // Create tilemap
+                const tilemap = new TilemapComponent({
+                    tileSize: 32,
+                    tiles: {
+                        0: null,           // Empty space
+                        1: "grass",        // Reference by name
+                        2: "stone",        // Reference by name  
+                        3: skyTile,        // Direct tile object
+                        4: "terrain1",     // Reference by name
+                        5: "terrain2"      // Reference by name
+                    },
+                    grid: [
+                        [2,2,2,2,2,2,2,2,2,2],
+                        [2,0,0,0,5,0,0,0,0,2],
+                        [2,0,1,1,1,1,1,0,0,2],
+                        [2,0,0,0,0,0,0,0,0,2],
+                        [2,0,0,3,3,3,0,0,4,2],
+                        [2,1,1,1,1,1,1,1,1,2],
+                        [2,2,2,2,2,2,2,2,2,2]
+                    ],
+                    enableCollision: true
+                });
+                
+                // Add tilemap to scene
+                const tilemapObject = new GameObject(100, 100);
+                tilemapObject.addComponent(tilemap);
+                this.add(tilemapObject);
+                
+                console.log("Tilemap created successfully!");
+                console.log("Grid dimensions:", tilemap.gridWidth, "x", tilemap.gridHeight);
+                console.log("Colliders created:", tilemap.colliders.length);
+                
+                // Test some tilemap methods
+                console.log("Tile at (5,3):", tilemap.getTileAt(5, 3));
+                console.log("World to grid (200, 200):", tilemap.worldToGrid(200, 200));
+                console.log("Grid to world (5, 3):", tilemap.gridToWorld(5, 3));
+                
+                // Find all solid tiles
+                const solidTiles = tilemap.getTilesWhere(tile => tile.isSolid());
+                console.log("Solid tiles found:", solidTiles.length);
+                
+                // Find all trigger tiles
+                const triggerTiles = tilemap.getTilesWhere(tile => tile.isTrigger());
+                console.log("Trigger tiles found:", triggerTiles.length);
+            }
+
+            update(deltaTime) {
+                // Scene update logic
+            }
+        }
+
+        // Initialize game
+        const game = new Game(document.getElementById('gameCanvas'));
+        const scene = new TilemapTestScene();
+        game.loadScene(scene);
+        game.start();
+    </script>
+</body>
+</html>

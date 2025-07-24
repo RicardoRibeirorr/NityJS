@@ -3,6 +3,9 @@ var Nity = (() => {
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
   var __getOwnPropNames = Object.getOwnPropertyNames;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __esm = (fn, res) => function __init() {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  };
   var __export = (target, all) => {
     for (var name in all)
       __defProp(target, name, { get: all[name], enumerable: true });
@@ -16,6 +19,387 @@ var Nity = (() => {
     return to;
   };
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+  // src/asset/Tile.js
+  var Tile;
+  var init_Tile = __esm({
+    "src/asset/Tile.js"() {
+      Tile = class {
+        /**
+         * Create a new tile data container
+         * @param {string} name - Unique name for this tile type
+         * @param {string} spriteName - Sprite name (supports "spritesheet:sprite" notation)
+         * @param {Object} [options={}] - Optional rendering and collision options
+         * @param {number} [options.width] - Custom width for rendering
+         * @param {number} [options.height] - Custom height for rendering
+         * @param {number} [options.opacity=1] - Opacity for rendering (0-1)
+         * @param {string} [options.color="#FFFFFF"] - Color tint for rendering
+         * @param {boolean} [options.flipX=false] - Flip horizontally
+         * @param {boolean} [options.flipY=false] - Flip vertically
+         * @param {Object} [options.collider] - Collision configuration
+         * @param {number} [options.collider.width] - Collider width
+         * @param {number} [options.collider.height] - Collider height
+         * @param {number} [options.collider.radius] - Collider radius (for circle colliders)
+         * @param {boolean} [options.collider.trigger=false] - Is this collider a trigger?
+         * @param {string} [options.collider.type="box"] - Collider type: "box" or "circle"
+         */
+        constructor(name, spriteName, options = {}) {
+          this.name = name;
+          this.spriteName = spriteName;
+          this.width = options.width || null;
+          this.height = options.height || null;
+          this.opacity = options.opacity !== void 0 ? options.opacity : 1;
+          this.color = options.color || "#FFFFFF";
+          this.flipX = options.flipX || false;
+          this.flipY = options.flipY || false;
+          this.collider = options.collider ? {
+            width: options.collider.width || null,
+            height: options.collider.height || null,
+            radius: options.collider.radius || null,
+            trigger: options.collider.trigger || false,
+            type: options.collider.type || "box"
+          } : null;
+        }
+        /**
+         * Check if this tile has collision
+         * @returns {boolean} True if tile has collision data
+         */
+        hasCollision() {
+          return this.collider !== null;
+        }
+        /**
+         * Check if this tile is a trigger
+         * @returns {boolean} True if tile is a trigger
+         */
+        isTrigger() {
+          return this.collider && this.collider.trigger;
+        }
+        /**
+         * Check if this tile is solid (has collision but not trigger)
+         * @returns {boolean} True if tile is solid
+         */
+        isSolid() {
+          return this.collider && !this.collider.trigger;
+        }
+        /**
+         * Get the collider type
+         * @returns {string|null} "box", "circle", or null if no collider
+         */
+        getColliderType() {
+          return this.collider ? this.collider.type : null;
+        }
+        /**
+         * Clone this tile with optional property overrides
+         * @param {Object} [overrides={}] - Properties to override in the clone
+         * @returns {Tile} New tile instance with same properties
+         */
+        clone(overrides = {}) {
+          const clonedOptions = {
+            width: this.width,
+            height: this.height,
+            opacity: this.opacity,
+            color: this.color,
+            flipX: this.flipX,
+            flipY: this.flipY,
+            collider: this.collider ? { ...this.collider } : null,
+            ...overrides
+          };
+          return new this.constructor(
+            overrides.name || this.name,
+            overrides.spriteName || this.spriteName,
+            clonedOptions
+          );
+        }
+        /**
+         * Convert tile to a readable string representation
+         * @returns {string} String representation of this tile
+         */
+        toString() {
+          const collision = this.hasCollision() ? ` (${this.isTrigger() ? "trigger" : "solid"})` : "";
+          return `Tile[${this.name}: ${this.spriteName}${collision}]`;
+        }
+      };
+    }
+  });
+
+  // src/asset/TileRegistry.js
+  var TileRegistry;
+  var init_TileRegistry = __esm({
+    "src/asset/TileRegistry.js"() {
+      TileRegistry = class {
+        static tiles = /* @__PURE__ */ new Map();
+        // Storage for all registered tiles: name -> TileAsset
+        /**
+         * Internal method to add a tile asset (used by TileAsset constructor)
+         * @param {string} name - Name to register the tile under
+         * @param {TileAsset} tileAsset - The tile asset to register
+         * @private
+         */
+        static _addTile(name, tileAsset) {
+          this.tiles.set(name, tileAsset);
+        }
+        /**
+         * Get a registered tile asset by name
+         * @param {string} name - Name of the tile to retrieve
+         * @returns {TileAsset|null} The tile asset or null if not found
+         */
+        static getTile(name) {
+          return this.tiles.get(name) || null;
+        }
+        /**
+         * Check if a tile is registered
+         * @param {string} name - Name of the tile to check
+         * @returns {boolean} True if tile exists in registry
+         */
+        static hasTile(name) {
+          return this.tiles.has(name);
+        }
+        /**
+         * Get all registered tile names
+         * @returns {string[]} Array of all registered tile names
+         */
+        static getAllTileNames() {
+          return Array.from(this.tiles.keys());
+        }
+        /**
+         * Get all registered tiles
+         * @returns {TileAsset[]} Array of all registered tile assets
+         */
+        static getAllTiles() {
+          return Array.from(this.tiles.values());
+        }
+        /**
+         * Remove a tile from the registry
+         * @param {string} name - Name of the tile to remove
+         * @returns {boolean} True if tile was removed, false if it didn't exist
+         */
+        static removeTile(name) {
+          return this.tiles.delete(name);
+        }
+        /**
+         * Clear all registered tiles
+         * Useful for scene transitions or testing
+         */
+        static clear() {
+          this.tiles.clear();
+        }
+        /**
+         * Get the number of registered tiles
+         * @returns {number} Number of registered tiles
+         */
+        static getCount() {
+          return this.tiles.size;
+        }
+        /**
+         * Register a tile manually (if not using TileAsset constructor)
+         * @param {string} name - Name to register the tile under
+         * @param {Tile|TileAsset} tile - The tile to register
+         * @returns {boolean} True if registered successfully, false if name already exists
+         */
+        static registerTile(name, tile) {
+          if (this.hasTile(name)) {
+            console.warn(`TileRegistry: Tile "${name}" already exists. Use forceRegisterTile() to override.`);
+            return false;
+          }
+          this.tiles.set(name, tile);
+          return true;
+        }
+        /**
+         * Register a tile, overriding any existing tile with the same name
+         * @param {string} name - Name to register the tile under
+         * @param {Tile|TileAsset} tile - The tile to register
+         */
+        static forceRegisterTile(name, tile) {
+          this.tiles.set(name, tile);
+        }
+        /**
+         * Create multiple tiles from metadata objects
+         * @param {Object[]} tilesMetadata - Array of tile metadata objects
+         * @returns {TileAsset[]} Array of created tile assets
+         * 
+         * @example
+         * const tiles = TileRegistry.createTilesFromMetadata([
+         *     { name: "grass", spriteName: "terrain:grass", options: {} },
+         *     { name: "stone", spriteName: "terrain:stone", options: { collider: { width: 32, height: 32 } } }
+         * ]);
+         */
+        static createTilesFromMetadata(tilesMetadata) {
+          const { TileAsset: TileAsset2 } = (init_TileAsset(), __toCommonJS(TileAsset_exports));
+          return tilesMetadata.map((metadata) => TileAsset2.meta(metadata));
+        }
+        /**
+         * Export all registered tiles to metadata format
+         * @returns {Object[]} Array of tile metadata objects
+         */
+        static exportAllToMetadata() {
+          return Array.from(this.tiles.values()).map(
+            (tile) => tile.toMeta ? tile.toMeta() : {
+              name: tile.name,
+              spriteName: tile.spriteName,
+              options: {
+                width: tile.width,
+                height: tile.height,
+                opacity: tile.opacity,
+                color: tile.color,
+                flipX: tile.flipX,
+                flipY: tile.flipY,
+                collider: tile.collider
+              }
+            }
+          );
+        }
+        /**
+         * Get tiles by filter criteria
+         * @param {function} filterFn - Function to filter tiles (tile) => boolean
+         * @returns {TileAsset[]} Array of tiles matching the filter
+         * 
+         * @example
+         * // Get all solid tiles
+         * const solidTiles = TileRegistry.getTilesByFilter(tile => tile.isSolid());
+         * 
+         * // Get all trigger tiles
+         * const triggerTiles = TileRegistry.getTilesByFilter(tile => tile.isTrigger());
+         * 
+         * // Get tiles using specific sprite
+         * const grassTiles = TileRegistry.getTilesByFilter(tile => tile.spriteName.includes("grass"));
+         */
+        static getTilesByFilter(filterFn) {
+          return Array.from(this.tiles.values()).filter(filterFn);
+        }
+        /**
+         * Debug method to print all registered tiles
+         * @param {boolean} [detailed=false] - Whether to show detailed tile information
+         */
+        static debugPrint(detailed = false) {
+          console.log(`TileRegistry: ${this.getCount()} tiles registered`);
+          if (detailed) {
+            this.tiles.forEach((tile, name) => {
+              console.log(`  - ${name}: ${tile.toString()}`);
+            });
+          } else {
+            console.log(`  Names: [${this.getAllTileNames().join(", ")}]`);
+          }
+        }
+      };
+    }
+  });
+
+  // src/asset/TileAsset.js
+  var TileAsset_exports = {};
+  __export(TileAsset_exports, {
+    TileAsset: () => TileAsset
+  });
+  var TileAsset;
+  var init_TileAsset = __esm({
+    "src/asset/TileAsset.js"() {
+      init_Tile();
+      init_TileRegistry();
+      TileAsset = class _TileAsset extends Tile {
+        /**
+         * Create a new tile asset and automatically register it
+         * @param {string} name - Unique name to register the tile under (cannot contain colons)
+         * @param {string} spriteName - Sprite name (supports "spritesheet:sprite" notation)
+         * @param {Object} [options={}] - Optional rendering and collision options (same as Tile)
+         */
+        constructor(name, spriteName, options = {}) {
+          if (name.includes(":")) {
+            throw new Error(`TileAsset name "${name}" cannot contain colons. Colons are reserved for potential future tile notation.`);
+          }
+          super(name, spriteName, options);
+          this._registerSelf();
+        }
+        /**
+         * Automatically register this tile asset in the TileRegistry
+         * @private
+         */
+        _registerSelf() {
+          TileRegistry._addTile(this.name, this);
+        }
+        /**
+         * Create a tile asset from metadata (factory method)
+         * @param {Object} metadata - Tile metadata object
+         * @param {string} metadata.name - Tile name
+         * @param {string} metadata.spriteName - Sprite name
+         * @param {Object} [metadata.options] - Tile options
+         * @returns {TileAsset} New tile asset instance
+         */
+        static meta(metadata) {
+          if (!metadata.name || typeof metadata.name !== "string" || metadata.name.trim() === "") {
+            throw new Error("TileAsset.meta() requires a valid name string");
+          }
+          if (!metadata.spriteName || typeof metadata.spriteName !== "string" || metadata.spriteName.trim() === "") {
+            throw new Error("TileAsset.meta() requires a valid spriteName string");
+          }
+          return new _TileAsset(metadata.name, metadata.spriteName, metadata.options || {});
+        }
+        /**
+         * Get default metadata structure for TileAsset
+         * @returns {Object} Default metadata object
+         */
+        static getDefaultMeta() {
+          return {
+            name: "",
+            spriteName: "",
+            options: {
+              width: null,
+              height: null,
+              opacity: 1,
+              color: "#FFFFFF",
+              flipX: false,
+              flipY: false,
+              collider: null
+            }
+          };
+        }
+        /**
+         * Export this tile to metadata format
+         * @returns {Object} Metadata object representing this tile
+         */
+        toMeta() {
+          return {
+            name: this.name,
+            spriteName: this.spriteName,
+            options: {
+              width: this.width,
+              height: this.height,
+              opacity: this.opacity,
+              color: this.color,
+              flipX: this.flipX,
+              flipY: this.flipY,
+              collider: this.collider ? { ...this.collider } : null
+            }
+          };
+        }
+        /**
+         * Apply metadata to this tile (runtime configuration)
+         * @param {Object} metadata - Metadata to apply
+         * @param {string} [metadata.name] - New tile name
+         * @param {string} [metadata.spriteName] - New sprite name
+         * @param {Object} [metadata.options] - New options to apply
+         */
+        applyMeta(metadata) {
+          if (metadata.name !== void 0) {
+            this.name = metadata.name;
+          }
+          if (metadata.spriteName !== void 0) {
+            this.spriteName = metadata.spriteName;
+          }
+          if (metadata.options) {
+            const opts = metadata.options;
+            if (opts.width !== void 0) this.width = opts.width;
+            if (opts.height !== void 0) this.height = opts.height;
+            if (opts.opacity !== void 0) this.opacity = opts.opacity;
+            if (opts.color !== void 0) this.color = opts.color;
+            if (opts.flipX !== void 0) this.flipX = opts.flipX;
+            if (opts.flipY !== void 0) this.flipY = opts.flipY;
+            if (opts.collider !== void 0) {
+              this.collider = opts.collider ? { ...opts.collider } : null;
+            }
+          }
+        }
+      };
+    }
+  });
 
   // src/index.js
   var index_exports = {};
@@ -46,6 +430,10 @@ var Nity = (() => {
     SpriteRegistry: () => SpriteRegistry,
     SpriteRendererComponent: () => SpriteRendererComponent,
     SpritesheetAsset: () => SpritesheetAsset,
+    Tile: () => Tile,
+    TileAsset: () => TileAsset,
+    TileRegistry: () => TileRegistry,
+    TilemapComponent: () => TilemapComponent,
     Time: () => Time,
     Vector2: () => Vector2,
     Vector3: () => Vector3,
@@ -215,6 +603,55 @@ var Nity = (() => {
 
   // src/common/Component.js
   var Component = class {
+    /**
+     * Creates a new Component with metadata system initialization.
+     * 
+     * Initializes the component with essential properties and integrates with the
+     * comprehensive metadata system. Sets up default values, GameObject reference
+     * placeholder, gizmos integration, and processes any constructor arguments
+     * through the metadata pipeline for consistent configuration handling.
+     * 
+     * **Initialization Process:**
+     * 1. Sets up core component properties (gameObject, enabled, started state)
+     * 2. Configures gizmos integration based on Game instance settings
+     * 3. Initializes metadata system with component-specific defaults
+     * 4. Processes constructor arguments through metadata pipeline
+     * 5. Validates final configuration for type safety
+     * 
+     * **Properties Initialized:**
+     * - `gameObject` - Reference to parent GameObject (set when attached)
+     * - `enabled` - Component active state (true by default)
+     * - `_started` - Internal lifecycle tracking
+     * - `_internalGizmos` - Debug visualization integration
+     * - `__meta` - Metadata configuration object
+     * 
+     * @example
+     * // Direct component creation
+     * const component = new MyComponent();
+     * gameObject.addComponent(component);
+     * 
+     * @example
+     * // Component with constructor arguments
+     * class PlayerController extends Component {
+     *     constructor(speed = 5) {
+     *         super(); // Calls metadata initialization
+     *         this.speed = speed;
+     *     }
+     * }
+     * 
+     * @example
+     * // Metadata-aware component
+     * class SpriteComponent extends Component {
+     *     constructor(spriteName, options = {}) {
+     *         super(); // Metadata system handles args automatically
+     *     }
+     *     
+     *     _applyConstructorArgs(spriteName, options) {
+     *         // Called automatically during super()
+     *         this.applyMeta({ spriteName, ...options });
+     *     }
+     * }
+     */
     constructor() {
       this.gameObject = null;
       this.enabled = true;
@@ -3079,26 +3516,131 @@ var Nity = (() => {
     }
   };
 
+  // src/index.js
+  init_Tile();
+  init_TileAsset();
+  init_TileRegistry();
+
   // src/common/Scene.js
   var Scene = class {
+    /**
+     * Creates a new Scene with optional creation function.
+     * 
+     * Initializes the scene with an empty objects array and stores the creation
+     * function for delayed execution during the preload phase. The create function
+     * allows for deferred object instantiation, ensuring proper game initialization
+     * order and preventing premature object creation.
+     * 
+     * @param {Object} [options={}] - Scene configuration options
+     * @param {Function} [options.create] - Function called during preload to create scene objects
+     *   - Receives the scene instance as parameter
+     *   - Should contain all initial GameObject creation and setup logic
+     *   - Called only once during scene preload phase
+     * 
+     * @example
+     * // Scene with creation function
+     * const gameScene = new Scene({
+     *     create: function(scene) {
+     *         // Create player
+     *         const player = new GameObject(400, 300);
+     *         player.name = "Player";
+     *         player.addComponents([
+     *             new SpriteRendererComponent("player_idle"),
+     *             new RigidbodyComponent(),
+     *             new BoxColliderComponent(32, 48)
+     *         ]);
+     *         scene.add(player);
+     *         
+     *         // Create enemies
+     *         for (let i = 0; i < 5; i++) {
+     *             const enemy = new GameObject(Math.random() * 800, Math.random() * 600);
+     *             enemy.addTag("enemy");
+     *             scene.add(enemy);
+     *         }
+     *     }
+     * });
+     * 
+     * @example
+     * // Empty scene for manual management
+     * const emptyScene = new Scene();
+     */
     constructor({ create } = {}) {
       this.objects = [];
       this._createFn = create;
     }
     /**
-     * Adds an object to the scene before the game starts.
-     * You should use {@link Instantiate.create} when adding new objects after launched the game.
+     * Adds a GameObject to the scene before the game starts.
      * 
-     * @param {Object} obj - The object to add to the scene.
+     * This method is designed for adding objects during scene creation or before
+     * the game loop begins. It delegates to Instantiate.create() to ensure proper
+     * object registration and lifecycle management. For adding objects during
+     * gameplay, use Instantiate.create() directly for better performance and
+     * immediate integration with running systems.
+     * 
+     * The added GameObject will go through the complete lifecycle:
+     * 1. Added to scene objects array
+     * 2. Preload phase (asset loading)
+     * 3. Start phase (initialization)
+     * 4. Update/render phases (ongoing)
+     * 
+     * @param {GameObject} obj - The GameObject to add to the scene
+     *   Must be a valid GameObject instance with components
+     * 
+     * @example
+     * // Adding objects during scene creation
+     * const scene = new Scene({
+     *     create: function(scene) {
+     *         const player = new GameObject(400, 300);
+     *         player.addComponent(new SpriteRendererComponent("player"));
+     *         scene.add(player); // Proper scene addition
+     *     }
+     * });
+     * 
+     * @example
+     * // Manual scene building
+     * const scene = new Scene();
+     * const background = new GameObject(0, 0);
+     * background.addComponent(new ImageComponent("./assets/bg.png"));
+     * scene.add(background);
+     * 
+     * @see {@link Instantiate.create} For adding objects during gameplay
+     * @see {@link GameObject} For GameObject creation and component management
      */
     add(obj) {
       Instantiate.create(obj);
     }
     /**
-     * Removes an object from the scene.
-     * You should use {@link Destroy.destroy} when removing objects during gameplay.
+     * Removes a GameObject from the scene with proper cleanup.
      * 
-     * @param {GameObject} obj - The object to remove from the scene.
+     * This method provides comprehensive GameObject removal including cleanup of
+     * all components, lifecycle method calls, and parent-child relationship management.
+     * It ensures no memory leaks or orphaned references remain after object removal.
+     * For gameplay object destruction, prefer using the global Destroy() function
+     * which provides Unity-compatible destruction patterns.
+     * 
+     * **Cleanup Process:**
+     * 1. Calls GameObject.destroy() if method exists
+     * 2. Iterates through all components and calls their destroy() methods
+     * 3. Removes from scene objects array
+     * 4. Clears parent reference to prevent orphaned objects
+     * 
+     * @param {GameObject} obj - The GameObject to remove from the scene
+     *   Must be a GameObject instance currently in this scene
+     * 
+     * @example
+     * // Manual object removal
+     * const enemy = scene.findByName("Enemy1");
+     * if (enemy) {
+     *     scene.remove(enemy); // Complete cleanup
+     * }
+     * 
+     * @example
+     * // Removing all enemies
+     * const enemies = scene.findByTag("enemy");
+     * enemies.forEach(enemy => scene.remove(enemy));
+     * 
+     * @see {@link Destroy} For Unity-compatible destruction during gameplay
+     * @see {@link GameObject#destroy} For GameObject-specific cleanup logic
      */
     remove(obj) {
       const index = this.objects.indexOf(obj);
@@ -3117,16 +3659,128 @@ var Nity = (() => {
         obj.scene = null;
       }
     }
+    /**
+     * Internal method for adding GameObjects directly to the scene array.
+     * 
+     * This is a low-level method used by the Instantiate system for direct object
+     * registration. It performs type validation to ensure only GameObject instances
+     * are added to the scene, maintaining scene integrity and preventing runtime
+     * errors from invalid object types.
+     * 
+     * **Important:** This method should only be called by internal engine systems
+     * like Instantiate.create(). Use scene.add() or Instantiate.create() for
+     * regular GameObject addition.
+     * 
+     * @private
+     * @param {GameObject} obj - The GameObject to add to the scene's objects array
+     * @throws {Error} If obj is not a GameObject instance
+     * 
+     * @internal Used by Instantiate system for direct object registration
+     */
     __addObjectToScene(obj) {
       if (!(obj instanceof GameObject)) throw new Error(`[Nity] Forbidden object '${obj ? obj.constructor.name : null}' added to the scene. Accepts only 'GameObject'.`);
       this.objects.push(obj);
     }
+    /**
+     * Finds the first GameObject in the scene with the specified name.
+     * 
+     * Searches through all GameObjects in the scene and returns the first one
+     * whose name property matches the provided string. Useful for accessing
+     * specific objects when you know their name. Returns null if no GameObject
+     * with the specified name is found.
+     * 
+     * **Performance Note:** This method performs a linear search through all
+     * objects. For frequently accessed objects, consider caching the reference.
+     * 
+     * @param {string} name - The name to search for
+     * @returns {GameObject|null} The first GameObject with matching name, or null if not found
+     * 
+     * @example
+     * // Find player object
+     * const player = scene.findByName("Player");
+     * if (player) {
+     *     player.position.x += 10;
+     * }
+     * 
+     * @example
+     * // Find specific enemy
+     * const boss = scene.findByName("BossEnemy");
+     * if (boss) {
+     *     boss.getComponent(SpriteRendererComponent).setColor("#FF0000");
+     * }
+     * 
+     * @see {@link GameObject#name} For setting GameObject names
+     * @see {@link findByTag} For finding objects by tag
+     */
     findByName(name) {
       return this.objects.find((obj) => obj.name === name);
     }
+    /**
+     * Finds all GameObjects in the scene with the specified tag.
+     * 
+     * Searches through all GameObjects in the scene and returns an array of all
+     * objects that have the specified tag. Useful for working with groups of
+     * objects that share common functionality or behavior. Returns an empty
+     * array if no GameObjects with the specified tag are found.
+     * 
+     * **Common Use Cases:**
+     * - Finding all enemies: `scene.findByTag("enemy")`
+     * - Finding all pickups: `scene.findByTag("pickup")`
+     * - Finding all UI elements: `scene.findByTag("ui")`
+     * 
+     * @param {string} tag - The tag to search for
+     * @returns {GameObject[]} Array of GameObjects with the specified tag (empty if none found)
+     * 
+     * @example
+     * // Find and damage all enemies
+     * const enemies = scene.findByTag("enemy");
+     * enemies.forEach(enemy => {
+     *     const health = enemy.getComponent(HealthComponent);
+     *     if (health) health.takeDamage(10);
+     * });
+     * 
+     * @example
+     * // Collect all pickups
+     * const pickups = scene.findByTag("pickup");
+     * pickups.forEach(pickup => {
+     *     // Apply pickup effect
+     *     pickup.getComponent(PickupComponent).collect();
+     * });
+     * 
+     * @example
+     * // Hide all UI elements
+     * const uiElements = scene.findByTag("ui");
+     * uiElements.forEach(ui => {
+     *     ui.getComponent(SpriteRendererComponent).setOpacity(0);
+     * });
+     * 
+     * @see {@link GameObject#addTag} For adding tags to GameObjects
+     * @see {@link GameObject#hasTag} For checking if GameObject has a tag
+     * @see {@link findByName} For finding objects by name
+     */
     findByTag(tag) {
       return this.objects.filter((obj) => obj.hasTag(tag));
     }
+    /**
+     * Asynchronously preloads all scene assets and executes the creation function.
+     * 
+     * This is the first phase of scene initialization that handles:
+     * 1. Executing the optional creation function to instantiate GameObjects
+     * 2. Preloading all assets for every GameObject and their components
+     * 3. Ensuring all required resources are loaded before game starts
+     * 
+     * The creation function is called only once and then cleared to prevent
+     * memory leaks. All GameObjects are preloaded in parallel for optimal
+     * performance using Promise.all().
+     * 
+     * @async
+     * @returns {Promise<void>} Resolves when all assets are loaded and scene is ready
+     * 
+     * @example
+     * // Preload is called automatically by the Game engine
+     * await scene.preload();
+     * console.log("All scene assets loaded");
+     */
     async preload() {
       if (typeof this._createFn === "function") {
         await this._createFn(this);
@@ -3135,6 +3789,22 @@ var Nity = (() => {
       const preloadPromises = this.objects.map((obj) => obj?.preload?.());
       await Promise.all(preloadPromises);
     }
+    /**
+     * Initializes all GameObjects in the scene after preloading is complete.
+     * 
+     * Calls the start() method on every GameObject that has one, providing
+     * a Unity-compatible initialization phase. This occurs after all assets
+     * are loaded but before the game loop begins, ensuring all objects can
+     * safely access their dependencies and perform initial setup.
+     * 
+     * @async
+     * @returns {Promise<void>} Resolves when all GameObjects have been initialized
+     * 
+     * @example
+     * // Start is called automatically by the Game engine after preload
+     * await scene.start();
+     * console.log("All GameObjects initialized");
+     */
     async start() {
       for (let obj of this.objects) {
         if (typeof obj?.start === "function") {
@@ -3144,8 +3814,48 @@ var Nity = (() => {
       setTimeout(() => {
       }, 500);
     }
+    /**
+     * Scene-specific update logic called every frame.
+     * 
+     * Override this method in scene subclasses to implement custom scene-level
+     * logic that should run every frame. This is called after all GameObject
+     * updates but before collision detection, making it ideal for scene-wide
+     * systems, camera management, or global game state updates.
+     * 
+     * @example
+     * // Custom scene with update logic
+     * class GameScene extends Scene {
+     *     update() {
+     *         // Update camera following player
+     *         this.updateCamera();
+     *         
+     *         // Check win conditions
+     *         this.checkWinCondition();
+     *     }
+     * }
+     */
     update() {
     }
+    /**
+     * Scene-specific late update logic called every frame.
+     * 
+     * Override this method in scene subclasses to implement custom scene-level
+     * logic that should run after all GameObject updates and collision detection.
+     * Ideal for UI updates, camera finalization, or cleanup operations that
+     * need to happen after all game logic has processed.
+     * 
+     * @example
+     * // Custom scene with late update logic
+     * class GameScene extends Scene {
+     *     lateUpdate() {
+     *         // Update UI elements
+     *         this.updateUI();
+     *         
+     *         // Finalize camera position
+     *         this.finalizeCamera();
+     *     }
+     * }
+     */
     lateUpdate() {
     }
     __update() {
@@ -4564,6 +5274,266 @@ var Nity = (() => {
         ctx.fillText(sizeText, 0, Math.max(size, height) / 2 + 15);
       }
       ctx.restore();
+    }
+  };
+
+  // src/renderer/components/TilemapComponent.js
+  init_TileRegistry();
+  init_Tile();
+  var TilemapComponent = class extends Component {
+    /**
+     * Create a new tilemap component
+     * @param {Object} config - Tilemap configuration
+     * @param {number} [config.tileSize=32] - Size of each tile in pixels (width and height)
+     * @param {number} [config.tileWidth] - Custom tile width (overrides tileSize)
+     * @param {number} [config.tileHeight] - Custom tile height (overrides tileSize)
+     * @param {Object} config.tiles - Tile mapping { id: tileReference }
+     * @param {Array[]} config.grid - 2D array defining the tile layout
+     * @param {number} [config.zIndex=0] - Rendering layer
+     * @param {boolean} [config.enableCollision=true] - Whether to create colliders for tiles
+     * @param {string} [config.sortingLayer="Default"] - Sorting layer for rendering
+     */
+    constructor(config = {}) {
+      super();
+      this.tileSize = config.tileSize || 32;
+      this.tileWidth = config.tileWidth || this.tileSize;
+      this.tileHeight = config.tileHeight || this.tileSize;
+      this.tiles = config.tiles || {};
+      this.grid = config.grid || [];
+      this.zIndex = config.zIndex || 0;
+      this.sortingLayer = config.sortingLayer || "Default";
+      this.enableCollision = config.enableCollision !== false;
+      this.resolvedTiles = /* @__PURE__ */ new Map();
+      this.resolvedSprites = /* @__PURE__ */ new Map();
+      this.colliders = [];
+      this.gridWidth = this.grid.length > 0 ? this.grid[0].length : 0;
+      this.gridHeight = this.grid.length;
+    }
+    /**
+     * Initialize the tilemap (called when component is added to GameObject)
+     */
+    start() {
+      this.resolveTiles();
+      this.createColliders();
+    }
+    /**
+     * Resolve all tile references to actual tile objects
+     * @private
+     */
+    resolveTiles() {
+      this.resolvedTiles.clear();
+      this.resolvedSprites.clear();
+      for (const [id, tileRef] of Object.entries(this.tiles)) {
+        if (tileRef === null || tileRef === void 0) {
+          this.resolvedTiles.set(id, null);
+          continue;
+        }
+        let tile = null;
+        if (typeof tileRef === "string") {
+          tile = TileRegistry.getTile(tileRef);
+          if (!tile) {
+            console.warn(`TilemapComponent: Tile "${tileRef}" not found in TileRegistry`);
+            continue;
+          }
+        } else if (tileRef instanceof Tile) {
+          tile = tileRef;
+        } else {
+          console.warn(`TilemapComponent: Invalid tile reference for id "${id}":`, tileRef);
+          continue;
+        }
+        this.resolvedTiles.set(id, tile);
+        const sprite = SpriteRegistry.getSprite(tile.spriteName);
+        if (!sprite) {
+          console.warn(`TilemapComponent: Sprite "${tile.spriteName}" not found for tile "${tile.name}"`);
+        } else {
+          this.resolvedSprites.set(id, sprite);
+        }
+      }
+    }
+    /**
+     * Create colliders for solid tiles
+     * @private
+     */
+    createColliders() {
+      if (!this.enableCollision) return;
+      this.clearColliders();
+      for (let row = 0; row < this.grid.length; row++) {
+        for (let col = 0; col < this.grid[row].length; col++) {
+          const tileId = this.grid[row][col];
+          const tile = this.resolvedTiles.get(String(tileId));
+          if (tile && tile.hasCollision()) {
+            this.createTileCollider(tile, col, row);
+          }
+        }
+      }
+    }
+    /**
+     * Create a collider for a specific tile
+     * @param {Tile} tile - The tile to create collision for
+     * @param {number} col - Grid column
+     * @param {number} row - Grid row
+     * @private
+     */
+    createTileCollider(tile, col, row) {
+      const worldX = this.gameObject.x + col * this.tileWidth;
+      const worldY = this.gameObject.y + row * this.tileHeight;
+      const colliderData = {
+        x: worldX,
+        y: worldY,
+        width: tile.collider.width || this.tileWidth,
+        height: tile.collider.height || this.tileHeight,
+        radius: tile.collider.radius,
+        type: tile.collider.type || "box",
+        trigger: tile.collider.trigger || false,
+        tile,
+        gridX: col,
+        gridY: row
+      };
+      this.colliders.push(colliderData);
+    }
+    /**
+     * Clear all tile colliders
+     * @private
+     */
+    clearColliders() {
+      this.colliders = [];
+    }
+    /**
+     * Render the tilemap
+     * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
+     */
+    __draw(ctx) {
+      ctx.save();
+      ctx.translate(this.gameObject.x, this.gameObject.y);
+      for (let row = 0; row < this.grid.length; row++) {
+        for (let col = 0; col < this.grid[row].length; col++) {
+          this.renderTile(ctx, col, row);
+        }
+      }
+      ctx.restore();
+    }
+    draw(ctx) {
+    }
+    /**
+     * Render a single tile
+     * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
+     * @param {number} col - Grid column
+     * @param {number} row - Grid row
+     * @private
+     */
+    renderTile(ctx, col, row) {
+      const tileId = this.grid[row][col];
+      const tile = this.resolvedTiles.get(String(tileId));
+      const sprite = this.resolvedSprites.get(String(tileId));
+      if (!tile || !sprite) return;
+      const x = col * this.tileWidth;
+      const y = row * this.tileHeight;
+      ctx.save();
+      if (tile.opacity !== 1) {
+        ctx.globalAlpha = tile.opacity;
+      }
+      if (tile.color !== "#FFFFFF") {
+        ctx.fillStyle = tile.color;
+        ctx.globalCompositeOperation = "multiply";
+      }
+      if (tile.flipX || tile.flipY) {
+        ctx.translate(x + this.tileWidth / 2, y + this.tileHeight / 2);
+        ctx.scale(tile.flipX ? -1 : 1, tile.flipY ? -1 : 1);
+        ctx.translate(-this.tileWidth / 2, -this.tileHeight / 2);
+      } else {
+        ctx.translate(x, y);
+      }
+      const renderWidth = tile.width || this.tileWidth;
+      const renderHeight = tile.height || this.tileHeight;
+      if (sprite.image && sprite.image.complete) {
+        sprite.draw(ctx, renderWidth / 2, renderHeight / 2, renderWidth, renderHeight, 0);
+      }
+      ctx.restore();
+    }
+    /**
+     * Get the tile at specific grid coordinates
+     * @param {number} col - Grid column
+     * @param {number} row - Grid row
+     * @returns {Tile|null} The tile at the position or null
+     */
+    getTileAt(col, row) {
+      if (row < 0 || row >= this.grid.length || col < 0 || col >= this.grid[row].length) {
+        return null;
+      }
+      const tileId = this.grid[row][col];
+      return this.resolvedTiles.get(String(tileId)) || null;
+    }
+    /**
+     * Set a tile at specific grid coordinates
+     * @param {number} col - Grid column
+     * @param {number} row - Grid row
+     * @param {string|number} tileId - Tile ID to set
+     */
+    setTileAt(col, row, tileId) {
+      if (row < 0 || row >= this.grid.length || col < 0 || col >= this.grid[row].length) {
+        return;
+      }
+      this.grid[row][col] = tileId;
+      if (this.enableCollision) {
+        this.createColliders();
+      }
+    }
+    /**
+     * Convert world coordinates to grid coordinates
+     * @param {number} worldX - World X coordinate
+     * @param {number} worldY - World Y coordinate
+     * @returns {Object} { col, row } grid coordinates
+     */
+    worldToGrid(worldX, worldY) {
+      const localX = worldX - this.gameObject.x;
+      const localY = worldY - this.gameObject.y;
+      return {
+        col: Math.floor(localX / this.tileWidth),
+        row: Math.floor(localY / this.tileHeight)
+      };
+    }
+    /**
+     * Convert grid coordinates to world coordinates
+     * @param {number} col - Grid column
+     * @param {number} row - Grid row
+     * @returns {Object} { x, y } world coordinates
+     */
+    gridToWorld(col, row) {
+      return {
+        x: this.gameObject.x + col * this.tileWidth,
+        y: this.gameObject.y + row * this.tileHeight
+      };
+    }
+    /**
+     * Get all tiles matching a filter
+     * @param {function} filterFn - Filter function (tile, col, row) => boolean
+     * @returns {Array} Array of { tile, col, row } objects
+     */
+    getTilesWhere(filterFn) {
+      const results = [];
+      for (let row = 0; row < this.grid.length; row++) {
+        for (let col = 0; col < this.grid[row].length; col++) {
+          const tile = this.getTileAt(col, row);
+          if (tile && filterFn(tile, col, row)) {
+            results.push({ tile, col, row });
+          }
+        }
+      }
+      return results;
+    }
+    /**
+     * Update tilemap (called every frame)
+     */
+    update(deltaTime) {
+    }
+    /**
+     * Clean up tilemap resources
+     */
+    destroy() {
+      this.clearColliders();
+      this.resolvedTiles.clear();
+      this.resolvedSprites.clear();
+      super.destroy();
     }
   };
 
