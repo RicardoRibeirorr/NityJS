@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NityJS - Browser Compatibility Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        #gameCanvas {
+            border: 2px solid #ddd;
+            background-color: white;
+            display: block;
+            margin: 20px auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .info-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+        .info-panel h2 {
+            margin-top: 0;
+            color: #1976D2;
+        }
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .feature-item {
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+        .feature-supported {
+            background-color: #E8F5E8;
+            border-color: #4CAF50;
+            color: #2E7D32;
+        }
+        .feature-unsupported {
+            background-color: #FFEBEE;
+            border-color: #F44336;
+            color: #C62828;
+        }
+        .feature-partial {
+            background-color: #FFF3E0;
+            border-color: #FF9800;
+            color: #E65100;
+        }
+        .console-hint {
+            background: #263238;
+            color: #B0BEC5;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+        }
+        .browser-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .browser-card {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .browser-card h4 {
+            margin: 0 0 10px 0;
+            color: #1976D2;
+        }
+        .version-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 2px;
+        }
+        .version-supported { background: #4CAF50; color: white; }
+        .version-partial { background: #FF9800; color: white; }
+        .version-unsupported { background: #F44336; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 NityJS Browser Compatibility Test</h1>
+        <p>This page tests your browser's compatibility with NityJS features and provides recommendations for optimal performance.</p>
+
+        <div class="info-panel">
+            <h2>🎯 What This Test Checks</h2>
+            <div class="feature-list">
+                <div class="feature-item">
+                    <strong>OffscreenCanvas Support</strong><br>
+                    <small>Required for optimal layer system performance</small>
+                </div>
+                <div class="feature-item">
+                    <strong>Performance API</strong><br>
+                    <small>High-resolution timing for smooth animations</small>
+                </div>
+                <div class="feature-item">
+                    <strong>Modern Canvas Features</strong><br>
+                    <small>Advanced 2D rendering capabilities</small>
+                </div>
+                <div class="feature-item">
+                    <strong>ES6 Class Support</strong><br>
+                    <small>Modern JavaScript syntax support</small>
+                </div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+        <div class="info-panel">
+            <h2>📊 Browser Support Matrix</h2>
+            <div class="browser-grid">
+                <div class="browser-card">
+                    <h4>Chrome</h4>
+                    <span class="version-badge version-supported">69+</span>
+                    <span class="version-badge version-unsupported">&lt;69</span>
+                    <p><small>Recommended browser with full feature support</small></p>
+                </div>
+                <div class="browser-card">
+                    <h4>Firefox</h4>
+                    <span class="version-badge version-supported">105+</span>
+                    <span class="version-badge version-partial">60-104</span>
+                    <span class="version-badge version-unsupported">&lt;60</span>
+                    <p><small>Excellent support for all features</small></p>
+                </div>
+                <div class="browser-card">
+                    <h4>Safari</h4>
+                    <span class="version-badge version-supported">16.4+</span>
+                    <span class="version-badge version-partial">12-16.3</span>
+                    <span class="version-badge version-unsupported">&lt;12</span>
+                    <p><small>Latest versions recommended for layer system</small></p>
+                </div>
+                <div class="browser-card">
+                    <h4>Edge</h4>
+                    <span class="version-badge version-supported">79+</span>
+                    <span class="version-badge version-unsupported">&lt;79</span>
+                    <p><small>Full compatibility with modern Edge</small></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h2>🛠️ Troubleshooting</h2>
+            
+            <h3>If Layer System Shows "Fallback Mode":</h3>
+            <ul>
+                <li><strong>Upgrade Your Browser:</strong> Update to the latest version for OffscreenCanvas support</li>
+                <li><strong>Alternative:</strong> Core functionality works, but layer performance may be reduced</li>
+                <li><strong>Coming Soon:</strong> v1.1 will include automatic polyfills for better compatibility</li>
+            </ul>
+
+            <h3>If Performance Warnings Appear:</h3>
+            <ul>
+                <li><strong>Modern Browser:</strong> Switch to Chrome, Firefox, or latest Safari</li>
+                <li><strong>Hardware Acceleration:</strong> Ensure GPU acceleration is enabled</li>
+                <li><strong>Extensions:</strong> Disable browser extensions that might interfere</li>
+            </ul>
+
+            <div class="console-hint">
+                💡 <strong>Pro Tip:</strong> Open Developer Console (F12) to see detailed compatibility analysis and recommendations specific to your browser.
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h2>🚀 Next Steps</h2>
+            <p>Based on your compatibility results:</p>
+            <ul>
+                <li><strong>Green Results:</strong> You're ready to build games with full NityJS features!</li>
+                <li><strong>Yellow Results:</strong> Core features work, consider browser upgrade for best experience</li>
+                <li><strong>Red Results:</strong> Browser upgrade recommended, or wait for v1.1 polyfill support</li>
+            </ul>
+            
+            <p><strong>Ready to start?</strong> Check out our <a href="../simple_layers/">Simple Layer Example</a> or browse the <a href="../../docs/">complete documentation</a>.</p>
+        </div>
+    </div>
+
+    <script type="module" src="index.js"></script>
+</body>
+</html>

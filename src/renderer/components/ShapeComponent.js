@@ -67,7 +67,7 @@ export class ShapeComponent extends Component {
      * 
      * @throws {Error} Via metadata validation if parameters are invalid
      */
-    constructor(shape, options = { width:10, height:10, color:'white' }) {
+    constructor(shape, options = { radius: 10, width: 10, height: 10, color: 'white' }) {
         super();
         // Properties will be set by _updatePropertiesFromMeta after metadata is applied
     }

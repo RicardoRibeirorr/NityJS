@@ -26,22 +26,63 @@ var Nity = (() => {
     "src/asset/Tile.js"() {
       Tile = class {
         /**
-         * Create a new tile data container
-         * @param {string} name - Unique name for this tile type
-         * @param {string} spriteName - Sprite name (supports "spritesheet:sprite" notation)
-         * @param {Object} [options={}] - Optional rendering and collision options
-         * @param {number} [options.width] - Custom width for rendering
-         * @param {number} [options.height] - Custom height for rendering
-         * @param {number} [options.opacity=1] - Opacity for rendering (0-1)
-         * @param {string} [options.color="#FFFFFF"] - Color tint for rendering
-         * @param {boolean} [options.flipX=false] - Flip horizontally
-         * @param {boolean} [options.flipY=false] - Flip vertically
-         * @param {Object} [options.collider] - Collision configuration
-         * @param {number} [options.collider.width] - Collider width
-         * @param {number} [options.collider.height] - Collider height
-         * @param {number} [options.collider.radius] - Collider radius (for circle colliders)
-         * @param {boolean} [options.collider.trigger=false] - Is this collider a trigger?
-         * @param {string} [options.collider.type="box"] - Collider type: "box" or "circle"
+         * Create a new tile data container.
+         * 
+         * Initializes a tile with a unique name, sprite reference, and optional rendering/collision
+         * properties. The tile serves as a data container that TilemapComponent uses to render
+         * and manage collision for grid-based levels.
+         * 
+         * @param {string} name - Unique identifier for this tile type (used for debugging and identification)
+         * @param {string} spriteName - Sprite reference supporting unified sprite notation
+         *                             Format: "spriteName" for single sprites or "sheet:sprite" for spritesheets
+         * @param {Object} [options={}] - Optional configuration for rendering and collision behavior
+         * @param {number} [options.width] - Custom render width in pixels (null = use tilemap's tileWidth)
+         * @param {number} [options.height] - Custom render height in pixels (null = use tilemap's tileHeight)
+         * @param {number} [options.opacity=1] - Tile transparency (0.0 = fully transparent, 1.0 = fully opaque)
+         * @param {string} [options.color="#FFFFFF"] - Color tint applied during rendering (hex or rgba format)
+         * @param {boolean} [options.flipX=false] - Horizontally flip the sprite during rendering
+         * @param {boolean} [options.flipY=false] - Vertically flip the sprite during rendering
+         * @param {Object} [options.collider] - Collision detection configuration (null = no collision)
+         * @param {number} [options.collider.width] - Collision box width in pixels
+         * @param {number} [options.collider.height] - Collision box height in pixels  
+         * @param {number} [options.collider.radius] - Collision circle radius in pixels (for circle type)
+         * @param {boolean} [options.collider.trigger=false] - Whether collider is a trigger (no physics blocking)
+         * @param {string} [options.collider.type="box"] - Collision shape type: "box" or "circle"
+         * 
+         * @throws {Error} Throws if name is not provided or is empty
+         * @throws {Error} Throws if spriteName is not provided or is empty
+         * 
+         * @example
+         * // Simple decorative tile
+         * const flower = new Tile("flower", "nature:flower_red");
+         * 
+         * // Scaled tile with transparency
+         * const cloud = new Tile("cloud", "weather:cloud", {
+         *     width: 48,
+         *     height: 32,
+         *     opacity: 0.7
+         * });
+         * 
+         * // Solid collision tile
+         * const platform = new Tile("platform", "terrain:stone_block", {
+         *     collider: {
+         *         width: 32,
+         *         height: 16,
+         *         type: "box",
+         *         trigger: false
+         *     }
+         * });
+         * 
+         * // Trigger tile with custom visuals
+         * const powerup = new Tile("powerup", "items:star", {
+         *     color: "#FFFF00",
+         *     opacity: 0.9,
+         *     collider: {
+         *         radius: 12,
+         *         type: "circle", 
+         *         trigger: true
+         *     }
+         * });
          */
         constructor(name, spriteName, options = {}) {
           this.name = name;
@@ -61,37 +102,138 @@ var Nity = (() => {
           } : null;
         }
         /**
-         * Check if this tile has collision
-         * @returns {boolean} True if tile has collision data
+         * Check if this tile has collision detection enabled.
+         * 
+         * Determines whether this tile has any collision configuration that would
+         * allow it to interact with physics systems or trigger events.
+         * 
+         * @returns {boolean} True if tile has collision data configured, false otherwise
+         * 
+         * @example
+         * const wall = new Tile("wall", "terrain:brick", {
+         *     collider: { width: 32, height: 32 }
+         * });
+         * console.log(wall.hasCollision()); // true
+         * 
+         * const decoration = new Tile("flower", "nature:flower");
+         * console.log(decoration.hasCollision()); // false
          */
         hasCollision() {
           return this.collider !== null;
         }
         /**
-         * Check if this tile is a trigger
-         * @returns {boolean} True if tile is a trigger
+         * Check if this tile is configured as a trigger.
+         * 
+         * Trigger tiles can detect collisions but don't block movement, making them
+         * ideal for pickups, switches, or detection zones.
+         * 
+         * @returns {boolean} True if tile is a trigger, false if solid or no collision
+         * 
+         * @example
+         * const pickup = new Tile("coin", "items:coin", {
+         *     collider: { radius: 8, trigger: true }
+         * });
+         * console.log(pickup.isTrigger()); // true
+         * 
+         * const wall = new Tile("wall", "terrain:stone", {
+         *     collider: { width: 32, height: 32, trigger: false }
+         * });
+         * console.log(wall.isTrigger()); // false
          */
         isTrigger() {
           return this.collider && this.collider.trigger;
         }
         /**
-         * Check if this tile is solid (has collision but not trigger)
-         * @returns {boolean} True if tile is solid
+         * Check if this tile is solid (has collision but is not a trigger).
+         * 
+         * Solid tiles block movement and provide physical barriers in the game world.
+         * 
+         * @returns {boolean} True if tile has collision and is not a trigger
+         * 
+         * @example
+         * const platform = new Tile("platform", "terrain:wood", {
+         *     collider: { width: 64, height: 16, trigger: false }
+         * });
+         * console.log(platform.isSolid()); // true
+         * 
+         * const sensor = new Tile("sensor", "tech:detector", {
+         *     collider: { radius: 16, trigger: true }
+         * });
+         * console.log(sensor.isSolid()); // false
          */
         isSolid() {
           return this.collider && !this.collider.trigger;
         }
         /**
-         * Get the collider type
-         * @returns {string|null} "box", "circle", or null if no collider
+         * Get the collision detection type for this tile.
+         * 
+         * Returns the geometric shape used for collision detection, or null if
+         * the tile has no collision configured.
+         * 
+         * @returns {string|null} "box", "circle", or null if no collider configured
+         * 
+         * @example
+         * const boxTile = new Tile("crate", "objects:crate", {
+         *     collider: { width: 32, height: 32, type: "box" }
+         * });
+         * console.log(boxTile.getColliderType()); // "box"
+         * 
+         * const ballTile = new Tile("ball", "objects:sphere", {
+         *     collider: { radius: 16, type: "circle" }
+         * });
+         * console.log(ballTile.getColliderType()); // "circle"
+         * 
+         * const noCollision = new Tile("background", "bg:sky");
+         * console.log(noCollision.getColliderType()); // null
          */
         getColliderType() {
           return this.collider ? this.collider.type : null;
         }
         /**
-         * Clone this tile with optional property overrides
-         * @param {Object} [overrides={}] - Properties to override in the clone
-         * @returns {Tile} New tile instance with same properties
+         * Create a copy of this tile with optional property overrides.
+         * 
+         * Performs a deep clone of the tile including all collision data, while allowing
+         * specific properties to be overridden in the new instance. Useful for creating
+         * variations of existing tiles.
+         * 
+         * @param {Object} [overrides={}] - Properties to override in the cloned tile
+         * @param {string} [overrides.name] - New name for the cloned tile
+         * @param {string} [overrides.spriteName] - New sprite reference for the cloned tile
+         * @param {number} [overrides.width] - Override width property
+         * @param {number} [overrides.height] - Override height property
+         * @param {number} [overrides.opacity] - Override opacity property
+         * @param {string} [overrides.color] - Override color property
+         * @param {boolean} [overrides.flipX] - Override flipX property
+         * @param {boolean} [overrides.flipY] - Override flipY property
+         * @param {Object} [overrides.collider] - Override entire collider configuration
+         * 
+         * @returns {Tile} New tile instance with same properties plus any overrides
+         * 
+         * @example
+         * // Create base tile
+         * const grassTile = new Tile("grass", "terrain:grass", {
+         *     width: 32,
+         *     height: 32,
+         *     opacity: 1.0
+         * });
+         * 
+         * // Create darker variant
+         * const darkGrass = grassTile.clone({
+         *     name: "dark_grass",
+         *     color: "#447744",
+         *     opacity: 0.8
+         * });
+         * 
+         * // Create solid version with collision
+         * const solidGrass = grassTile.clone({
+         *     name: "solid_grass",
+         *     collider: {
+         *         width: 32,
+         *         height: 32,
+         *         type: "box",
+         *         trigger: false
+         *     }
+         * });
          */
         clone(overrides = {}) {
           const clonedOptions = {
@@ -111,8 +253,26 @@ var Nity = (() => {
           );
         }
         /**
-         * Convert tile to a readable string representation
-         * @returns {string} String representation of this tile
+         * Convert tile to a human-readable string representation.
+         * 
+         * Provides a concise description of the tile including its name, sprite reference,
+         * and collision status for debugging and logging purposes.
+         * 
+         * @returns {string} Formatted string describing this tile
+         * 
+         * @example
+         * const wall = new Tile("wall", "terrain:brick", {
+         *     collider: { width: 32, height: 32, trigger: false }
+         * });
+         * console.log(wall.toString()); // "Tile[wall: terrain:brick (solid)]"
+         * 
+         * const pickup = new Tile("coin", "items:gold", {
+         *     collider: { radius: 8, trigger: true }
+         * });
+         * console.log(pickup.toString()); // "Tile[coin: items:gold (trigger)]"
+         * 
+         * const decoration = new Tile("flower", "nature:rose");
+         * console.log(decoration.toString()); // "Tile[flower: nature:rose]"
          */
         toString() {
           const collision = this.hasCollision() ? ` (${this.isTrigger() ? "trigger" : "solid"})` : "";
@@ -130,26 +290,78 @@ var Nity = (() => {
         static tiles = /* @__PURE__ */ new Map();
         // Storage for all registered tiles: name -> TileAsset
         /**
-         * Internal method to add a tile asset (used by TileAsset constructor)
-         * @param {string} name - Name to register the tile under
-         * @param {TileAsset} tileAsset - The tile asset to register
+         * Internal method to add a tile asset (used by TileAsset constructor).
+         * 
+         * Registers a tile in the internal storage map, making it available for
+         * retrieval by name. This method is called automatically during TileAsset
+         * construction and should not be called directly by user code.
+         * 
+         * @param {string} name - Unique name to register the tile under
+         * @param {TileAsset} tileAsset - The tile asset instance to register
+         * 
          * @private
+         * @since 1.0.0
          */
         static _addTile(name, tileAsset) {
           this.tiles.set(name, tileAsset);
         }
         /**
-         * Get a registered tile asset by name
+         * Get a registered tile asset by name.
+         * 
+         * Retrieves a tile from the registry using its unique name. Returns null
+         * if the tile is not found, allowing for safe existence checking.
+         * 
          * @param {string} name - Name of the tile to retrieve
-         * @returns {TileAsset|null} The tile asset or null if not found
+         * @returns {TileAsset|null} The tile asset if found, null otherwise
+         * 
+         * @example
+         * // Register a tile
+         * const grassTile = new TileAsset("grass", "terrain:grass");
+         * 
+         * // Retrieve the tile
+         * const retrievedTile = TileRegistry.getTile("grass");
+         * console.log(retrievedTile.toString()); // "Tile[grass: terrain:grass]"
+         * 
+         * // Handle missing tiles safely
+         * const missingTile = TileRegistry.getTile("nonexistent");
+         * if (missingTile) {
+         *     console.log("Found tile:", missingTile.name);
+         * } else {
+         *     console.log("Tile not found");
+         * }
+         * 
+         * @since 1.0.0
          */
         static getTile(name) {
           return this.tiles.get(name) || null;
         }
         /**
-         * Check if a tile is registered
+         * Check if a tile is registered in the registry.
+         * 
+         * Performs a fast existence check without retrieving the actual tile object.
+         * Useful for conditional logic and validation.
+         * 
          * @param {string} name - Name of the tile to check
-         * @returns {boolean} True if tile exists in registry
+         * @returns {boolean} True if tile exists in registry, false otherwise
+         * 
+         * @example
+         * // Check before using a tile
+         * if (TileRegistry.hasTile("lava")) {
+         *     const lavaTile = TileRegistry.getTile("lava");
+         *     console.log("Lava tile is available");
+         * } else {
+         *     console.log("Lava tile needs to be created");
+         *     new TileAsset("lava", "hazards:lava");
+         * }
+         * 
+         * // Validate tile names in configuration
+         * const requiredTiles = ["grass", "stone", "water"];
+         * const missingTiles = requiredTiles.filter(name => !TileRegistry.hasTile(name));
+         * if (missingTiles.length > 0) {
+         *     console.error("Missing tiles:", missingTiles);
+         * }
+         * 
+         * @since 1.0.0
          */
         static hasTile(name) {
           return this.tiles.has(name);
@@ -296,10 +508,49 @@ var Nity = (() => {
       init_TileRegistry();
       TileAsset = class _TileAsset extends Tile {
         /**
-         * Create a new tile asset and automatically register it
-         * @param {string} name - Unique name to register the tile under (cannot contain colons)
-         * @param {string} spriteName - Sprite name (supports "spritesheet:sprite" notation)
-         * @param {Object} [options={}] - Optional rendering and collision options (same as Tile)
+         * Create a new tile asset and automatically register it in TileRegistry.
+         * 
+         * Initializes a new TileAsset with the specified configuration and immediately
+         * registers it in the global TileRegistry for use in tilemaps. The tile name
+         * must be unique and cannot contain colons (reserved for future notation).
+         * 
+         * @param {string} name - Unique identifier for registry registration (no colons allowed)
+         * @param {string} spriteName - Sprite reference supporting unified notation ("sprite" or "sheet:sprite")
+         * @param {Object} [options={}] - Tile configuration options (same as base Tile class)
+         * @param {number} [options.width] - Custom render width in pixels
+         * @param {number} [options.height] - Custom render height in pixels
+         * @param {number} [options.opacity=1] - Tile transparency (0.0-1.0)
+         * @param {string} [options.color="#FFFFFF"] - Color tint for rendering
+         * @param {boolean} [options.flipX=false] - Horizontal flip during rendering
+         * @param {boolean} [options.flipY=false] - Vertical flip during rendering
+         * @param {Object} [options.collider] - Collision configuration
+         * @param {number} [options.collider.width] - Collision box width
+         * @param {number} [options.collider.height] - Collision box height
+         * @param {number} [options.collider.radius] - Collision circle radius
+         * @param {boolean} [options.collider.trigger=false] - Is collider a trigger
+         * @param {string} [options.collider.type="box"] - Collision type: "box" or "circle"
+         * 
+         * @throws {Error} If name contains colons (reserved for future tile notation)
+         * @throws {Error} If name is not provided or is empty
+         * @throws {Error} If spriteName is not provided or is empty
+         * 
+         * @example
+         * // Simple tile registration
+         * const grass = new TileAsset("grass", "terrain:grass");
+         * 
+         * // Complex tile with all options
+         * const lava = new TileAsset("lava", "hazards:lava_flow", {
+         *     width: 32,
+         *     height: 32,
+         *     opacity: 0.9,
+         *     color: "#FF6600",
+         *     collider: {
+         *         width: 30,
+         *         height: 30,
+         *         type: "box",
+         *         trigger: true
+         *     }
+         * });
          */
         constructor(name, spriteName, options = {}) {
           if (name.includes(":")) {
@@ -309,19 +560,65 @@ var Nity = (() => {
           this._registerSelf();
         }
         /**
-         * Automatically register this tile asset in the TileRegistry
+         * Automatically register this tile asset in the TileRegistry.
+         * 
+         * Internal method called during construction to ensure the tile is immediately
+         * available for use in tilemaps and other systems.
+         * 
          * @private
+         * @since 1.0.0
          */
         _registerSelf() {
           TileRegistry._addTile(this.name, this);
         }
         /**
-         * Create a tile asset from metadata (factory method)
-         * @param {Object} metadata - Tile metadata object
-         * @param {string} metadata.name - Tile name
-         * @param {string} metadata.spriteName - Sprite name
-         * @param {Object} [metadata.options] - Tile options
-         * @returns {TileAsset} New tile asset instance
+         * Create a tile asset from metadata configuration (factory method).
+         * 
+         * Provides a declarative way to create tiles from configuration objects,
+         * ideal for loading tiles from JSON, visual editors, or serialized data.
+         * 
+         * @param {Object} metadata - Complete tile configuration object
+         * @param {string} metadata.name - Unique tile identifier for registry
+         * @param {string} metadata.spriteName - Sprite reference for rendering
+         * @param {Object} [metadata.options] - Tile configuration options
+         * @param {number} [metadata.options.width] - Custom render width
+         * @param {number} [metadata.options.height] - Custom render height
+         * @param {number} [metadata.options.opacity=1] - Tile transparency
+         * @param {string} [metadata.options.color="#FFFFFF"] - Color tint
+         * @param {boolean} [metadata.options.flipX=false] - Horizontal flip
+         * @param {boolean} [metadata.options.flipY=false] - Vertical flip
+         * @param {Object} [metadata.options.collider] - Collision configuration
+         * 
+         * @returns {TileAsset} New tile asset instance registered in TileRegistry
+         * 
+         * @throws {Error} If metadata.name is missing or invalid
+         * @throws {Error} If metadata.spriteName is missing or invalid
+         * 
+         * @example
+         * // Create from metadata object
+         * const stoneTile = TileAsset.meta({
+         *     name: "stone",
+         *     spriteName: "terrain:stone_block",
+         *     options: {
+         *         width: 32,
+         *         height: 32,
+         *         collider: {
+         *             width: 32,
+         *             height: 32,
+         *             type: "box"
+         *         }
+         *     }
+         * });
+         * 
+         * // Load multiple tiles from JSON
+         * const tilesConfig = [
+         *     { name: "dirt", spriteName: "terrain:dirt", options: {} },
+         *     { name: "water", spriteName: "liquids:water", options: { opacity: 0.7 } }
+         * ];
+         * const tiles = tilesConfig.map(config => TileAsset.meta(config));
+         * 
+         * @static
+         * @since 1.0.0
          */
         static meta(metadata) {
           if (!metadata.name || typeof metadata.name !== "string" || metadata.name.trim() === "") {
@@ -333,8 +630,49 @@ var Nity = (() => {
           return new _TileAsset(metadata.name, metadata.spriteName, metadata.options || {});
         }
         /**
-         * Get default metadata structure for TileAsset
-         * @returns {Object} Default metadata object
+         * Get default metadata structure for TileAsset.
+         * 
+         * Returns a complete metadata template with all supported properties
+         * and their default values, useful for documentation and tooling.
+         * 
+         * @returns {Object} Default metadata object with all properties
+         * @returns {string} returns.name - Default empty name
+         * @returns {string} returns.spriteName - Default empty sprite name
+         * @returns {Object} returns.options - Default options configuration
+         * @returns {number|null} returns.options.width - Default width (null = use tilemap size)
+         * @returns {number|null} returns.options.height - Default height (null = use tilemap size)
+         * @returns {number} returns.options.opacity - Default opacity (1.0 = fully opaque)
+         * @returns {string} returns.options.color - Default color ('#FFFFFF' = white/no tint)
+         * @returns {boolean} returns.options.flipX - Default horizontal flip (false)
+         * @returns {boolean} returns.options.flipY - Default vertical flip (false)
+         * @returns {Object|null} returns.options.collider - Default collision (null = no collision)
+         * 
+         * @example
+         * // Get template for tile creation
+         * const template = TileAsset.getDefaultMeta();
+         * console.log(template);
+         * // {
+         * //   name: '',
+         * //   spriteName: '',
+         * //   options: {
+         * //     width: null,
+         * //     height: null,
+         * //     opacity: 1,
+         * //     color: '#FFFFFF',
+         * //     flipX: false,
+         * //     flipY: false,
+         * //     collider: null
+         * //   }
+         * // }
+         * 
+         * // Use template for tile editor UI
+         * const editorDefaults = TileAsset.getDefaultMeta();
+         * editorDefaults.name = "new_tile";
+         * editorDefaults.spriteName = "terrain:grass";
+         * const newTile = TileAsset.meta(editorDefaults);
+         * 
+         * @static
+         * @since 1.0.0
          */
         static getDefaultMeta() {
           return {
@@ -352,8 +690,57 @@ var Nity = (() => {
           };
         }
         /**
-         * Export this tile to metadata format
-         * @returns {Object} Metadata object representing this tile
+         * Export this tile to metadata format for serialization.
+         * 
+         * Converts the tile asset to a plain object suitable for JSON serialization,
+         * saving to files, or transmission over networks. The exported metadata can
+         * be used with TileAsset.meta() to recreate the tile.
+         * 
+         * @returns {Object} Metadata object representing this tile's complete state
+         * @returns {string} returns.name - Tile's registered name
+         * @returns {string} returns.spriteName - Tile's sprite reference
+         * @returns {Object} returns.options - Tile's configuration options
+         * @returns {number|null} returns.options.width - Custom width or null
+         * @returns {number|null} returns.options.height - Custom height or null
+         * @returns {number} returns.options.opacity - Tile transparency
+         * @returns {string} returns.options.color - Color tint value
+         * @returns {boolean} returns.options.flipX - Horizontal flip state
+         * @returns {boolean} returns.options.flipY - Vertical flip state
+         * @returns {Object|null} returns.options.collider - Collision configuration or null
+         * 
+         * @example
+         * // Create a tile and export it
+         * const iceTile = new TileAsset("ice", "terrain:ice_block", {
+         *     opacity: 0.8,
+         *     color: "#AAFFFF",
+         *     collider: { width: 32, height: 32, type: "box" }
+         * });
+         * 
+         * const metadata = iceTile.toMeta();
+         * console.log(JSON.stringify(metadata, null, 2));
+         * // {
+         * //   "name": "ice",
+         * //   "spriteName": "terrain:ice_block",
+         * //   "options": {
+         * //     "width": null,
+         * //     "height": null,
+         * //     "opacity": 0.8,
+         * //     "color": "#AAFFFF",
+         * //     "flipX": false,
+         * //     "flipY": false,
+         * //     "collider": {
+         * //       "width": 32,
+         * //       "height": 32,
+         * //       "type": "box",
+         * //       "trigger": false
+         * //     }
+         * //   }
+         * // }
+         * 
+         * // Recreate the tile from metadata
+         * const recreatedTile = TileAsset.meta(metadata);
+         * 
+         * @since 1.0.0
          */
         toMeta() {
           return {
@@ -371,11 +758,51 @@ var Nity = (() => {
           };
         }
         /**
-         * Apply metadata to this tile (runtime configuration)
-         * @param {Object} metadata - Metadata to apply
-         * @param {string} [metadata.name] - New tile name
-         * @param {string} [metadata.spriteName] - New sprite name
-         * @param {Object} [metadata.options] - New options to apply
+         * Apply metadata to this tile at runtime (dynamic configuration).
+         * 
+         * Updates the tile's properties from a metadata object, allowing for
+         * runtime reconfiguration without creating new instances. Useful for
+         * tile editors, dynamic tile systems, or loading saved configurations.
+         * 
+         * @param {Object} metadata - Metadata object with properties to update
+         * @param {string} [metadata.name] - New tile name (updates registry key)
+         * @param {string} [metadata.spriteName] - New sprite reference
+         * @param {Object} [metadata.options] - New configuration options
+         * @param {number} [metadata.options.width] - New custom width
+         * @param {number} [metadata.options.height] - New custom height
+         * @param {number} [metadata.options.opacity] - New transparency value
+         * @param {string} [metadata.options.color] - New color tint
+         * @param {boolean} [metadata.options.flipX] - New horizontal flip state
+         * @param {boolean} [metadata.options.flipY] - New vertical flip state
+         * @param {Object|null} [metadata.options.collider] - New collision configuration
+         * 
+         * @example
+         * // Create base tile
+         * const stoneTile = new TileAsset("stone", "terrain:stone");
+         * 
+         * // Apply new configuration at runtime
+         * stoneTile.applyMeta({
+         *     spriteName: "terrain:marble",
+         *     options: {
+         *         opacity: 0.9,
+         *         color: "#F0F0F0",
+         *         collider: {
+         *             width: 32,
+         *             height: 32,
+         *             type: "box",
+         *             trigger: false
+         *         }
+         *     }
+         * });
+         * 
+         * // Partial updates are supported
+         * stoneTile.applyMeta({
+         *     options: {
+         *         opacity: 0.7  // Only changes opacity, keeps other properties
+         *     }
+         * });
+         * 
+         * @since 1.0.0
          */
         applyMeta(metadata) {
           if (metadata.name !== void 0) {
@@ -417,6 +844,7 @@ var Nity = (() => {
     ImageComponent: () => ImageComponent,
     Input: () => Input,
     Instantiate: () => Instantiate,
+    LayerManager: () => LayerManager,
     MonoBehaviour: () => MonoBehaviour,
     MovementComponent: () => MovementComponent,
     MovementController: () => MovementController,
@@ -1574,6 +2002,8 @@ var Nity = (() => {
       this.name = "";
       this.tags = /* @__PURE__ */ new Set();
       this.paused = false;
+      this.layer = "default";
+      this.zIndex = 0;
     }
     /**
      * Adds a component to the GameObject.
@@ -1953,6 +2383,10 @@ var Nity = (() => {
       }
       if (addToScene && !parent && Game.instance?.scene) {
         Game.instance.scene.__addObjectToScene(gameObject);
+        if (Game.instance.hasLayerSystem()) {
+          const layerName = gameObject.layer || Game.instance.getDefaultLayer();
+          Game.instance.addToLayer(layerName, gameObject);
+        }
       }
       _Instantiate._registerGameObject(gameObject);
       return gameObject;
@@ -2388,6 +2822,283 @@ var Nity = (() => {
     _pendingDestructions = [];
   }
 
+  // src/core/LayerManager.js
+  var LayerManager = class {
+    /**
+     * Create a new internal layer manager with single canvas output
+     * @param {HTMLCanvasElement} mainCanvas - Single visible canvas for output
+     * @param {Object} config - Layer configuration
+     * @param {string[]} [config.layers=['background', 'default', 'ui']] - Array of layer names in rendering order (back to front)
+     * @param {string} [config.defaultLayer='default'] - Default layer name for GameObjects without specified layer
+     * @param {number} [config.width=800] - Layer canvas width
+     * @param {number} [config.height=600] - Layer canvas height
+     */
+    constructor(mainCanvas, config = {}) {
+      this.mainCanvas = mainCanvas;
+      this.mainCtx = mainCanvas.getContext("2d");
+      this.config = {
+        layers: config.layers || ["background", "default", "ui"],
+        defaultLayer: config.defaultLayer || "default",
+        width: config.width || mainCanvas.width || 800,
+        height: config.height || mainCanvas.height || 600,
+        ...config
+      };
+      this.layers = /* @__PURE__ */ new Map();
+      this.layerContexts = /* @__PURE__ */ new Map();
+      this.layerContents = /* @__PURE__ */ new Map();
+      this.dirtyLayers = /* @__PURE__ */ new Set();
+      this.layerOrder = [...this.config.layers];
+      this.layerZIndex = /* @__PURE__ */ new Map();
+      this.initializeLayers();
+    }
+    /**
+     * Initialize all internal OffscreenCanvas layers
+     * @private
+     */
+    initializeLayers() {
+      this.config.layers.forEach((layerName, index) => {
+        const canvas = new OffscreenCanvas(this.config.width, this.config.height);
+        const ctx = canvas.getContext("2d");
+        this.layers.set(layerName, canvas);
+        this.layerContexts.set(layerName, ctx);
+        this.layerContents.set(layerName, []);
+        this.layerZIndex.set(layerName, index * 100);
+        this.dirtyLayers.add(layerName);
+      });
+    }
+    /**
+     * Add content to a specific layer
+     * @param {string} layerName - Name of the layer
+     * @param {Object} object - Object to add (GameObject, Component, or renderable object)
+     */
+    addToLayer(layerName, object) {
+      if (!this.layers.has(layerName)) {
+        console.warn(`LayerManager: Layer "${layerName}" does not exist`);
+        return;
+      }
+      const layerContents = this.layerContents.get(layerName);
+      if (!layerContents.includes(object)) {
+        layerContents.push(object);
+        if (object.layer !== void 0) {
+          object.layer = layerName;
+        }
+        this.markLayerDirty(layerName);
+      }
+    }
+    /**
+     * Remove content from a layer
+     * @param {string} layerName - Name of the layer
+     * @param {Object} object - Object to remove
+     */
+    removeFromLayer(layerName, object) {
+      if (!this.layers.has(layerName)) return;
+      const layerContents = this.layerContents.get(layerName);
+      const index = layerContents.indexOf(object);
+      if (index !== -1) {
+        layerContents.splice(index, 1);
+        this.markLayerDirty(layerName);
+      }
+    }
+    /**
+     * Mark a layer as needing redraw
+     * @param {string} layerName - Layer to mark dirty
+     */
+    markLayerDirty(layerName) {
+      this.dirtyLayers.add(layerName);
+    }
+    /**
+     * Mark all layers as dirty (force full redraw)
+     */
+    markAllLayersDirty() {
+      this.config.layers.forEach((layerName) => {
+        this.dirtyLayers.add(layerName);
+      });
+    }
+    /**
+     * Render a specific layer to its OffscreenCanvas
+     * @param {string} layerName - Layer to render
+     * @private
+     */
+    renderLayer(layerName) {
+      if (!this.dirtyLayers.has(layerName)) return;
+      const ctx = this.layerContexts.get(layerName);
+      const contents = this.layerContents.get(layerName);
+      if (!ctx || !contents) return;
+      ctx.clearRect(0, 0, this.config.width, this.config.height);
+      const sortedContents = contents.slice().sort((a, b) => {
+        const aZ = a.zIndex || 0;
+        const bZ = b.zIndex || 0;
+        return aZ - bZ;
+      });
+      sortedContents.forEach((object) => {
+        if (object.active === false) return;
+        ctx.save();
+        if (typeof object.__draw === "function") {
+          object.__draw(ctx);
+        } else if (typeof object.draw === "function") {
+          object.draw(ctx);
+        }
+        ctx.restore();
+      });
+      this.dirtyLayers.delete(layerName);
+    }
+    /**
+     * Main render method - composites all layers to the single main canvas
+     */
+    render() {
+      this.layerOrder.forEach((layerName) => {
+        if (this.dirtyLayers.has(layerName)) {
+          this.renderLayer(layerName);
+        }
+      });
+      this.mainCtx.clearRect(0, 0, this.mainCanvas.width, this.mainCanvas.height);
+      this.layerOrder.forEach((layerName) => {
+        const layerCanvas = this.layers.get(layerName);
+        if (layerCanvas) {
+          this.mainCtx.drawImage(layerCanvas, 0, 0);
+        }
+      });
+    }
+    /**
+     * Get layer z-index for sorting
+     * @param {string} layerName - Layer name
+     * @returns {number} Z-index value
+     */
+    getLayerZIndex(layerName) {
+      return this.layerZIndex.get(layerName) || 0;
+    }
+    /**
+     * Set layer z-index and reorder layers
+     * @param {string} layerName - Layer name
+     * @param {number} zIndex - New z-index
+     */
+    setLayerZIndex(layerName, zIndex) {
+      this.layerZIndex.set(layerName, zIndex);
+      this.layerOrder.sort((a, b) => this.getLayerZIndex(a) - this.getLayerZIndex(b));
+    }
+    /**
+     * Get the default layer name
+     * @returns {string} Default layer name
+     */
+    getDefaultLayer() {
+      return this.config.defaultLayer;
+    }
+    /**
+     * Clear a specific layer
+     * @param {string} layerName - Layer to clear
+     */
+    clearLayer(layerName) {
+      if (!this.layerContents.has(layerName)) return;
+      this.layerContents.set(layerName, []);
+      this.markLayerDirty(layerName);
+    }
+    /**
+     * Clear all layers
+     */
+    clearAllLayers() {
+      this.layerOrder.forEach((layerName) => {
+        this.clearLayer(layerName);
+      });
+    }
+    /**
+     * Resize all layers and main canvas
+     * @param {number} width - New width
+     * @param {number} height - New height
+     */
+    resize(width, height) {
+      this.config.width = width;
+      this.config.height = height;
+      this.mainCanvas.width = width;
+      this.mainCanvas.height = height;
+      this.layers.forEach((canvas, layerName) => {
+        const newCanvas = new OffscreenCanvas(width, height);
+        const newCtx = newCanvas.getContext("2d");
+        this.layers.set(layerName, newCanvas);
+        this.layerContexts.set(layerName, newCtx);
+        this.markLayerDirty(layerName);
+      });
+    }
+    /**
+     * Get objects on a specific layer
+     * @param {string} layerName - Layer name
+     * @returns {Array} Array of objects on the layer
+     */
+    getLayerContents(layerName) {
+      return this.layerContents.get(layerName) || [];
+    }
+    /**
+     * Check if a layer exists
+     * @param {string} layerName - Layer name to check
+     * @returns {boolean} True if layer exists
+     */
+    hasLayer(layerName) {
+      return this.layers.has(layerName);
+    }
+    /**
+     * Add a new layer at runtime
+     * @param {string} layerName - Name of new layer
+     * @param {number} [zIndex] - Z-index for layer ordering
+     */
+    addLayer(layerName, zIndex) {
+      if (this.hasLayer(layerName)) {
+        console.warn(`LayerManager: Layer "${layerName}" already exists`);
+        return;
+      }
+      const canvas = new OffscreenCanvas(this.config.width, this.config.height);
+      const ctx = canvas.getContext("2d");
+      this.layers.set(layerName, canvas);
+      this.layerContexts.set(layerName, ctx);
+      this.layerContents.set(layerName, []);
+      const finalZIndex = zIndex !== void 0 ? zIndex : this.layerOrder.length * 100;
+      this.layerZIndex.set(layerName, finalZIndex);
+      this.layerOrder.push(layerName);
+      this.layerOrder.sort((a, b) => this.getLayerZIndex(a) - this.getLayerZIndex(b));
+      this.markLayerDirty(layerName);
+    }
+    /**
+     * Remove a layer
+     * @param {string} layerName - Layer to remove
+     */
+    removeLayer(layerName) {
+      if (!this.hasLayer(layerName)) return;
+      this.layers.delete(layerName);
+      this.layerContexts.delete(layerName);
+      this.layerContents.delete(layerName);
+      this.layerZIndex.delete(layerName);
+      this.dirtyLayers.delete(layerName);
+      const index = this.layerOrder.indexOf(layerName);
+      if (index !== -1) {
+        this.layerOrder.splice(index, 1);
+      }
+    }
+    /**
+     * Get memory usage statistics
+     * @returns {Object} Memory usage info
+     */
+    getMemoryStats() {
+      const layerCount = this.layers.size;
+      const totalObjects = Array.from(this.layerContents.values()).reduce((total, contents) => total + contents.length, 0);
+      const memoryPerLayer = this.config.width * this.config.height * 4;
+      const totalMemory = layerCount * memoryPerLayer;
+      return {
+        layers: layerCount,
+        objects: totalObjects,
+        memoryMB: (totalMemory / (1024 * 1024)).toFixed(2),
+        dirtyLayers: this.dirtyLayers.size,
+        canvasElements: 1
+        // Only main canvas in DOM
+      };
+    }
+    /**
+     * Debug info for development
+     * @returns {string} Debug information
+     */
+    getDebugInfo() {
+      const stats = this.getMemoryStats();
+      return `LayerManager: ${stats.layers} internal layers, ${stats.objects} objects, ${stats.memoryMB}MB memory, ${stats.dirtyLayers} dirty layers, 1 DOM canvas`;
+    }
+  };
+
   // src/core/Game.js
   var Game = class _Game {
     #_forcedpaused = false;
@@ -2398,10 +3109,15 @@ var Nity = (() => {
     // For tracking the last frame time
     constructor(canvas) {
       _Game.instance = this;
-      this.canvas = canvas;
-      this.ctx = canvas.getContext("2d");
+      if (canvas != null && !(canvas instanceof HTMLCanvasElement)) {
+        if (!(canvas instanceof HTMLCanvasElement)) throw new Error("Game constructor requires a valid HTMLCanvasElement.");
+        this.canvas = canvas;
+        this.ctx = canvas.getContext("2d");
+      }
       this.scene = null;
       this.mainCamera = null;
+      this.layerManager = null;
+      this.useLayerSystem = false;
       this.paused = false;
       this._internalGizmos = false;
       this._debugMode = false;
@@ -2409,13 +3125,29 @@ var Nity = (() => {
       new CollisionSystem();
       Instantiate.registerPendingColliders();
     }
-    configure(options = { canvas: null, mainCamera: null, debug: false }) {
+    configure(options = { canvas: null, mainCamera: null, debug: false, layers: null, defaultLayer: null, useLayerSystem: false }) {
+      if (this.#_initialized || this.#_launching) {
+        console.warn("Game is already initialized. Configuration changes will not take effect.");
+        return;
+      }
       if (options.canvas) {
         this.canvas = options.canvas;
         this.ctx = this.canvas.getContext("2d");
       }
       if (options.mainCamera) this.mainCamera = options.mainCamera;
       if (options.debug) this.#_debugMode();
+      if (options.useLayerSystem && this.canvas) {
+        this.useLayerSystem = true;
+        const layerConfig = {
+          layers: options.layers || ["background", "default", "ui"],
+          defaultLayer: options.defaultLayer || "default",
+          width: this.canvas.width,
+          height: this.canvas.height
+        };
+        this.layerManager = new LayerManager(this.canvas, layerConfig);
+        console.log("LayerManager initialized with layers:", layerConfig.layers);
+        console.log("Default layer:", layerConfig.defaultLayer);
+      }
     }
     launch(scene) {
       if (!scene && !this.scene) throw new Error("No scene provided.");
@@ -2469,7 +3201,11 @@ var Nity = (() => {
         }
         this.scene.__lateUpdate();
         _processPendingDestructions();
-        this.scene.__draw(this.ctx);
+        if (this.useLayerSystem && this.layerManager) {
+          this.layerManager.render();
+        } else {
+          this.scene.__draw(this.ctx);
+        }
       }
       requestAnimationFrame(this.#_loop.bind(this));
     }
@@ -2512,10 +3248,64 @@ var Nity = (() => {
       this.ctx.imageSmoothingEnabled = false;
       this.ctx.mozImageSmoothingEnabled = false;
       this.ctx.webkitImageSmoothingEnabled = false;
+      if (this.useLayerSystem && !this.layerManager) {
+        const layerConfig = {
+          layers: ["background", "environment", "gameplay", "effects", "ui"],
+          width: this.canvas.width,
+          height: this.canvas.height
+        };
+        this.layerManager = new LayerManager(this.canvas, layerConfig);
+        console.log("LayerManager initialized in _initCanvas with default layers");
+      }
     }
     #_debugMode() {
       this._debugMode = true;
       this._internalGizmos = true;
+    }
+    /**
+     * Add a GameObject to a specific layer (only works when layer system is enabled)
+     * @param {string} layerName - Name of the layer
+     * @param {GameObject} gameObject - GameObject to add to the layer
+     */
+    addToLayer(layerName, gameObject) {
+      if (!this.useLayerSystem || !this.layerManager) {
+        console.warn("LayerManager not enabled. Use configure({ useLayerSystem: true }) to enable layers.");
+        return;
+      }
+      this.layerManager.addToLayer(layerName, gameObject);
+    }
+    /**
+     * Remove a GameObject from a layer
+     * @param {string} layerName - Name of the layer
+     * @param {GameObject} gameObject - GameObject to remove from the layer
+     */
+    removeFromLayer(layerName, gameObject) {
+      if (!this.useLayerSystem || !this.layerManager) {
+        console.warn("LayerManager not enabled.");
+        return;
+      }
+      this.layerManager.removeFromLayer(layerName, gameObject);
+    }
+    /**
+     * Get access to the LayerManager instance
+     * @returns {LayerManager|null} The LayerManager instance or null if not enabled
+     */
+    getLayerManager() {
+      return this.layerManager;
+    }
+    /**
+     * Check if layer system is enabled
+     * @returns {boolean} True if layer system is enabled
+     */
+    hasLayerSystem() {
+      return this.useLayerSystem && this.layerManager !== null;
+    }
+    /**
+     * Gets the default layer name.
+     * @returns {string} The default layer name, or 'default' if no layer system is active.
+     */
+    getDefaultLayer() {
+      return this.layerManager ? this.layerManager.getDefaultLayer() : "default";
     }
   };
   Game.instance = null;
@@ -3577,6 +4367,9 @@ var Nity = (() => {
      * gameplay, use Instantiate.create() directly for better performance and
      * immediate integration with running systems.
      * 
+     * When the layer system is enabled, GameObjects are automatically added to
+     * their specified layer. If no layer is set, they use the "Default" layer.
+     * 
      * The added GameObject will go through the complete lifecycle:
      * 1. Added to scene objects array
      * 2. Preload phase (asset loading)
@@ -3591,15 +4384,17 @@ var Nity = (() => {
      * const scene = new Scene({
      *     create: function(scene) {
      *         const player = new GameObject(400, 300);
+     *         player.layer = 'gameplay'; // Set layer for layer system
      *         player.addComponent(new SpriteRendererComponent("player"));
      *         scene.add(player); // Proper scene addition
      *     }
      * });
      * 
      * @example
-     * // Manual scene building
+     * // Manual scene building with layers
      * const scene = new Scene();
      * const background = new GameObject(0, 0);
+     * background.layer = 'background'; // Background layer
      * background.addComponent(new ImageComponent("./assets/bg.png"));
      * scene.add(background);
      * 
@@ -3608,6 +4403,10 @@ var Nity = (() => {
      */
     add(obj) {
       Instantiate.create(obj);
+      if (Game.instance && Game.instance.hasLayerSystem()) {
+        const layerName = obj.layer || Game.instance.getDefaultLayer();
+        Game.instance.addToLayer(layerName, obj);
+      }
     }
     /**
      * Removes a GameObject from the scene with proper cleanup.
@@ -5282,16 +6081,65 @@ var Nity = (() => {
   init_Tile();
   var TilemapComponent = class extends Component {
     /**
-     * Create a new tilemap component
-     * @param {Object} config - Tilemap configuration
-     * @param {number} [config.tileSize=32] - Size of each tile in pixels (width and height)
-     * @param {number} [config.tileWidth] - Custom tile width (overrides tileSize)
-     * @param {number} [config.tileHeight] - Custom tile height (overrides tileSize)
-     * @param {Object} config.tiles - Tile mapping { id: tileReference }
-     * @param {Array[]} config.grid - 2D array defining the tile layout
-     * @param {number} [config.zIndex=0] - Rendering layer
-     * @param {boolean} [config.enableCollision=true] - Whether to create colliders for tiles
-     * @param {string} [config.sortingLayer="Default"] - Sorting layer for rendering
+     * Create a new tilemap component with the specified configuration.
+     * 
+     * Initializes a tilemap with tile definitions, grid layout, and rendering options.
+     * The tilemap supports mixed tile references, allowing tiles from the registry,
+     * direct tile objects, and empty spaces to be used together in a single map.
+     * 
+     * @param {Object} config - Complete tilemap configuration object
+     * @param {number} [config.tileSize=32] - Default size for both width and height of tiles in pixels
+     * @param {number} [config.tileWidth] - Custom tile width in pixels (overrides tileSize)
+     * @param {number} [config.tileHeight] - Custom tile height in pixels (overrides tileSize)
+     * @param {Object} config.tiles - Tile mapping defining available tiles by ID
+     *                               Format: { id: tileReference } where tileReference can be:
+     *                               - null/undefined: Empty space
+     *                               - string: Tile name from TileRegistry
+     *                               - Tile: Direct tile object
+     * @param {Array[]} config.grid - 2D array defining tile placement using tile IDs
+     *                               Format: [[row0_tiles], [row1_tiles], ...]
+     * @param {number} [config.zIndex=0] - Rendering layer depth for sorting
+     * @param {boolean} [config.enableCollision=true] - Whether to generate collision metadata for tiles
+     * @param {string} [config.sortingLayer="Default"] - Sorting layer name for rendering organization
+     * 
+     * @throws {Error} If config.tiles is not provided
+     * @throws {Error} If config.grid is not provided or is empty
+     * 
+     * @example
+     * // Basic tilemap configuration
+     * const simpleTilemap = new TilemapComponent({
+     *     tileSize: 16,
+     *     tiles: {
+     *         0: null,           // Empty space
+     *         1: "grass",        // Registry reference
+     *         2: "stone"         // Registry reference
+     *     },
+     *     grid: [
+     *         [2,2,2,2],
+     *         [2,1,1,2],
+     *         [2,2,2,2]
+     *     ]
+     * });
+     * 
+     * // Advanced tilemap with mixed references
+     * const advancedTilemap = new TilemapComponent({
+     *     tileWidth: 32,
+     *     tileHeight: 24,        // Non-square tiles
+     *     tiles: {
+     *         0: null,
+     *         1: "grass",        // From registry
+     *         2: new Tile("custom", "special:tile", { opacity: 0.8 }), // Direct object
+     *         3: "water"         // From registry
+     *     },
+     *     grid: [
+     *         [1,1,1,1,1],
+     *         [1,2,0,2,1],
+     *         [3,3,3,3,3]
+     *     ],
+     *     enableCollision: true,
+     *     zIndex: 1,
+     *     sortingLayer: "Environment"
+     * });
      */
     constructor(config = {}) {
       super();
@@ -5310,15 +6158,27 @@ var Nity = (() => {
       this.gridHeight = this.grid.length;
     }
     /**
-     * Initialize the tilemap (called when component is added to GameObject)
+     * Initialize the tilemap component when added to a GameObject.
+     * 
+     * Performs initial setup including tile resolution from the TileRegistry
+     * and SpriteRegistry, and collision generation. This method is called
+     * automatically by the component system.
+     * 
+     * @since 1.0.0
      */
     start() {
       this.resolveTiles();
       this.createColliders();
     }
     /**
-     * Resolve all tile references to actual tile objects
+     * Resolve all tile references to actual tile and sprite objects.
+     * 
+     * Processes the tile mapping to convert string references into actual tile objects
+     * from the TileRegistry and resolves their sprites from the SpriteRegistry.
+     * Invalid references are logged as warnings but don't stop processing.
+     * 
      * @private
+     * @since 1.0.0
      */
     resolveTiles() {
       this.resolvedTiles.clear();

@@ -41,6 +41,10 @@ export class GameObject {
         this.name = '';
         this.tags = new Set();
         this.paused = false;
+        
+        // Layer system for rendering order
+        this.layer = 'default';  // Default layer name (lowercase to match new defaults)
+        this.zIndex = 0;         // Z-index within layer
     }
 
 

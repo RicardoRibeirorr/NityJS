@@ -129,6 +129,7 @@ class PlayerController extends Component {
 |--------|------------------|--------|
 | **GameObject-Component** | GameObject/MonoBehaviour | ✅ Complete |
 | **Unity-Style Destroy** | Destroy/DestroyImmediate | ✅ Complete |
+| **Layer System** | Sorting Layers/Canvas | ✅ Complete |
 | **Metadata Components** | Editor Inspector | ✅ Complete |
 | **Scene Management** | Scene System | ✅ Complete |
 | **Physics & Collision** | Rigidbody2D/Collider2D | ✅ Stable |
@@ -151,6 +152,8 @@ class PlayerController extends Component {
 #### 🔧 Core Systems
 - **[Game & Scene Management](./docs/core/)** - Game loop, scenes, lifecycle
 - **[GameObject & Components](./docs/core/GameObject.md)** - Entity-component architecture
+- **[LayerManager](./docs/core/LayerManager.md)** - Internal OffscreenCanvas layer system for depth-based rendering
+- **[Browser Compatibility](./docs/core/BrowserCompatibility.md)** - Cross-browser support, polyfills, and compatibility guidance
 - **[Component Metadata System](./docs/core/ComponentMetadata.md)** - Data-driven development & visual editor integration
 - **[Input System](./docs/input/Input.md)** - Keyboard, mouse, events, callbacks
 - **[Physics System](./docs/physics/)** - Movement, collision, gravity
@@ -264,6 +267,15 @@ const gameScene = new Scene({
   }
 });
 
+// Enable Layer System (like Unity's Sorting Layers)
+game.configure({
+    useLayerSystem: true  // Enables 3 default layers: background, default, ui
+});
+
+// Objects automatically go to 'default' layer, or set explicitly:
+// background.layer = 'background';  // Background objects
+// ui.layer = 'ui';                  // UI elements
+
 // Launch game (like Unity's Play button)
 game.launch(gameScene);
 ```
@@ -322,6 +334,9 @@ Each example includes:
 - **Audio System** - Sound effects and music
 - **Tilemap Renderer** - Efficient tile-based graphics  
 - **Particle System** - Visual effects and animations
+- **Raycast System** - Physics raycasting for line-of-sight and collision detection
+- **Enhanced ShapeComponent** - Additional shapes like polygon, star, arrow, and custom paths
+- **Browser Compatibility Polyfills** - OffscreenCanvas fallback for older browsers and mobile Safari
 - **Mobile Touch** - Touch input and gestures
 - **Debug Tools** - Visual debugging and profilers
 - **Visual Editor** - Browser-based scene editor with metadata integration
@@ -340,6 +355,18 @@ Each example includes:
 - **🌐 Universal** - Works in all modern browsers
 - **📱 Mobile Ready** - Touch-optimized input
 - **⚙️ Node.js Compatible** - Server-side game logic
+
+### Browser Support
+- **Chrome/Edge**: Full support (recommended)
+- **Firefox**: Full support
+- **Safari**: Full support (iOS 16.4+ for LayerManager)
+- **Mobile Browsers**: Full support on modern devices
+- **Legacy Support**: Automatic fallbacks for older browsers
+
+### Layer System Compatibility
+- **OffscreenCanvas**: Chrome 69+, Firefox 105+, Safari 16.4+
+- **Fallback Mode**: Graceful degradation to single canvas rendering
+- **Detection**: Automatic capability detection with console warnings
 
 ## 📄 License
 

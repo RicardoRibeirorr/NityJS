@@ -5,6 +5,7 @@ import { CollisionSystem } from '../bin/CollisionSystem.js';
 import { Instantiate } from './Instantiate.js';
 import { Time } from './Time.js';
 import { _processPendingDestructions } from './Destroy.js';
+import { LayerManager } from './LayerManager.js';
 
 // === Game.js ===
 export class Game {
@@ -15,10 +16,19 @@ export class Game {
 
     constructor(canvas) {
         Game.instance = this;
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
+        if(canvas!= null && !(canvas instanceof HTMLCanvasElement)) {
+            if(!(canvas instanceof HTMLCanvasElement))throw new Error("Game constructor requires a valid HTMLCanvasElement.");
+                    this.canvas = canvas;
+            this.ctx = canvas.getContext('2d');
+        }
+
         this.scene = null;
         this.mainCamera = null; // GameObject with CameraComponent
+        
+        // Layer system initialization
+        this.layerManager = null; // Will be initialized when canvas is ready
+        this.useLayerSystem = false; // Can be enabled via configure()
+        
         // this.spriteRegistry = new SpriteRegistry();
         this.paused = false;
         //privates
@@ -32,13 +42,32 @@ export class Game {
         Instantiate.registerPendingColliders();
     }
 
-    configure(options = {canvas:null, mainCamera:null, debug:false}) {
+    configure(options = {canvas:null, mainCamera:null, debug:false, layers:null, defaultLayer:null, useLayerSystem:false}) {
+        if(this.#_initialized || this.#_launching) {
+            console.warn("Game is already initialized. Configuration changes will not take effect.");
+            return;
+        }
+
         if (options.canvas) {
             this.canvas = options.canvas;
             this.ctx = this.canvas.getContext('2d');
         }
         if (options.mainCamera) this.mainCamera = options.mainCamera;
         if(options.debug) this.#_debugMode();
+        
+        // Layer system configuration
+        if (options.useLayerSystem && this.canvas) {
+            this.useLayerSystem = true;
+            const layerConfig = {
+                layers: options.layers || ['background', 'default', 'ui'],
+                defaultLayer: options.defaultLayer || 'default',
+                width: this.canvas.width,
+                height: this.canvas.height
+            };
+            this.layerManager = new LayerManager(this.canvas, layerConfig);
+            console.log('LayerManager initialized with layers:', layerConfig.layers);
+            console.log('Default layer:', layerConfig.defaultLayer);
+        }
     }
 
     launch(scene) {
@@ -111,7 +140,12 @@ export class Game {
             // Process pending destructions (should be after updates but before drawing)
             _processPendingDestructions();
             
-            this.scene.__draw(this.ctx);
+            // Render using LayerManager if enabled, otherwise use traditional scene rendering
+            if (this.useLayerSystem && this.layerManager) {
+                this.layerManager.render();
+            } else {
+                this.scene.__draw(this.ctx);
+            }
         }
 
         requestAnimationFrame(this.#_loop.bind(this));
@@ -165,14 +199,74 @@ export class Game {
             console.error("Failed to get 2D context from canvas.");
         }
 
-
         this.ctx.imageSmoothingEnabled = false;
         this.ctx.mozImageSmoothingEnabled = false;
         this.ctx.webkitImageSmoothingEnabled = false;
+        
+        // Initialize LayerManager if not already done and useLayerSystem is enabled
+        if (this.useLayerSystem && !this.layerManager) {
+            const layerConfig = {
+                layers: ['background', 'environment', 'gameplay', 'effects', 'ui'],
+                width: this.canvas.width,
+                height: this.canvas.height
+            };
+            this.layerManager = new LayerManager(this.canvas, layerConfig);
+            console.log('LayerManager initialized in _initCanvas with default layers');
+        }
     }
     #_debugMode(){
         this._debugMode = true;
         this._internalGizmos = true;
+    }
+    
+    /**
+     * Add a GameObject to a specific layer (only works when layer system is enabled)
+     * @param {string} layerName - Name of the layer
+     * @param {GameObject} gameObject - GameObject to add to the layer
+     */
+    addToLayer(layerName, gameObject) {
+        if (!this.useLayerSystem || !this.layerManager) {
+            console.warn('LayerManager not enabled. Use configure({ useLayerSystem: true }) to enable layers.');
+            return;
+        }
+        this.layerManager.addToLayer(layerName, gameObject);
+    }
+    
+    /**
+     * Remove a GameObject from a layer
+     * @param {string} layerName - Name of the layer
+     * @param {GameObject} gameObject - GameObject to remove from the layer
+     */
+    removeFromLayer(layerName, gameObject) {
+        if (!this.useLayerSystem || !this.layerManager) {
+            console.warn('LayerManager not enabled.');
+            return;
+        }
+        this.layerManager.removeFromLayer(layerName, gameObject);
+    }
+    
+    /**
+     * Get access to the LayerManager instance
+     * @returns {LayerManager|null} The LayerManager instance or null if not enabled
+     */
+    getLayerManager() {
+        return this.layerManager;
+    }
+    
+    /**
+     * Check if layer system is enabled
+     * @returns {boolean} True if layer system is enabled
+     */
+    hasLayerSystem() {
+        return this.useLayerSystem && this.layerManager !== null;
+    }
+
+    /**
+     * Gets the default layer name.
+     * @returns {string} The default layer name, or 'default' if no layer system is active.
+     */
+    getDefaultLayer() {
+        return this.layerManager ? this.layerManager.getDefaultLayer() : 'default';
     }
 
 }

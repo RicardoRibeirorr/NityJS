@@ -55,6 +55,12 @@ export class Instantiate {
         // Add to current scene if requested and no parent
         if (addToScene && !parent && Game.instance?.scene) {
             Game.instance.scene.__addObjectToScene(gameObject);
+            
+            // If layer system is enabled, add to appropriate layer
+            if (Game.instance.hasLayerSystem()) {
+                const layerName = gameObject.layer || Game.instance.getDefaultLayer();
+                Game.instance.addToLayer(layerName, gameObject);
+            }
         }
 
         // Register the GameObject and its components

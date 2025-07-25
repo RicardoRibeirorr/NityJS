@@ -21,6 +21,7 @@ export * from './input/Input.js';
 // export * from './renderer/Sprite.js';
 export * from './asset/SpriteAsset.js';
 export * from './asset/SpritesheetAsset.js';
+export * from './core/LayerManager.js';
 export * from './renderer/components/ImageComponent.js';
 export * from './renderer/components/ShapeComponent.js';
 export * from './renderer/components/SpriteRendererComponent.js';

@@ -7,7 +7,7 @@ import {
   BoxColliderComponent,
   ShapeComponent,
   Instantiate
-} from '../../dist/nity.module.min.js';
+} from '../../../dist/nity.module.min.js';
 
 console.log('Starting Instantiate system test...');
 

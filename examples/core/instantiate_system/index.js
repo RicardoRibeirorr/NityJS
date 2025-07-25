@@ -11,7 +11,7 @@ import {
   MovementComponent,
   Instantiate,
   Vector2
-} from '../../dist/nity.module.min.js';
+} from '../../../dist/nity.module.min.js';
 
 const canvas = document.getElementById('game');
 const game = new Game(canvas);

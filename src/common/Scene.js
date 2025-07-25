@@ -1,6 +1,7 @@
 import { CollisionSystem } from "../bin/CollisionSystem.js";
 import { Instantiate } from "../core/Instantiate.js";
 import { GameObject } from "./GameObject.js";
+import { Game } from "../core/Game.js";
 
 
 /**
@@ -112,6 +113,9 @@ export class Scene {
      * gameplay, use Instantiate.create() directly for better performance and
      * immediate integration with running systems.
      * 
+     * When the layer system is enabled, GameObjects are automatically added to
+     * their specified layer. If no layer is set, they use the "Default" layer.
+     * 
      * The added GameObject will go through the complete lifecycle:
      * 1. Added to scene objects array
      * 2. Preload phase (asset loading)
@@ -126,15 +130,17 @@ export class Scene {
      * const scene = new Scene({
      *     create: function(scene) {
      *         const player = new GameObject(400, 300);
+     *         player.layer = 'gameplay'; // Set layer for layer system
      *         player.addComponent(new SpriteRendererComponent("player"));
      *         scene.add(player); // Proper scene addition
      *     }
      * });
      * 
      * @example
-     * // Manual scene building
+     * // Manual scene building with layers
      * const scene = new Scene();
      * const background = new GameObject(0, 0);
+     * background.layer = 'background'; // Background layer
      * background.addComponent(new ImageComponent("./assets/bg.png"));
      * scene.add(background);
      * 
@@ -143,6 +149,12 @@ export class Scene {
      */
     add(obj){
         Instantiate.create(obj);
+        
+        // If layer system is enabled, add to appropriate layer
+        if (Game.instance && Game.instance.hasLayerSystem()) {
+            const layerName = obj.layer || Game.instance.getDefaultLayer();
+            Game.instance.addToLayer(layerName, obj);
+        }
     }
 
     /**

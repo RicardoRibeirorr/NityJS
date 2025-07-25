@@ -8,6 +8,8 @@ This is a complete index of all available documentation for the NityJS game engi
 - [Game](core/Game.md) - Main game engine, canvas management, and game loop
 - [Scene](core/Scene.md) - Scene management, object lifecycle, and game state
 - [GameObject](core/GameObject.md) - Base entity class with Vector2 transform, rotation, and component system
+- [LayerManager](core/LayerManager.md) - Internal OffscreenCanvas layer system for depth-based rendering organization
+- [Browser Compatibility](core/BrowserCompatibility.md) - Cross-browser support, polyfills, and compatibility guidance
 - [Component Metadata System](core/ComponentMetadata.md) - Universal metadata support for all components and animation clips
 - [Component](core/Component.md) - Base class for all modular functionality (Unity's MonoBehaviour equivalent)
 - [MonoBehaviour](core/MonoBehaviour.md) - Unity-style alias for Component (exact same functionality)
