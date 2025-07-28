@@ -69,7 +69,17 @@ export class ShapeComponent extends Component {
      */
     constructor(shape, options = { radius: 10, width: 10, height: 10, color: 'white' }) {
         super();
-        // Properties will be set by _updatePropertiesFromMeta after metadata is applied
+        
+        // Initialize with default metadata first
+        this.__meta = this.constructor.getDefaultMeta();
+        
+        // Apply constructor arguments if provided
+        if (shape || Object.keys(options).length > 0) {
+            this._applyConstructorArgs(shape, options);
+        } else {
+            // Set default properties from metadata
+            this._updatePropertiesFromMeta();
+        }
     }
 
     /**
@@ -268,7 +278,7 @@ export class ShapeComponent extends Component {
                 this.drawPolygon(ctx, x, y);
                 break;
             default:
-                this.drawRect(ctx, x, y);
+                throw new Error(`ShapeComponent: Unsupported shape type "${this.shape}"`);
                 break;
         }
     }

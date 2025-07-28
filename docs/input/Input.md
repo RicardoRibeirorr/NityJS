@@ -31,7 +31,12 @@ The Input system is automatically initialized by the Game class. No manual setup
 ```javascript
 // Automatic initialization in Game
 const game = new Game(canvas);
-game.start(); // Input.initialize() called here
+const scene = new Scene({
+  create(scene) {
+    // Your game objects here
+  }
+});
+game.launch(scene); // Input.initialize() called here
 ```
 
 ## Keyboard Input

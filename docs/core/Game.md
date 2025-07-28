@@ -2,6 +2,36 @@
 
 The `Game` class is the main entry point for NityJS applications. It manages the game loop, canvas rendering, and coordinates all game systems.
 
+## Quick Start
+
+```javascript
+import { Game, Scene } from 'nity-engine';
+
+const canvas = document.getElementById('gameCanvas');
+const game = new Game(canvas);
+
+// Configure the game (optional)
+game.configure({ useLayerSystem: true });
+
+// Create and launch a scene
+const scene = new Scene({
+  create(scene) {
+    // Add game objects here
+  }
+});
+
+game.launch(scene); // Start the game
+```
+
+## Core API Methods
+
+- **`game.launch(scene)`** - Start the game with a scene
+- **`game.loadScene(scene)`** - Switch to a different scene during runtime
+- **`game.configure(options)`** - Configure game settings before launch
+- **`game.pause()`** / **`game.resume()`** - Game flow control
+
+> ⚠️ **Important**: There is no `game.start()` method. Use `game.launch(scene)` to start the game.
+
 ## Overview
 
 ```javascript

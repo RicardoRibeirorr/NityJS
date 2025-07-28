@@ -16,7 +16,7 @@ export class Game {
 
     constructor(canvas) {
         Game.instance = this;
-        if(canvas!= null && !(canvas instanceof HTMLCanvasElement)) {
+        if(canvas!= null) {
             if(!(canvas instanceof HTMLCanvasElement))throw new Error("Game constructor requires a valid HTMLCanvasElement.");
                     this.canvas = canvas;
             this.ctx = canvas.getContext('2d');

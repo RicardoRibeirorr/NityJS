@@ -60,10 +60,12 @@ export class Scene {
     /**
      * Creates a new Scene with optional creation function.
      * 
-     * Initializes the scene with an empty objects array and stores the creation
-     * function for delayed execution during the preload phase. The create function
-     * allows for deferred object instantiation, ensuring proper game initialization
-     * order and preventing premature object creation.
+     * Supports two patterns for scene creation:
+     * 1. Constructor-based: Pass a create function in options
+     * 2. Class-based: Extend Scene and implement create method
+     * 
+     * The create function/method allows for deferred object instantiation, ensuring proper 
+     * game initialization order and preventing premature object creation.
      * 
      * @param {Object} [options={}] - Scene configuration options
      * @param {Function} [options.create] - Function called during preload to create scene objects
@@ -72,27 +74,27 @@ export class Scene {
      *   - Called only once during scene preload phase
      * 
      * @example
-     * // Scene with creation function
+     * // Pattern 1: Constructor-based scene creation
      * const gameScene = new Scene({
      *     create: function(scene) {
-     *         // Create player
      *         const player = new GameObject(400, 300);
      *         player.name = "Player";
-     *         player.addComponents([
-     *             new SpriteRendererComponent("player_idle"),
-     *             new RigidbodyComponent(),
-     *             new BoxColliderComponent(32, 48)
-     *         ]);
+     *         player.addComponent(new SpriteRendererComponent("player_idle"));
      *         scene.add(player);
-     *         
-     *         // Create enemies
-     *         for (let i = 0; i < 5; i++) {
-     *             const enemy = new GameObject(Math.random() * 800, Math.random() * 600);
-     *             enemy.addTag("enemy");
-     *             scene.add(enemy);
-     *         }
      *     }
      * });
+     * 
+     * @example
+     * // Pattern 2: Class-based scene creation
+     * class GameScene extends Scene {
+     *     create(scene) {
+     *         const player = new GameObject(400, 300);
+     *         player.name = "Player";
+     *         player.addComponent(new SpriteRendererComponent("player_idle"));
+     *         scene.add(player);
+     *     }
+     * }
+     * const gameScene = new GameScene();
      * 
      * @example
      * // Empty scene for manual management
@@ -101,6 +103,43 @@ export class Scene {
     constructor({ create } = {}) {
         this.objects = [];
         this._createFn = create;
+    }
+
+    /**
+     * Scene creation method that can be overridden in extended classes.
+     * 
+     * This method is called automatically during the preload phase and provides
+     * a way to define scene objects when extending the Scene class. It receives
+     * the scene instance as a parameter and should contain all GameObject
+     * creation and initial setup logic.
+     * 
+     * @param {Scene} scene - The scene instance (this)
+     * 
+     * @example
+     * // Implementing create method in extended Scene class
+     * class GameScene extends Scene {
+     *     create(scene) {
+     *         // Create player
+     *         const player = new GameObject(400, 300);
+     *         player.name = "Player";
+     *         player.addComponent(new SpriteRendererComponent("player_idle"));
+     *         scene.add(player);
+     *         
+     *         // Create enemies
+     *         for (let i = 0; i < 3; i++) {
+     *             const enemy = new GameObject(100 + i * 200, 200);
+     *             enemy.addTag("enemy");
+     *             enemy.addComponent(new SpriteRendererComponent("enemy"));
+     *             scene.add(enemy);
+     *         }
+     *     }
+     * }
+     * 
+     * @virtual Override this method in Scene subclasses for scene setup
+     */
+    create(scene) {
+        // Override this method in subclasses
+        // Called automatically during preload if implemented
     }
 
     
@@ -342,9 +381,15 @@ export class Scene {
      * console.log("All scene assets loaded");
      */
     async preload() {
+        // Handle constructor-based create function
         if (typeof this._createFn === 'function') {
-            await this._createFn(this); // Now run creation logic only when game launches
+            await this._createFn(this); // Run creation logic from constructor
             this._createFn = null; // clear reference after use
+        }
+        
+        // Handle class method-based create function
+        if (typeof this.create === 'function' && this.create !== this._createFn) {
+            await this.create(this); // Run creation logic from extended class method
         }
 
         const preloadPromises = this.objects.map(obj => obj?.preload?.());

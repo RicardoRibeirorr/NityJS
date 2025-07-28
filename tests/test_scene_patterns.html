@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Scene Creation Patterns Test</title>
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+        canvas { border: 1px solid #ccc; display: block; margin: 20px 0; }
+        .info { background: #f0f0f0; padding: 10px; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>NityJS Scene Creation Patterns Test</h1>
+    
+    <div class="info">
+        <h3>Testing both Scene creation patterns:</h3>
+        <p><strong>Pattern 1:</strong> Constructor with create function</p>
+        <p><strong>Pattern 2:</strong> Class extension with create method</p>
+        <p>Check console for creation logs and verify both scenes work.</p>
+    </div>
+    
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    
+    <script type="module">
+        import { Game, Scene, GameObject, Vector2,ShapeComponent } from '../src/index.js';
+
+        console.log('%c Scene Creation Patterns Test ', 'background: #2196F3; color: white; padding: 5px; border-radius: 3px;');
+        
+        // Pattern 1: Constructor-based scene creation
+        console.log('🎯 Testing Pattern 1: Constructor with create function');
+        const constructorScene = new Scene({
+            create(scene) {
+                console.log('✅ Constructor pattern create() called');
+                
+                // Create a blue circle
+                const blueShape = new GameObject(new Vector2(200, 200));
+                blueShape.name = "ConstructorShape";
+                blueShape.addComponent(new ShapeComponent('circle', {
+                    radius: 40,
+                    color: '#2196F3'
+                }));
+                scene.add(blueShape);
+                
+                console.log('  - Added blue circle via constructor pattern');
+            }
+        });
+        
+        // Pattern 2: Class-based scene creation
+        console.log('🎯 Testing Pattern 2: Class extension with create method');
+        class ExtendedScene extends Scene {
+            constructor() {
+                super(); // No create function in constructor
+                this.sceneData = { createdObjects: 0 };
+                console.log('✅ Extended scene constructor called');
+            }
+            
+            create(scene) {
+                console.log('✅ Extended scene create() method called');
+                
+                // Create a green circle
+                const greenShape = new GameObject(new Vector2(600, 200));
+                greenShape.name = "ExtendedShape";
+                greenShape.addComponent(new ShapeComponent('circle', {
+                    radius: 40,
+                    color: '#4CAF50'
+                }));
+                scene.add(greenShape);
+                
+                this.sceneData.createdObjects++;
+                console.log('  - Added green circle via class extension pattern');
+                console.log('  - Scene data:', this.sceneData);
+            }
+            
+            update() {
+                // Custom scene logic can be added here
+            }
+        }
+        
+        const extendedScene = new ExtendedScene();
+        
+        // Test both scenes by switching between them
+        const canvas = document.getElementById('gameCanvas');
+        const game = new Game(canvas);
+        
+        console.log('🚀 Starting with constructor-based scene...');
+        game.launch(constructorScene);
+        
+        // Switch to extended scene after 3 seconds
+        setTimeout(async () => {
+            console.log('🔄 Switching to class-based scene...');
+            await game.loadScene(extendedScene);
+            console.log('✅ Both patterns work correctly!');
+        }, 3000);
+        
+        console.log('🎮 Test running! Blue circle = constructor pattern, Green circle = class extension pattern');
+    </script>
+</body>
+</html>

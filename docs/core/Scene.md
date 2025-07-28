@@ -122,7 +122,7 @@ Called after all GameObject updates. Use for cleanup or final calculations.
 
 ## Scene Creation Patterns
 
-### Basic Scene Setup
+### Pattern 1: Constructor-based Creation
 ```javascript
 const gameScene = new Scene({
   create(scene) {
@@ -153,22 +153,43 @@ const gameScene = new Scene({
 });
 ```
 
-### Scene with Custom Logic
+### Pattern 2: Class-based Creation (Extended Scene)
 ```javascript
 class GameScene extends Scene {
   constructor() {
-    super({
-      create: (scene) => this.createScene(scene)
-    });
+    super(); // No create function in constructor
     this.score = 0;
     this.gameTime = 0;
   }
   
-  createScene(scene) {
-    // Setup scene objects
-    this.createPlayer();
-    this.createEnemies();
-    this.createUI();
+  // Override the create method
+  create(scene) {
+    // Create player
+    this.createPlayer(scene);
+    this.createEnemies(scene);
+    this.createUI(scene);
+  }
+  
+  createPlayer(scene) {
+    const player = new GameObject(400, 300);
+    player.name = "Player";
+    player.addComponent(new SpriteRendererComponent("player_idle"));
+    player.addComponent(new RigidbodyComponent());
+    scene.add(player);
+  }
+  
+  createEnemies(scene) {
+    for (let i = 0; i < 5; i++) {
+      const enemy = new GameObject(Math.random() * 800, Math.random() * 600);
+      enemy.name = `Enemy${i}`;
+      enemy.addTag("enemy");
+      enemy.addComponent(new SpriteRendererComponent("enemy"));
+      scene.add(enemy);
+    }
+  }
+  
+  createUI(scene) {
+    // UI creation logic
   }
   
   update() {
