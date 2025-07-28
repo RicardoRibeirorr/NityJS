@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NityJS Audio System Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: white;
+        }
+        canvas {
+            border: 2px solid #4a90e2;
+            background: #16213e;
+            display: block;
+            margin: 20px auto;
+        }
+        .info {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .controls {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .controls h3 {
+            margin-top: 0;
+            color: #4a90e2;
+        }
+        .controls div {
+            margin: 5px 0;
+        }
+        .feature {
+            background: #16213e;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>🎵 NityJS Audio System Demo</h1>
+        <p>Unity-style Audio System with 3D Spatial Audio</p>
+        
+        <div class="controls">
+            <h3>🎮 Controls</h3>
+            <div><strong>Arrow Keys:</strong> Move player (affects 3D audio listener position)</div>
+            <div><strong>SPACE:</strong> Jump (play 2D sound effect)</div>
+            <div><strong>C:</strong> Collect coin (play 3D positioned sound)</div>
+            <div><strong>M:</strong> Toggle background music</div>
+        </div>
+
+        <div class="feature">
+            <h3>🔊 Audio Features Demonstrated</h3>
+            <p><strong>AudioListenerComponent:</strong> Unity-style audio listener with 3D spatial calculations</p>
+            <p><strong>AudioSourceComponent:</strong> 2D and 3D audio sources with distance-based volume</p>
+            <p><strong>AudioClip:</strong> Web Audio API wrapper for efficient audio management</p>
+            <p><strong>3D Audio:</strong> Volume and panning adjust based on distance and position</p>
+        </div>
+
+        <div style="margin: 20px 0;">
+            <p><em>Note: This demo requires audio files. For testing without files, check browser console for status.</em></p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { 
+            Game, 
+            Scene, 
+            GameObject, 
+            Vector2, 
+            Time,
+            AudioClip, 
+            AudioListenerComponent, 
+            AudioSourceComponent,
+            ShapeComponent,
+            Input
+} from '../../dist/nity.module.js';
+
+        class AudioTestScene extends Scene {
+            create() {
+                // Audio Listener (main camera/player ears)
+                this.listener = new GameObject(new Vector2(400, 300));
+                this.listener.addComponent(AudioListenerComponent.meta({
+                    isMainListener: true,
+                    masterVolume: 0.8
+                }));
+                this.add(this.listener);
+
+                // Create a mock audio clip for testing (when files don't exist)
+                const mockAudioClip = {
+                    name: 'mock',
+                    audioBuffer: null,
+                    load: async () => { console.log('Mock audio loaded'); },
+                    isLoaded: () => true
+                };
+
+                // Player (blue square)
+                this.player = new GameObject(new Vector2(200, 300));
+                this.player.addComponent(ShapeComponent.meta({
+                    shapeType: 'rectangle',
+                    options: { width: 32, height: 32, color: '#4a90e2', filled: true }
+                }));
+                this.player.addComponent(AudioSourceComponent.meta({
+                    clip: mockAudioClip,
+                    volume: 0.7,
+                    is3D: false
+                }));
+                this.add(this.player);
+
+                // Coin (yellow circle)
+                this.coin = new GameObject(new Vector2(600, 200));
+                this.coin.addComponent(ShapeComponent.meta({
+                    shapeType: 'circle',
+                    options: { radius: 12, color: '#ffd700', filled: true }
+                }));
+                this.coin.addComponent(AudioSourceComponent.meta({
+                    clip: mockAudioClip,
+                    volume: 1.0,
+                    is3D: true,
+                    maxDistance: 300,
+                    minDistance: 50
+                }));
+                this.add(this.coin);
+
+                // Background music source (invisible)
+                this.musicSource = new GameObject(new Vector2(0, 0));
+                this.musicSource.addComponent(AudioSourceComponent.meta({
+                    clip: mockAudioClip,
+                    volume: 0.3,
+                    loop: true,
+                    playOnAwake: false,
+                    is3D: false
+                }));
+                this.add(this.musicSource);
+
+                console.log('🎵 Audio Test Scene loaded!');
+                console.log('🎮 Use Arrow Keys to move, SPACE to jump, C for coin, M for music');
+            }
+
+            update() {
+                if (!this.player || !this.coin) return;
+
+                const playerAudio = this.player.getComponent(AudioSourceComponent);
+                const coinAudio = this.coin.getComponent(AudioSourceComponent);
+                const musicAudio = this.musicSource.getComponent(AudioSourceComponent);
+
+                // Player movement (affects 3D audio listening position)
+                const moveSpeed = 200;
+                if (Input.isKeyPressed('ArrowLeft')) {
+                    this.player.position.x -= moveSpeed * Time.deltaTime;
+                    this.listener.position.x = this.player.position.x;
+                }
+                if (Input.isKeyPressed('ArrowRight')) {
+                    this.player.position.x += moveSpeed * Time.deltaTime;
+                    this.listener.position.x = this.player.position.x;
+                }
+                if (Input.isKeyPressed('ArrowUp')) {
+                    this.player.position.y -= moveSpeed * Time.deltaTime;
+                    this.listener.position.y = this.player.position.y;
+                }
+                if (Input.isKeyPressed('ArrowDown')) {
+                    this.player.position.y += moveSpeed * Time.deltaTime;
+                    this.listener.position.y = this.player.position.y;
+                }
+
+                // Audio controls
+                if (Input.isKeyDown('Space')) {
+                    console.log('🎵 Playing jump sound (2D)');
+                    playerAudio.play();
+                }
+
+                if (Input.isKeyDown('KeyC')) {
+                    console.log('🎵 Playing coin sound (3D positioned)');
+                    coinAudio.play();
+                }
+
+                if (Input.isKeyDown('KeyM')) {
+                    if (musicAudio.isPlaying) {
+                        console.log('🎵 Pausing background music');
+                        musicAudio.pause();
+                    } else {
+                        console.log('🎵 Playing background music');
+                        musicAudio.play();
+                    }
+                }
+
+                // Display distance for 3D audio demonstration
+                const distance = Vector2.distance(this.player.position, this.coin.position);
+                document.title = `🎵 Distance to coin: ${Math.round(distance)}px - Audio Volume: ${Math.round((1 - Math.min(distance / 300, 1)) * 100)}%`;
+            }
+        }
+
+        // Initialize game
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 600;
+        document.body.appendChild(canvas);
+
+        const game = new Game();
+        game.configure({
+            canvas: canvas,
+            useLayerSystem: true
+        });
+
+        // Start game
+        const scene = new AudioTestScene();
+        game.launch(scene);
+
+        console.log('🎵 NityJS Audio System Demo Ready!');
+        console.log('📝 This demo shows the Audio System architecture even without audio files');
+    </script>
+</body>
+</html>

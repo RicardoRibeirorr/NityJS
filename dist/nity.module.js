@@ -5697,6 +5697,12 @@ var ShapeComponent = class extends Component {
    */
   constructor(shape, options = { radius: 10, width: 10, height: 10, color: "white" }) {
     super();
+    this.__meta = this.constructor.getDefaultMeta();
+    if (shape || Object.keys(options).length > 0) {
+      this._applyConstructorArgs(shape, options);
+    } else {
+      this._updatePropertiesFromMeta();
+    }
   }
   /**
    * Provides default metadata configuration for ShapeComponent instances.
@@ -7117,7 +7123,1351 @@ var FollowTarget = class extends Component {
     }
   }
 };
+
+// src/audio/AudioClip.js
+var AudioClip = class _AudioClip {
+  /**
+   * Creates a new AudioClip with the specified name and URL.
+   * 
+   * Initializes the audio clip with basic properties and prepares it for loading.
+   * The audio data is not loaded immediately - call load() to begin the loading
+   * and decoding process. This allows for better control over when audio resources
+   * are loaded and reduces initial page load time.
+   * 
+   * @param {string} name - Unique identifier for this audio clip
+   * @param {string} url - Path to the audio file (relative or absolute)
+   * 
+   * @example
+   * // Create clips for different audio types
+   * const music = new AudioClip("background_music", "assets/music/theme.mp3");
+   * const sfx = new AudioClip("explosion", "assets/sounds/explosion.wav");
+   * const voice = new AudioClip("dialog_01", "assets/voice/intro.ogg");
+   */
+  constructor(name, url) {
+    this.name = name;
+    this.url = url;
+    this.audioBuffer = null;
+    this.length = 0;
+    this.channels = 0;
+    this.frequency = 0;
+    this.isLoaded = false;
+    this.isLoading = false;
+    this.loadError = null;
+    this.audioContext = _AudioClip.getAudioContext();
+  }
+  /**
+   * Gets or creates the global Web Audio API context.
+   * 
+   * Creates a singleton AudioContext that all audio clips share. This ensures
+   * optimal resource usage and prevents the creation of multiple audio contexts
+   * which can cause performance issues. Handles browser compatibility for
+   * AudioContext creation.
+   * 
+   * @static
+   * @returns {AudioContext} The global audio context instance
+   * 
+   * @example
+   * // Access global audio context
+   * const context = AudioClip.getAudioContext();
+   * console.log('Sample Rate:', context.sampleRate);
+   */
+  static getAudioContext() {
+    if (!_AudioClip._audioContext) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        throw new Error("Web Audio API not supported in this browser");
+      }
+      _AudioClip._audioContext = new AudioContextClass();
+      if (_AudioClip._audioContext.state === "suspended") {
+        document.addEventListener("click", () => {
+          if (_AudioClip._audioContext.state === "suspended") {
+            _AudioClip._audioContext.resume();
+          }
+        }, { once: true });
+      }
+    }
+    return _AudioClip._audioContext;
+  }
+  /**
+   * Loads and decodes the audio file.
+   * 
+   * Fetches the audio file from the specified URL and decodes it using the Web
+   * Audio API. This is an asynchronous operation that should be awaited. Once
+   * loaded, the audio clip can be used by AudioSource components for playback.
+   * 
+   * @async
+   * @returns {Promise<boolean>} True if loading succeeded, false if failed
+   * 
+   * @example
+   * // Load audio with error handling
+   * const clip = new AudioClip("jump", "assets/jump.wav");
+   * const success = await clip.load();
+   * if (success) {
+   *     console.log("Audio loaded successfully");
+   * } else {
+   *     console.error("Failed to load audio:", clip.loadError);
+   * }
+   */
+  async load() {
+    if (this.isLoaded) return true;
+    if (this.isLoading) {
+      return new Promise((resolve) => {
+        const checkLoaded = () => {
+          if (!this.isLoading) {
+            resolve(this.isLoaded);
+          } else {
+            setTimeout(checkLoaded, 10);
+          }
+        };
+        checkLoaded();
+      });
+    }
+    this.isLoading = true;
+    this.loadError = null;
+    try {
+      const response = await fetch(this.url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch audio: ${response.status} ${response.statusText}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+      this.length = this.audioBuffer.length / this.audioBuffer.sampleRate;
+      this.channels = this.audioBuffer.numberOfChannels;
+      this.frequency = this.audioBuffer.sampleRate;
+      this.isLoaded = true;
+      this.isLoading = false;
+      console.log(`\u2705 Audio clip loaded: ${this.name} (${this.length.toFixed(2)}s, ${this.channels}ch, ${this.frequency}Hz)`);
+      return true;
+    } catch (error) {
+      this.loadError = error.message;
+      this.isLoading = false;
+      this.isLoaded = false;
+      console.error(`\u274C Failed to load audio clip '${this.name}':`, error);
+      return false;
+    }
+  }
+  /**
+   * Creates an audio buffer source node for playback.
+   * 
+   * Generates a new AudioBufferSourceNode connected to the audio context. This
+   * node can be configured and connected to other audio nodes (like gain nodes
+   * or panners) before starting playback. Each playback requires a new source
+   * node as they are single-use.
+   * 
+   * @returns {AudioBufferSourceNode|null} Audio source node or null if not loaded
+   * 
+   * @internal Used by AudioSource components for audio playback
+   */
+  createSourceNode() {
+    if (!this.isLoaded || !this.audioBuffer) {
+      console.warn(`Cannot create source node: Audio clip '${this.name}' not loaded`);
+      return null;
+    }
+    const sourceNode = this.audioContext.createBufferSource();
+    sourceNode.buffer = this.audioBuffer;
+    return sourceNode;
+  }
+  /**
+   * Checks if the audio clip is ready for playback.
+   * 
+   * @returns {boolean} True if the clip is loaded and ready to play
+   */
+  get isReady() {
+    return this.isLoaded && this.audioBuffer !== null;
+  }
+  /**
+   * Gets the current state of the audio clip.
+   * 
+   * @returns {string} Current state: 'unloaded', 'loading', 'loaded', or 'error'
+   */
+  get state() {
+    if (this.loadError) return "error";
+    if (this.isLoading) return "loading";
+    if (this.isLoaded) return "loaded";
+    return "unloaded";
+  }
+  /**
+   * Preloads all audio clips in the provided array.
+   * 
+   * @static
+   * @param {AudioClip[]} clips - Array of audio clips to preload
+   * @returns {Promise<boolean[]>} Array of success states for each clip
+   * 
+   * @example
+   * // Preload multiple clips
+   * const clips = [jumpSound, shootSound, musicClip];
+   * const results = await AudioClip.preloadAll(clips);
+   * console.log(`${results.filter(r => r).length}/${clips.length} clips loaded`);
+   */
+  static async preloadAll(clips) {
+    const loadPromises = clips.map((clip) => clip.load());
+    return Promise.all(loadPromises);
+  }
+};
+AudioClip._audioContext = null;
+
+// src/audio/components/AudioListenerComponent.js
+var AudioListenerComponent = class _AudioListenerComponent extends Component {
+  /**
+   * Creates a new AudioListener component.
+   * 
+   * Initializes the audio listener with default settings and attempts to set
+   * itself as the main listener. If another listener is already active, this
+   * one will be inactive until the main listener is removed or this listener
+   * is explicitly activated.
+   * 
+   * @example
+   * // Basic listener setup
+   * const listener = new AudioListenerComponent();
+   * cameraObject.addComponent(listener);
+   */
+  constructor() {
+    super();
+    this.masterVolume = 1;
+    this.dopplerFactor = 1;
+    this.rolloffFactor = 1;
+    this.isActive = false;
+    if (!_AudioListenerComponent.main) {
+      this.setAsMainListener();
+    }
+    console.log(`\u{1F3A7} AudioListener created ${this.isActive ? "(ACTIVE)" : "(inactive)"}`);
+  }
+  /**
+   * Activates this listener as the main audio listener.
+   * 
+   * Sets this listener as the main audio receiver and deactivates any other
+   * listeners in the scene. Only one listener should be active at a time to
+   * avoid audio processing conflicts.
+   * 
+   * @example
+   * // Switch to this listener
+   * const newListener = camera2.getComponent(AudioListenerComponent);
+   * newListener.setAsMainListener();
+   */
+  setAsMainListener() {
+    if (_AudioListenerComponent.main && _AudioListenerComponent.main !== this) {
+      _AudioListenerComponent.main.isActive = false;
+      console.log("\u{1F3A7} Previous AudioListener deactivated");
+    }
+    _AudioListenerComponent.main = this;
+    this.isActive = true;
+    console.log("\u{1F3A7} AudioListener activated as main listener");
+  }
+  /**
+   * Calculates 3D audio parameters based on listener and source positions.
+   * 
+   * Determines volume attenuation and stereo panning for an audio source based
+   * on its position relative to this listener. This creates realistic 3D audio
+   * positioning where distant sounds are quieter and sounds to the left/right
+   * are panned accordingly.
+   * 
+   * @param {Vector2} sourcePosition - World position of the audio source
+   * @param {number} maxDistance - Maximum audible distance for the source
+   * @param {number} rolloffMode - Distance rolloff mode ('linear', 'logarithmic', 'custom')
+   * @returns {Object} Audio parameters for 3D positioning
+   * @returns {number} returns.volume - Volume multiplier (0.0 to 1.0)
+   * @returns {number} returns.pan - Stereo pan value (-1.0 to 1.0, left to right)
+   * @returns {number} returns.distance - Distance between listener and source
+   * 
+   * @example
+   * // Calculate audio parameters for a sound source
+   * const audioParams = listener.calculate3DAudio(
+   *     sourcePosition, 
+   *     500,        // Max distance
+   *     'linear'    // Rolloff mode
+   * );
+   * console.log(`Volume: ${audioParams.volume}, Pan: ${audioParams.pan}`);
+   */
+  calculate3DAudio(sourcePosition, maxDistance = 500, rolloffMode = "linear") {
+    if (!this.isActive || !this.gameObject) {
+      return { volume: 0, pan: 0, distance: Infinity };
+    }
+    const listenerPosition = this.gameObject.position;
+    const deltaX = sourcePosition.x - listenerPosition.x;
+    const deltaY = sourcePosition.y - listenerPosition.y;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    let volume = 1;
+    if (distance > 0 && maxDistance > 0) {
+      switch (rolloffMode) {
+        case "linear":
+          volume = Math.max(0, 1 - distance / maxDistance);
+          break;
+        case "logarithmic":
+          volume = Math.max(0, 1 / (1 + distance / maxDistance));
+          break;
+        case "inverse":
+          volume = Math.max(0, maxDistance / (maxDistance + distance));
+          break;
+        default:
+          volume = Math.max(0, 1 - distance / maxDistance);
+      }
+    }
+    volume *= this.rolloffFactor * this.masterVolume;
+    let pan = 0;
+    if (distance > 0) {
+      const maxPanDistance = maxDistance * 0.5;
+      pan = Math.max(-1, Math.min(1, deltaX / maxPanDistance));
+    }
+    return {
+      volume: Math.max(0, Math.min(1, volume)),
+      pan: Math.max(-1, Math.min(1, pan)),
+      distance
+    };
+  }
+  /**
+   * Sets the global master volume for all audio.
+   * 
+   * @param {number} volume - Master volume (0.0 to 1.0)
+   * 
+   * @example
+   * // Set master volume to 50%
+   * listener.setMasterVolume(0.5);
+   */
+  setMasterVolume(volume) {
+    this.masterVolume = Math.max(0, Math.min(1, volume));
+    console.log(`\u{1F50A} Master volume set to ${(this.masterVolume * 100).toFixed(0)}%`);
+  }
+  /**
+   * Gets the current world position of the listener.
+   * 
+   * @returns {Vector2|null} Listener position or null if no GameObject attached
+   */
+  get position() {
+    return this.gameObject ? this.gameObject.position : null;
+  }
+  /**
+   * Called when the component is destroyed.
+   * Removes this listener as main if it was active.
+   */
+  destroy() {
+    if (_AudioListenerComponent.main === this) {
+      _AudioListenerComponent.main = null;
+      console.log("\u{1F3A7} Main AudioListener removed");
+    }
+    super.destroy();
+  }
+  /**
+   * Component metadata support for visual editors.
+   * 
+   * @static
+   * @returns {Object} Default metadata configuration
+   */
+  static getDefaultMeta() {
+    return {
+      masterVolume: 1,
+      dopplerFactor: 1,
+      rolloffFactor: 1
+    };
+  }
+  /**
+   * Updates component properties from metadata.
+   * 
+   * @private
+   */
+  _updatePropertiesFromMeta() {
+    this.masterVolume = this.__meta.masterVolume;
+    this.dopplerFactor = this.__meta.dopplerFactor;
+    this.rolloffFactor = this.__meta.rolloffFactor;
+  }
+  /**
+   * Validates metadata configuration.
+   * 
+   * @private
+   */
+  _validateMeta() {
+    if (typeof this.__meta.masterVolume !== "number" || this.__meta.masterVolume < 0 || this.__meta.masterVolume > 1) {
+      throw new Error("AudioListener masterVolume must be a number between 0 and 1");
+    }
+    if (typeof this.__meta.dopplerFactor !== "number" || this.__meta.dopplerFactor < 0) {
+      throw new Error("AudioListener dopplerFactor must be a non-negative number");
+    }
+    if (typeof this.__meta.rolloffFactor !== "number" || this.__meta.rolloffFactor < 0) {
+      throw new Error("AudioListener rolloffFactor must be a non-negative number");
+    }
+  }
+};
+AudioListenerComponent.main = null;
+
+// src/audio/components/AudioSourceComponent.js
+var AudioSourceComponent = class extends Component {
+  /**
+   * Creates a new AudioSource component.
+   * 
+   * Initializes the audio source with default settings for 3D spatial audio.
+   * The component is ready to play audio clips once a clip is assigned and
+   * the necessary Web Audio API nodes are created.
+   * 
+   * @param {AudioClip} [clip=null] - Audio clip to play
+   * @param {Object} [options={}] - Configuration options
+   * @param {boolean} [options.spatial=true] - Whether to use 3D spatial audio
+   * @param {boolean} [options.autoPlay=false] - Start playing immediately when clip is set
+   * @param {boolean} [options.loop=false] - Loop the audio clip
+   * @param {number} [options.volume=1.0] - Volume level (0.0 to 1.0)
+   * @param {number} [options.pitch=1.0] - Playback pitch (0.5 to 2.0)
+   * 
+   * @example
+   * // Create configured audio source
+   * const audioSource = new AudioSourceComponent(jumpClip, {
+   *     spatial: true,
+   *     volume: 0.8,
+   *     maxDistance: 200
+   * });
+   */
+  constructor(clip = null, options = {}) {
+    super();
+    this.__meta = this.constructor.getDefaultMeta();
+    if (clip || Object.keys(options).length > 0) {
+      this._applyConstructorArgs(clip, options);
+    } else {
+      this._updatePropertiesFromMeta();
+    }
+    this.isPlaying = false;
+    this.isPaused = false;
+    this.currentTime = 0;
+    this.sourceNode = null;
+    this.gainNode = null;
+    this.pannerNode = null;
+    this.audioContext = null;
+    this.startTime = 0;
+    this.pauseTime = 0;
+    console.log(`\u{1F50A} AudioSource created (${this.spatial ? "3D" : "2D"} audio)`);
+  }
+  /**
+   * Provides default metadata configuration for AudioSource instances.
+   * 
+   * @static
+   * @returns {Object} Default metadata configuration
+   */
+  static getDefaultMeta() {
+    return {
+      clip: null,
+      spatial: true,
+      autoPlay: false,
+      loop: false,
+      volume: 1,
+      pitch: 1,
+      maxDistance: 500,
+      minDistance: 1,
+      rolloffMode: "linear"
+    };
+  }
+  /**
+   * Applies constructor arguments to metadata format.
+   * 
+   * @private
+   */
+  _applyConstructorArgs(clip, options = {}) {
+    const metadata = {
+      ...this.__meta,
+      clip,
+      ...options
+    };
+    this.applyMeta(metadata);
+  }
+  /**
+   * Updates component properties from metadata.
+   * 
+   * @private
+   */
+  _updatePropertiesFromMeta() {
+    this.clip = this.__meta.clip;
+    this.spatial = this.__meta.spatial;
+    this.autoPlay = this.__meta.autoPlay;
+    this.loop = this.__meta.loop;
+    this.volume = this.__meta.volume;
+    this.pitch = this.__meta.pitch;
+    this.maxDistance = this.__meta.maxDistance;
+    this.minDistance = this.__meta.minDistance;
+    this.rolloffMode = this.__meta.rolloffMode;
+    if (this.autoPlay && this.clip && this.clip.isReady) {
+      this.play();
+    }
+  }
+  /**
+   * Validates metadata configuration.
+   * 
+   * @private
+   */
+  _validateMeta() {
+    if (this.__meta.volume < 0 || this.__meta.volume > 1) {
+      throw new Error("AudioSource volume must be between 0 and 1");
+    }
+    if (this.__meta.pitch < 0.1 || this.__meta.pitch > 3) {
+      throw new Error("AudioSource pitch must be between 0.1 and 3");
+    }
+    if (this.__meta.maxDistance <= 0) {
+      throw new Error("AudioSource maxDistance must be positive");
+    }
+    const validRolloffModes = ["linear", "logarithmic", "inverse"];
+    if (!validRolloffModes.includes(this.__meta.rolloffMode)) {
+      throw new Error(`AudioSource rolloffMode must be one of: ${validRolloffModes.join(", ")}`);
+    }
+  }
+  /**
+   * Starts playback of the assigned audio clip.
+   * 
+   * Creates the necessary Web Audio API nodes and begins playback. For 3D audio,
+   * calculates spatial positioning based on the current GameObject position and
+   * the active AudioListener. Handles both immediate playback and resuming from
+   * a paused state.
+   * 
+   * @param {number} [delay=0] - Delay before starting playback (in seconds)
+   * @returns {boolean} True if playback started successfully
+   * 
+   * @example
+   * // Play immediately
+   * audioSource.play();
+   * 
+   * @example
+   * // Play with delay
+   * audioSource.play(0.5); // Start after 500ms
+   * 
+   * @example
+   * // Check if playback started
+   * if (audioSource.play()) {
+   *     console.log("Audio started playing");
+   * }
+   */
+  play(delay = 0) {
+    if (!this.clip || !this.clip.isReady) {
+      console.warn("Cannot play: AudioClip not loaded or not assigned");
+      return false;
+    }
+    this.stop();
+    try {
+      this.audioContext = this.clip.audioContext;
+      this.sourceNode = this.clip.createSourceNode();
+      if (!this.sourceNode) {
+        console.error("Failed to create audio source node");
+        return false;
+      }
+      this.sourceNode.loop = this.loop;
+      this.sourceNode.playbackRate.value = this.pitch;
+      this.gainNode = this.audioContext.createGain();
+      this.gainNode.gain.value = this.volume;
+      this.sourceNode.connect(this.gainNode);
+      if (this.spatial && this.gameObject) {
+        this._setup3DAudio();
+      } else {
+        this.gainNode.connect(this.audioContext.destination);
+      }
+      this.sourceNode.onended = () => {
+        if (!this.loop) {
+          this.isPlaying = false;
+          this.currentTime = 0;
+          this._cleanup();
+        }
+      };
+      const startTime = this.audioContext.currentTime + delay;
+      const offset = this.isPaused ? this.pauseTime : 0;
+      this.sourceNode.start(startTime, offset);
+      this.isPlaying = true;
+      this.isPaused = false;
+      this.startTime = startTime - offset;
+      console.log(`\u{1F3B5} Audio started: ${this.clip.name} (${this.spatial ? "3D" : "2D"})`);
+      return true;
+    } catch (error) {
+      console.error("Failed to play audio:", error);
+      this._cleanup();
+      return false;
+    }
+  }
+  /**
+   * Pauses audio playback.
+   * 
+   * Stops the current audio source and records the current playback position
+   * so that playback can be resumed from the same point using play().
+   * 
+   * @example
+   * // Pause and resume audio
+   * audioSource.pause();
+   * setTimeout(() => audioSource.play(), 1000); // Resume after 1 second
+   */
+  pause() {
+    if (!this.isPlaying) return;
+    this.pauseTime = this.audioContext.currentTime - this.startTime;
+    if (this.sourceNode) {
+      try {
+        this.sourceNode.stop();
+      } catch (error) {
+      }
+    }
+    this.isPlaying = false;
+    this.isPaused = true;
+    this._cleanup();
+    console.log(`\u23F8\uFE0F Audio paused: ${this.clip ? this.clip.name : "unknown"}`);
+  }
+  /**
+   * Stops audio playback and resets to the beginning.
+   * 
+   * Completely stops audio playback and resets the playback position to the
+   * start of the clip. Unlike pause(), this cannot be resumed from the same
+   * position.
+   * 
+   * @example
+   * // Stop audio completely
+   * audioSource.stop();
+   */
+  stop() {
+    if (!this.isPlaying && !this.isPaused) return;
+    if (this.sourceNode) {
+      try {
+        this.sourceNode.stop();
+      } catch (error) {
+      }
+    }
+    this.isPlaying = false;
+    this.isPaused = false;
+    this.currentTime = 0;
+    this.pauseTime = 0;
+    this._cleanup();
+    console.log(`\u23F9\uFE0F Audio stopped: ${this.clip ? this.clip.name : "unknown"}`);
+  }
+  /**
+   * Sets up 3D spatial audio using Web Audio API.
+   * 
+   * @private
+   */
+  _setup3DAudio() {
+    if (!this.spatial || !this.gameObject || !AudioListenerComponent.main) {
+      this.gainNode.connect(this.audioContext.destination);
+      return;
+    }
+    const listener = AudioListenerComponent.main;
+    const audioParams = listener.calculate3DAudio(
+      this.gameObject.position,
+      this.maxDistance,
+      this.rolloffMode
+    );
+    this.pannerNode = this.audioContext.createStereoPanner();
+    this.pannerNode.pan.value = audioParams.pan;
+    this.gainNode.gain.value = this.volume * audioParams.volume;
+    this.gainNode.connect(this.pannerNode);
+    this.pannerNode.connect(this.audioContext.destination);
+    console.log(`\u{1F3AF} 3D Audio: vol=${audioParams.volume.toFixed(2)}, pan=${audioParams.pan.toFixed(2)}, dist=${audioParams.distance.toFixed(1)}`);
+  }
+  /**
+   * Updates 3D audio parameters during playback.
+   * Called automatically if the GameObject or listener moves.
+   */
+  update() {
+    if (this.isPlaying && this.spatial && this.pannerNode && this.gameObject && AudioListenerComponent.main) {
+      const listener = AudioListenerComponent.main;
+      const audioParams = listener.calculate3DAudio(
+        this.gameObject.position,
+        this.maxDistance,
+        this.rolloffMode
+      );
+      this.gainNode.gain.value = this.volume * audioParams.volume;
+      this.pannerNode.pan.value = audioParams.pan;
+    }
+    if (this.isPlaying && this.audioContext) {
+      this.currentTime = this.audioContext.currentTime - this.startTime;
+    }
+  }
+  /**
+   * Cleans up Web Audio API nodes.
+   * 
+   * @private
+   */
+  _cleanup() {
+    if (this.sourceNode) {
+      this.sourceNode.disconnect();
+      this.sourceNode = null;
+    }
+    if (this.gainNode) {
+      this.gainNode.disconnect();
+      this.gainNode = null;
+    }
+    if (this.pannerNode) {
+      this.pannerNode.disconnect();
+      this.pannerNode = null;
+    }
+  }
+  /**
+   * Sets the volume of this audio source.
+   * 
+   * @param {number} volume - Volume level (0.0 to 1.0)
+   */
+  setVolume(volume) {
+    this.volume = Math.max(0, Math.min(1, volume));
+    if (this.gainNode) {
+      if (this.spatial && this.gameObject && AudioListenerComponent.main) {
+        const listener = AudioListenerComponent.main;
+        const audioParams = listener.calculate3DAudio(
+          this.gameObject.position,
+          this.maxDistance,
+          this.rolloffMode
+        );
+        this.gainNode.gain.value = this.volume * audioParams.volume;
+      } else {
+        this.gainNode.gain.value = this.volume;
+      }
+    }
+  }
+  /**
+   * Sets the pitch/playback rate of this audio source.
+   * 
+   * @param {number} pitch - Pitch multiplier (0.1 to 3.0)
+   */
+  setPitch(pitch) {
+    this.pitch = Math.max(0.1, Math.min(3, pitch));
+    if (this.sourceNode) {
+      this.sourceNode.playbackRate.value = this.pitch;
+    }
+  }
+  /**
+   * Gets the current playback time in seconds.
+   * 
+   * @returns {number} Current playback time
+   */
+  get time() {
+    return this.currentTime;
+  }
+  /**
+   * Sets the current playback time (seeking).
+   * Note: Requires stopping and restarting playback.
+   * 
+   * @param {number} time - Time to seek to in seconds
+   */
+  set time(time) {
+    if (this.clip && time >= 0 && time <= this.clip.length) {
+      const wasPlaying = this.isPlaying;
+      this.stop();
+      this.pauseTime = time;
+      this.isPaused = true;
+      if (wasPlaying) {
+        this.play();
+      }
+    }
+  }
+  /**
+   * Called when the component is destroyed.
+   */
+  destroy() {
+    this.stop();
+    super.destroy();
+  }
+};
+
+// src/audio/ProceduralAudioClip.js
+var ProceduralAudioClip = class _ProceduralAudioClip {
+  /**
+   * Create a procedural audio clip
+   * @param {string} name - Name identifier for the clip
+   * @param {Object} options - Generation options
+   */
+  constructor(name, options = {}) {
+    this.name = name;
+    this.options = {
+      type: "tone",
+      // 'tone', 'noise', 'sweep', 'complex', 'random'
+      frequency: 440,
+      // Base frequency in Hz
+      duration: 1,
+      // Duration in seconds
+      volume: 0.5,
+      // Volume (0.0 to 1.0)
+      sampleRate: 44100,
+      // Sample rate
+      fadeIn: 0.01,
+      // Fade in time
+      fadeOut: 0.1,
+      // Fade out time
+      ...options
+    };
+    this.audioBuffer = null;
+    this.audioContext = null;
+    this._isLoaded = false;
+  }
+  /**
+   * Generate and load the procedural audio
+   * @returns {Promise<void>}
+   */
+  async load() {
+    try {
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      this.audioBuffer = await this.generateAudio();
+      this._isLoaded = true;
+      console.log(`ProceduralAudioClip "${this.name}" generated successfully`);
+    } catch (error) {
+      console.error(`Failed to generate ProceduralAudioClip "${this.name}":`, error);
+      throw error;
+    }
+  }
+  /**
+   * Generate audio buffer based on type
+   * @returns {AudioBuffer}
+   */
+  async generateAudio() {
+    const { duration, sampleRate } = this.options;
+    const length = Math.floor(duration * sampleRate);
+    const buffer = this.audioContext.createBuffer(1, length, sampleRate);
+    const data = buffer.getChannelData(0);
+    switch (this.options.type) {
+      case "tone":
+        this.generateTone(data, length);
+        break;
+      case "noise":
+        this.generateNoise(data, length);
+        break;
+      case "sweep":
+        this.generateSweep(data, length);
+        break;
+      case "complex":
+        this.generateComplex(data, length);
+        break;
+      case "random":
+        this.generateRandom(data, length);
+        break;
+      default:
+        this.generateTone(data, length);
+    }
+    this.applyEnvelope(data, length);
+    return buffer;
+  }
+  /**
+   * Generate simple tone wave
+   * @param {Float32Array} data - Audio data array
+   * @param {number} length - Buffer length
+   */
+  generateTone(data, length) {
+    const { frequency, sampleRate } = this.options;
+    const waveType = this.options.waveType || "sine";
+    for (let i = 0; i < length; i++) {
+      const t = i / sampleRate * frequency * 2 * Math.PI;
+      switch (waveType) {
+        case "sine":
+          data[i] = Math.sin(t);
+          break;
+        case "square":
+          data[i] = Math.sin(t) > 0 ? 1 : -1;
+          break;
+        case "sawtooth":
+          data[i] = 2 * (t / (2 * Math.PI) - Math.floor(t / (2 * Math.PI) + 0.5));
+          break;
+        case "triangle":
+          data[i] = 2 * Math.abs(2 * (t / (2 * Math.PI) - Math.floor(t / (2 * Math.PI) + 0.5))) - 1;
+          break;
+        default:
+          data[i] = Math.sin(t);
+      }
+    }
+  }
+  /**
+   * Generate white/pink/brown noise
+   * @param {Float32Array} data - Audio data array
+   * @param {number} length - Buffer length
+   */
+  generateNoise(data, length) {
+    const noiseType = this.options.noiseType || "white";
+    switch (noiseType) {
+      case "white":
+        for (let i = 0; i < length; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        break;
+      case "pink":
+        this.generatePinkNoise(data, length);
+        break;
+      case "brown":
+        this.generateBrownNoise(data, length);
+        break;
+    }
+  }
+  /**
+   * Generate pink noise (1/f noise)
+   * @param {Float32Array} data - Audio data array
+   * @param {number} length - Buffer length
+   */
+  generatePinkNoise(data, length) {
+    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+    for (let i = 0; i < length; i++) {
+      const white = Math.random() * 2 - 1;
+      b0 = 0.99886 * b0 + white * 0.0555179;
+      b1 = 0.99332 * b1 + white * 0.0750759;
+      b2 = 0.969 * b2 + white * 0.153852;
+      b3 = 0.8665 * b3 + white * 0.3104856;
+      b4 = 0.55 * b4 + white * 0.5329522;
+      b5 = -0.7616 * b5 - white * 0.016898;
+      data[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+      data[i] *= 0.11;
+      b6 = white * 0.115926;
+    }
+  }
+  /**
+   * Generate brown noise (random walk)
+   * @param {Float32Array} data - Audio data array
+   * @param {number} length - Buffer length
+   */
+  generateBrownNoise(data, length) {
+    let lastOut = 0;
+    for (let i = 0; i < length; i++) {
+      const white = Math.random() * 2 - 1;
+      data[i] = (lastOut + 0.02 * white) / 1.02;
+      lastOut = data[i];
+      data[i] *= 3.5;
+    }
+  }
+  /**
+   * Generate frequency sweep
+   * @param {Float32Array} data - Audio data array
+   * @param {number} length - Buffer length
+   */
+  generateSweep(data, length) {
+    const startFreq = this.options.startFreq || this.options.frequency;
+    const endFreq = this.options.endFreq || this.options.frequency * 2;
+    const { sampleRate } = this.options;
+    for (let i = 0; i < length; i++) {
+      const progress = i / length;
+      const currentFreq = startFreq + (endFreq - startFreq) * progress;
+      const t = i / sampleRate * currentFreq * 2 * Math.PI;
+      data[i] = Math.sin(t);
+    }
+  }
+  /**
+   * Generate complex multi-harmonic sound
+   * @param {Float32Array} data - Audio data array
+   * @param {number} length - Buffer length
+   */
+  generateComplex(data, length) {
+    const { frequency, sampleRate } = this.options;
+    const harmonics = this.options.harmonics || [1, 0.5, 0.25, 0.125];
+    for (let i = 0; i < length; i++) {
+      let sample = 0;
+      for (let h = 0; h < harmonics.length; h++) {
+        const harmFreq = frequency * (h + 1);
+        const t = i / sampleRate * harmFreq * 2 * Math.PI;
+        sample += Math.sin(t) * harmonics[h];
+      }
+      data[i] = sample / harmonics.length;
+    }
+  }
+  /**
+   * Generate completely random sound (useful for sound effects)
+   * @param {Float32Array} data - Audio data array
+   * @param {number} length - Buffer length
+   */
+  generateRandom(data, length) {
+    const effects = ["tone", "noise", "sweep"];
+    const randomEffect = effects[Math.floor(Math.random() * effects.length)];
+    const originalOptions = { ...this.options };
+    this.options.frequency = 100 + Math.random() * 800;
+    this.options.waveType = ["sine", "square", "sawtooth", "triangle"][Math.floor(Math.random() * 4)];
+    this.options.noiseType = ["white", "pink", "brown"][Math.floor(Math.random() * 3)];
+    switch (randomEffect) {
+      case "tone":
+        this.generateTone(data, length);
+        break;
+      case "noise":
+        this.generateNoise(data, length);
+        break;
+      case "sweep":
+        this.options.startFreq = 50 + Math.random() * 200;
+        this.options.endFreq = 200 + Math.random() * 800;
+        this.generateSweep(data, length);
+        break;
+    }
+    this.options = originalOptions;
+  }
+  /**
+   * Apply volume envelope to prevent clicks/pops
+   * @param {Float32Array} data - Audio data array
+   * @param {number} length - Buffer length
+   */
+  applyEnvelope(data, length) {
+    const { volume, fadeIn, fadeOut, sampleRate } = this.options;
+    const fadeInSamples = Math.floor(fadeIn * sampleRate);
+    const fadeOutSamples = Math.floor(fadeOut * sampleRate);
+    for (let i = 0; i < length; i++) {
+      let amplitude = volume;
+      if (i < fadeInSamples) {
+        amplitude *= i / fadeInSamples;
+      }
+      if (i > length - fadeOutSamples) {
+        amplitude *= (length - i) / fadeOutSamples;
+      }
+      data[i] *= amplitude;
+    }
+  }
+  /**
+   * Check if audio is loaded and ready
+   * @returns {boolean}
+   */
+  isLoaded() {
+    return this._isLoaded && this.audioBuffer !== null;
+  }
+  /**
+   * Create procedural audio clip using metadata pattern
+   * @param {Object} metadata - Configuration metadata
+   * @returns {ProceduralAudioClip}
+   */
+  static meta(metadata) {
+    const defaults = _ProceduralAudioClip.getDefaultMeta();
+    const config = { ...defaults, ...metadata };
+    if (!config.name || config.name.trim() === "") {
+      throw new Error("ProceduralAudioClip metadata must include a valid name");
+    }
+    return new _ProceduralAudioClip(config.name, config);
+  }
+  /**
+   * Get default metadata configuration
+   * @returns {Object}
+   */
+  static getDefaultMeta() {
+    return {
+      name: "",
+      type: "tone",
+      frequency: 440,
+      duration: 1,
+      volume: 0.5,
+      sampleRate: 44100,
+      fadeIn: 0.01,
+      fadeOut: 0.1,
+      waveType: "sine",
+      noiseType: "white",
+      startFreq: null,
+      endFreq: null,
+      harmonics: [1, 0.5, 0.25, 0.125]
+    };
+  }
+  /**
+   * Apply metadata to existing instance
+   * @param {Object} metadata - Metadata to apply
+   */
+  applyMeta(metadata) {
+    Object.assign(this.options, metadata);
+    if (metadata.name) this.name = metadata.name;
+    if (this._isLoaded) {
+      this._isLoaded = false;
+      this.audioBuffer = null;
+    }
+  }
+  /**
+   * Export current configuration as metadata
+   * @returns {Object}
+   */
+  toMeta() {
+    return {
+      name: this.name,
+      ...this.options
+    };
+  }
+  /**
+   * Static factory methods for common sound types
+   */
+  static createBeep(frequency = 800, duration = 0.2) {
+    return _ProceduralAudioClip.meta({
+      name: `beep_${frequency}`,
+      type: "tone",
+      frequency,
+      duration,
+      waveType: "sine",
+      volume: 0.3
+    });
+  }
+  static createClick(duration = 0.1) {
+    return _ProceduralAudioClip.meta({
+      name: "click",
+      type: "noise",
+      duration,
+      noiseType: "white",
+      volume: 0.2,
+      fadeOut: duration * 0.8
+    });
+  }
+  static createWhoosh(duration = 0.5) {
+    return _ProceduralAudioClip.meta({
+      name: "whoosh",
+      type: "sweep",
+      startFreq: 1e3,
+      endFreq: 200,
+      duration,
+      volume: 0.4
+    });
+  }
+  static createZap(duration = 0.3) {
+    return _ProceduralAudioClip.meta({
+      name: "zap",
+      type: "complex",
+      frequency: 300,
+      duration,
+      harmonics: [1, 0.8, 0.6, 0.4, 0.2],
+      volume: 0.5
+    });
+  }
+  static createRandomSFX(duration = 0.5) {
+    return _ProceduralAudioClip.meta({
+      name: `random_sfx_${Date.now()}`,
+      type: "random",
+      duration,
+      volume: 0.4
+    });
+  }
+};
+
+// src/audio/RandomAudioGenerator.js
+var RandomAudioGenerator = class {
+  /**
+   * Generate a random beep sound
+   * @param {Object} options - Generation options
+   * @returns {ProceduralAudioClip}
+   */
+  static randomBeep(options = {}) {
+    const frequency = options.frequency || 200 + Math.random() * 600;
+    const duration = options.duration || 0.1 + Math.random() * 0.3;
+    const waveType = options.waveType || ["sine", "square", "triangle"][Math.floor(Math.random() * 3)];
+    return new ProceduralAudioClip(`random_beep_${Date.now()}`, {
+      type: "tone",
+      frequency,
+      duration,
+      waveType,
+      volume: 0.3 + Math.random() * 0.3,
+      fadeIn: 0.01,
+      fadeOut: duration * 0.3
+    });
+  }
+  /**
+   * Generate random ambient sound
+   * @param {Object} options - Generation options
+   * @returns {ProceduralAudioClip}
+   */
+  static randomAmbient(options = {}) {
+    const noiseTypes = ["white", "pink", "brown"];
+    const noiseType = options.noiseType || noiseTypes[Math.floor(Math.random() * noiseTypes.length)];
+    const duration = options.duration || 2 + Math.random() * 8;
+    return new ProceduralAudioClip(`random_ambient_${Date.now()}`, {
+      type: "noise",
+      noiseType,
+      duration,
+      volume: 0.1 + Math.random() * 0.2,
+      fadeIn: duration * 0.1,
+      fadeOut: duration * 0.1
+    });
+  }
+  /**
+   * Generate random sweep/whoosh sound
+   * @param {Object} options - Generation options
+   * @returns {ProceduralAudioClip}
+   */
+  static randomSweep(options = {}) {
+    const startFreq = options.startFreq || 100 + Math.random() * 500;
+    const endFreq = options.endFreq || 200 + Math.random() * 800;
+    const duration = options.duration || 0.3 + Math.random() * 0.7;
+    const reverse = Math.random() > 0.5;
+    const actualStart = reverse ? endFreq : startFreq;
+    const actualEnd = reverse ? startFreq : endFreq;
+    return new ProceduralAudioClip(`random_sweep_${Date.now()}`, {
+      type: "sweep",
+      startFreq: actualStart,
+      endFreq: actualEnd,
+      duration,
+      volume: 0.2 + Math.random() * 0.3
+    });
+  }
+  /**
+   * Generate random complex harmonic sound
+   * @param {Object} options - Generation options
+   * @returns {ProceduralAudioClip}
+   */
+  static randomHarmonic(options = {}) {
+    const baseFreq = options.frequency || 150 + Math.random() * 400;
+    const duration = options.duration || 0.5 + Math.random() * 1.5;
+    const harmonics = [];
+    const numHarmonics = 3 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < numHarmonics; i++) {
+      harmonics.push(Math.random() * (1 / (i + 1)));
+    }
+    return new ProceduralAudioClip(`random_harmonic_${Date.now()}`, {
+      type: "complex",
+      frequency: baseFreq,
+      duration,
+      harmonics,
+      volume: 0.3 + Math.random() * 0.2
+    });
+  }
+  /**
+   * Generate random percussion/hit sound
+   * @param {Object} options - Generation options
+   * @returns {ProceduralAudioClip}
+   */
+  static randomPercussion(options = {}) {
+    const duration = options.duration || 0.05 + Math.random() * 0.15;
+    const soundTypes = ["noise", "tone"];
+    const type = soundTypes[Math.floor(Math.random() * soundTypes.length)];
+    const baseOptions = {
+      duration,
+      volume: 0.4 + Math.random() * 0.4,
+      fadeIn: 1e-3,
+      fadeOut: duration * 0.7
+    };
+    if (type === "noise") {
+      return new ProceduralAudioClip(`random_percussion_${Date.now()}`, {
+        ...baseOptions,
+        type: "noise",
+        noiseType: "white"
+      });
+    } else {
+      return new ProceduralAudioClip(`random_percussion_${Date.now()}`, {
+        ...baseOptions,
+        type: "tone",
+        frequency: 80 + Math.random() * 200,
+        waveType: "square"
+      });
+    }
+  }
+  /**
+   * Generate random musical note
+   * @param {Object} options - Generation options
+   * @returns {ProceduralAudioClip}
+   */
+  static randomNote(options = {}) {
+    const noteFreqs = [
+      261.63,
+      277.18,
+      293.66,
+      311.13,
+      329.63,
+      349.23,
+      369.99,
+      392,
+      415.3,
+      440,
+      466.16,
+      493.88,
+      523.25,
+      554.37,
+      587.33,
+      622.25,
+      659.25,
+      698.46,
+      739.99,
+      783.99,
+      830.61,
+      880,
+      932.33,
+      987.77
+    ];
+    const frequency = options.frequency || noteFreqs[Math.floor(Math.random() * noteFreqs.length)];
+    const duration = options.duration || 0.5 + Math.random() * 1;
+    const waveType = options.waveType || ["sine", "triangle"][Math.floor(Math.random() * 2)];
+    return new ProceduralAudioClip(`random_note_${Date.now()}`, {
+      type: "tone",
+      frequency,
+      duration,
+      waveType,
+      volume: 0.3 + Math.random() * 0.3,
+      fadeIn: 0.05,
+      fadeOut: duration * 0.2
+    });
+  }
+  /**
+   * Generate random laser/zap sound
+   * @param {Object} options - Generation options
+   * @returns {ProceduralAudioClip}
+   */
+  static randomLaser(options = {}) {
+    const startFreq = options.startFreq || 400 + Math.random() * 600;
+    const endFreq = options.endFreq || 50 + Math.random() * 200;
+    const duration = options.duration || 0.2 + Math.random() * 0.3;
+    return new ProceduralAudioClip(`random_laser_${Date.now()}`, {
+      type: "sweep",
+      startFreq,
+      endFreq,
+      duration,
+      volume: 0.4 + Math.random() * 0.3,
+      fadeOut: duration * 0.5
+    });
+  }
+  /**
+   * Generate random coin/pickup sound
+   * @param {Object} options - Generation options
+   * @returns {ProceduralAudioClip}
+   */
+  static randomPickup(options = {}) {
+    return new ProceduralAudioClip(`random_pickup_${Date.now()}`, {
+      type: "complex",
+      frequency: 600 + Math.random() * 400,
+      duration: 0.3 + Math.random() * 0.2,
+      harmonics: [1, 0.6, 0.3, 0.1],
+      volume: 0.4 + Math.random() * 0.2,
+      fadeOut: 0.15
+    });
+  }
+  /**
+   * Generate random explosion sound
+   * @param {Object} options - Generation options
+   * @returns {ProceduralAudioClip}
+   */
+  static randomExplosion(options = {}) {
+    const duration = options.duration || 0.5 + Math.random() * 1;
+    return new ProceduralAudioClip(`random_explosion_${Date.now()}`, {
+      type: "noise",
+      noiseType: "brown",
+      duration,
+      volume: 0.5 + Math.random() * 0.3,
+      fadeIn: 0.01,
+      fadeOut: duration * 0.6
+    });
+  }
+  /**
+   * Generate completely random sound effect
+   * @param {Object} options - Generation options
+   * @returns {ProceduralAudioClip}
+   */
+  static randomAny(options = {}) {
+    const generators = [
+      this.randomBeep,
+      this.randomSweep,
+      this.randomHarmonic,
+      this.randomPercussion,
+      this.randomNote,
+      this.randomLaser,
+      this.randomPickup
+    ];
+    const randomGenerator = generators[Math.floor(Math.random() * generators.length)];
+    return randomGenerator.call(this, options);
+  }
+  /**
+   * Generate a sequence of random sounds
+   * @param {number} count - Number of sounds to generate
+   * @param {Object} options - Generation options
+   * @returns {Array<ProceduralAudioClip>}
+   */
+  static randomSequence(count = 5, options = {}) {
+    const sounds = [];
+    for (let i = 0; i < count; i++) {
+      sounds.push(this.randomAny(options));
+    }
+    return sounds;
+  }
+  /**
+   * Create a randomized version of a sound type
+   * @param {string} type - Base sound type ('beep', 'sweep', 'harmonic', etc.)
+   * @param {number} variations - Number of variations to create
+   * @param {Object} baseOptions - Base options for all variations
+   * @returns {Array<ProceduralAudioClip>}
+   */
+  static createVariations(type, variations = 3, baseOptions = {}) {
+    const sounds = [];
+    const methodName = `random${type.charAt(0).toUpperCase() + type.slice(1)}`;
+    if (typeof this[methodName] === "function") {
+      for (let i = 0; i < variations; i++) {
+        sounds.push(this[methodName](baseOptions));
+      }
+    } else {
+      console.warn(`Unknown sound type: ${type}`);
+      for (let i = 0; i < variations; i++) {
+        sounds.push(this.randomAny(baseOptions));
+      }
+    }
+    return sounds;
+  }
+};
 export {
+  AudioClip,
+  AudioListenerComponent,
+  AudioSourceComponent,
   BoxColliderComponent,
   CameraComponent,
   CircleColliderComponent,
@@ -7135,7 +8485,9 @@ export {
   MonoBehaviour,
   MovementComponent,
   MovementController,
+  ProceduralAudioClip,
   Random,
+  RandomAudioGenerator,
   RigidbodyComponent,
   Scene,
   ShapeComponent,

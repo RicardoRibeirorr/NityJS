@@ -35,3 +35,10 @@ export * from './math/Vector3.js';
 
 export * from './extensions/movement/FollowTarget.js';
 export * from './extensions/movement/MovementController.js';
+
+// Audio System
+export * from './audio/AudioClip.js';
+export * from './audio/components/AudioListenerComponent.js';
+export * from './audio/components/AudioSourceComponent.js';
+export * from './audio/ProceduralAudioClip.js';
+export * from './audio/RandomAudioGenerator.js';
