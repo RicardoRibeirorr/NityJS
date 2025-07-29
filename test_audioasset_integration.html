@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AudioAsset Integration Test - NityJS</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: white;
+        }
+        .info {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .test-result {
+            background: #16213e;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+        }
+        .success {
+            border-left: 4px solid #27ae60;
+        }
+        .error {
+            border-left: 4px solid #e74c3c;
+        }
+        button {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #6bb6ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎵 AudioAsset Integration Test</h1>
+    <p>Testing AudioAsset extending AudioClip functionality</p>
+    
+    <div class="info">
+        <h3>Test Objectives:</h3>
+        <div>✅ AudioAsset extends AudioClip properly</div>
+        <div>✅ AudioAsset has all required methods (createSourceNode, isReady, etc.)</div>
+        <div>✅ AudioSourceComponent can use AudioAsset directly</div>
+        <div>✅ No more toAudioClip() conversion needed</div>
+    </div>
+
+    <div id="testResults"></div>
+    
+    <button onclick="runTests()">Run Integration Tests</button>
+    <button onclick="testAudioPlayback()">Test Audio Playback</button>
+
+    <script type="module">
+        import { AudioAsset, AudioSourceComponent, GameObject, AudioRegistry } from '../../../src/index.js';
+
+        let results = [];
+
+        function addResult(test, success, message) {
+            results.push({test, success, message});
+            updateUI();
+        }
+
+        function updateUI() {
+            const container = document.getElementById('testResults');
+            container.innerHTML = results.map(result => `
+                <div class="test-result ${result.success ? 'success' : 'error'}">
+                    <strong>${result.test}:</strong> ${result.success ? '✅' : '❌'} ${result.message}
+                </div>
+            `).join('');
+        }
+
+        window.runTests = async function() {
+            results = [];
+            console.log('🧪 Starting AudioAsset Integration Tests...');
+
+            try {
+                // Test 1: AudioAsset inheritance
+                console.log('Test 1: Checking AudioAsset inheritance...');
+                const testAsset = new AudioAsset('test_audio', 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+Dz'); // Minimal WAV data
+                
+                if (testAsset instanceof AudioAsset) {
+                    addResult('AudioAsset Instance', true, 'AudioAsset created successfully');
+                } else {
+                    addResult('AudioAsset Instance', false, 'Failed to create AudioAsset');
+                    return;
+                }
+
+                // Test 2: AudioClip inheritance
+                console.log('Test 2: Checking AudioClip inheritance...');
+                if (testAsset.createSourceNode && typeof testAsset.createSourceNode === 'function') {
+                    addResult('AudioClip Inheritance', true, 'createSourceNode method inherited');
+                } else {
+                    addResult('AudioClip Inheritance', false, 'createSourceNode method missing');
+                }
+
+                // Test 3: Required properties
+                console.log('Test 3: Checking required properties...');
+                const hasRequiredProps = testAsset.hasOwnProperty('audioBuffer') && 
+                                        testAsset.hasOwnProperty('audioContext') &&
+                                        typeof testAsset.isReady !== 'undefined';
+                
+                if (hasRequiredProps) {
+                    addResult('Required Properties', true, 'All required properties present');
+                } else {
+                    addResult('Required Properties', false, 'Missing required properties');
+                }
+
+                // Test 4: AudioRegistry integration
+                console.log('Test 4: Checking AudioRegistry integration...');
+                const retrievedAsset = AudioRegistry.getAudio('test_audio');
+                if (retrievedAsset === testAsset) {
+                    addResult('AudioRegistry Integration', true, 'Asset auto-registered correctly');
+                } else {
+                    addResult('AudioRegistry Integration', false, 'Asset not found in registry');
+                }
+
+                // Test 5: AudioSourceComponent compatibility
+                console.log('Test 5: Checking AudioSourceComponent compatibility...');
+                const gameObject = new GameObject();
+                const audioSource = new AudioSourceComponent();
+                gameObject.addComponent(audioSource);
+                
+                try {
+                    audioSource.setClip('test_audio'); // Should work without toAudioClip()
+                    if (audioSource.clip === testAsset) {
+                        addResult('AudioSourceComponent', true, 'AudioAsset used directly in AudioSourceComponent');
+                    } else {
+                        addResult('AudioSourceComponent', false, 'AudioAsset not properly assigned');
+                    }
+                } catch (error) {
+                    addResult('AudioSourceComponent', false, `Error: ${error.message}`);
+                }
+
+                // Test 6: Method availability
+                console.log('Test 6: Checking method availability...');
+                const requiredMethods = ['createSourceNode', 'load', 'dispose'];
+                const missingMethods = requiredMethods.filter(method => 
+                    typeof testAsset[method] !== 'function'
+                );
+                
+                if (missingMethods.length === 0) {
+                    addResult('Method Availability', true, 'All required methods available');
+                } else {
+                    addResult('Method Availability', false, `Missing methods: ${missingMethods.join(', ')}`);
+                }
+
+                console.log('✅ All tests completed!');
+
+            } catch (error) {
+                addResult('Test Execution', false, `Test failed: ${error.message}`);
+                console.error('❌ Test execution failed:', error);
+            }
+        };
+
+        window.testAudioPlayback = async function() {
+            console.log('🎵 Testing audio playback...');
+            
+            try {
+                // Create a simple sine wave for testing
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const buffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.1, audioContext.sampleRate);
+                const data = buffer.getChannelData(0);
+                
+                for (let i = 0; i < buffer.length; i++) {
+                    data[i] = Math.sin(2 * Math.PI * 440 * i / audioContext.sampleRate) * 0.1;
+                }
+                
+                // Create test asset with actual audio data
+                const testAsset = new AudioAsset('beep_test', 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+Dz');
+                testAsset.audioBuffer = buffer; // Override with our test buffer
+                testAsset.isLoaded = true;
+                
+                // Test playback with AudioSourceComponent
+                const gameObject = new GameObject();
+                const audioSource = new AudioSourceComponent();
+                gameObject.addComponent(audioSource);
+                
+                audioSource.setClip(testAsset);
+                const playResult = audioSource.play();
+                
+                if (playResult) {
+                    addResult('Audio Playback', true, 'Audio playback started successfully');
+                    setTimeout(() => audioSource.stop(), 100); // Stop after 100ms
+                } else {
+                    addResult('Audio Playback', false, 'Failed to start audio playback');
+                }
+                
+            } catch (error) {
+                addResult('Audio Playback', false, `Playback error: ${error.message}`);
+                console.error('❌ Audio playback test failed:', error);
+            }
+        };
+
+        // Auto-run tests on load
+        setTimeout(() => runTests(), 500);
+    </script>
+</body>
+</html>

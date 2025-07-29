@@ -1,5 +1,6 @@
 import { Component } from '../../common/Component.js';
 import { AudioListenerComponent } from './AudioListenerComponent.js';
+import { AudioRegistry } from '../../asset/AudioRegistry.js';
 
 /**
  * AudioSourceComponent - Unity-style audio playback component with 3D spatial audio support.
@@ -23,17 +24,26 @@ import { AudioListenerComponent } from './AudioListenerComponent.js';
  * @extends Component
  * 
  * @example
- * // Basic 3D audio source
+ * // Basic 3D audio source with AudioRegistry
  * const audioSource = new AudioSourceComponent();
- * audioSource.clip = jumpSoundClip;
+ * audioSource.setClip("jump_sound"); // Looks up in AudioRegistry
  * audioSource.spatial = true;
  * audioSource.maxDistance = 300;
  * audioSource.play();
  * 
  * @example
+ * // Using metadata with AudioRegistry name
+ * const audioSource = AudioSourceComponent.meta({
+ *     clip: "explosion_sound", // AudioRegistry name
+ *     spatial: true,
+ *     volume: 0.8,
+ *     maxDistance: 400
+ * });
+ * 
+ * @example
  * // UI sound (2D audio)
  * const uiAudio = new AudioSourceComponent();
- * uiAudio.clip = buttonClickClip;
+ * uiAudio.setClip("button_click");
  * uiAudio.spatial = false;
  * uiAudio.volume = 0.8;
  * uiAudio.play();
@@ -143,7 +153,7 @@ export class AudioSourceComponent extends Component {
      * @private
      */
     _updatePropertiesFromMeta() {
-        this.clip = this.__meta.clip;
+        this._setClip(this.__meta.clip);
         this.spatial = this.__meta.spatial;
         this.autoPlay = this.__meta.autoPlay;
         this.loop = this.__meta.loop;
@@ -181,6 +191,64 @@ export class AudioSourceComponent extends Component {
         if (!validRolloffModes.includes(this.__meta.rolloffMode)) {
             throw new Error(`AudioSource rolloffMode must be one of: ${validRolloffModes.join(', ')}`);
         }
+    }
+
+    /**
+     * Set the audio clip for this source.
+     * Supports both direct clip objects and string names (looks up in AudioRegistry).
+     * 
+     * @param {Object|string|null} clipOrName - Audio clip object or name to lookup
+     * @private
+     */
+    _setClip(clipOrName) {
+        if (!clipOrName) {
+            this.clip = null;
+            return;
+        }
+
+        if (typeof clipOrName === 'string') {
+            // Look up audio by name in AudioRegistry
+            const audioAsset = AudioRegistry.getAudio(clipOrName);
+            if (audioAsset) {
+                this.clip = audioAsset; // AudioAsset now extends AudioClip, use directly
+                this.clipName = clipOrName;
+            } else {
+                console.warn(`AudioSourceComponent: Audio "${clipOrName}" not found in AudioRegistry`);
+                this.clip = null;
+                this.clipName = null;
+            }
+        } else {
+            // Direct clip object
+            this.clip = clipOrName;
+            this.clipName = clipOrName.name || 'unknown';
+        }
+    }
+
+    /**
+     * Set the audio clip for this audio source.
+     * Supports both direct AudioClip objects and string names from AudioRegistry.
+     * 
+     * @param {Object|string|null} clipOrName - Audio clip object or registry name
+     * 
+     * @example
+     * // Using AudioRegistry name
+     * audioSource.setClip("jump_sound");
+     * 
+     * @example
+     * // Using direct clip object
+     * audioSource.setClip(myAudioClip);
+     */
+    setClip(clipOrName) {
+        this._setClip(clipOrName);
+        this.__meta.clip = clipOrName;
+    }
+
+    /**
+     * Get the current audio clip name (if available)
+     * @returns {string|null} The clip name or null if no clip
+     */
+    getClipName() {
+        return this.clipName || (this.clip ? this.clip.name : null);
     }
     
     /**

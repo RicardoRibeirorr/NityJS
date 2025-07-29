@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Spatial Audio - NityJS</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: white;
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid #4a90e2;
+            background: #16213e;
+            display: block;
+            margin: 20px auto;
+        }
+        .controls {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px auto;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔊 3D Spatial Audio</h1>
+    <p>Move around to hear 3D positioned audio</p>
+    
+    <div class="controls">
+        <h3>Controls</h3>
+        <div><strong>Arrow Keys:</strong> Move player (listener)</div>
+        <div><strong>SPACE:</strong> Play sound at coin position</div>
+        <div>Volume changes based on distance!</div>
+    </div>
+
+    <script type="module" src="index.js"></script>
+</body>
+</html>

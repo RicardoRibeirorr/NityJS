@@ -17,10 +17,18 @@ export * from './common/GameObject.js';
 export * from './common/Scene.js';
 export * from './common/components/CameraComponent.js';
 export * from './extensions/movement/MovementController.js';
-export * from './input/Input.js';
+// Input System - New extensible device-based architecture
+export * from './input/KeyboardInput.js';
+export * from './input/MouseInput.js';
+export * from './input/GamepadInput.js';
+// Legacy input support (for compatibility)
+export * from './input/mappings/Keyboard.js';
+export * from './input/mappings/Gamepad.js';
 // export * from './renderer/Sprite.js';
 export * from './asset/SpriteAsset.js';
 export * from './asset/SpritesheetAsset.js';
+export * from './asset/AudioAsset.js';
+// AudioRegistry is internal - not exported to developers
 export * from './core/LayerManager.js';
 export * from './renderer/components/ImageComponent.js';
 export * from './renderer/components/ShapeComponent.js';

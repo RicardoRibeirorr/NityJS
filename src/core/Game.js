@@ -1,4 +1,5 @@
 import { SpriteRegistry } from '../asset/SpriteRegistry.js';
+import { AudioRegistry } from '../asset/AudioRegistry.js';
 import { CameraComponent } from '../common/components/CameraComponent.js';
 import { Input } from '../input/Input.js';
 import { CollisionSystem } from '../bin/CollisionSystem.js';
@@ -159,7 +160,13 @@ export class Game {
         //     scene._create(scene);  // Build the objects
         //     scene._create = null;
         // }
-        await SpriteRegistry.preloadAll();
+        
+        // Preload all engine assets
+        await Promise.all([
+            SpriteRegistry.preloadAll(),
+            AudioRegistry.preloadAll()
+        ]);
+        
         await this.scene.preload();
         await this.scene.start();
     }

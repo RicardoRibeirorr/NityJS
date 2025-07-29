@@ -22,10 +22,10 @@ export class MovementComponent extends Component {
     update() {
         const movement = new Vector2(0, 0);
 
-        if (Input.isKeyDown('ArrowRight') || Input.isKeyDown('d') || Input.isKeyDown('D')) movement.x += this.speed * Time.deltaTime;
-        if (Input.isKeyDown('ArrowLeft') || Input.isKeyDown('a') || Input.isKeyDown('A'))  movement.x -= this.speed * Time.deltaTime;
-        if (Input.isKeyDown('ArrowDown') || Input.isKeyDown('s') || Input.isKeyDown('S'))  movement.y += this.speed * Time.deltaTime;
-        if (Input.isKeyDown('ArrowUp') || Input.isKeyDown('w') || Input.isKeyDown('W'))    movement.y -= this.speed * Time.deltaTime;
+        if (Input.keyboard.isDown('ArrowRight') || Input.keyboard.isDown('d') || Input.keyboard.isDown('D')) movement.x += this.speed * Time.deltaTime;
+        if (Input.keyboard.isDown('ArrowLeft') || Input.keyboard.isDown('a') || Input.keyboard.isDown('A'))  movement.x -= this.speed * Time.deltaTime;
+        if (Input.keyboard.isDown('ArrowDown') || Input.keyboard.isDown('s') || Input.keyboard.isDown('S'))  movement.y += this.speed * Time.deltaTime;
+        if (Input.keyboard.isDown('ArrowUp') || Input.keyboard.isDown('w') || Input.keyboard.isDown('W'))    movement.y -= this.speed * Time.deltaTime;
 
         if (movement.magnitude > 0) {
             this.rigidbody.move(movement);

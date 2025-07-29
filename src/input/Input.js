@@ -1,385 +1,266 @@
-// === Input.js ===
+/**
+ * Main Input system for NityJS - Extensible device-based input management
+ * Provides device-specific access: Input.keyboard.isPressed(), Input.mouse.isDown(), etc.
+ */
+import { KeyboardInput } from './KeyboardInput.js';
+import { MouseInput } from './MouseInput.js';
+import { GamepadInput } from './GamepadInput.js';
+
 export class Input {
-    static keys = new Set(); // Currently held keys
-    static pressedKeys = new Set(); // Keys pressed this frame (click-like)
-    static releasedKeys = new Set(); // Keys released this frame
-    static previousKeys = new Set(); // Keys from previous frame
+    // Device instances - accessible as Input.keyboard, Input.mouse, Input.gamepad
+    static keyboard = new KeyboardInput();
+    static mouse = new MouseInput();
+    static gamepad = new GamepadInput();
     
-    // Mouse/Pointer state
-    static mouseButtons = new Set(); // Currently held mouse buttons
-    static pressedMouseButtons = new Set(); // Mouse buttons pressed this frame
-    static releasedMouseButtons = new Set(); // Mouse buttons released this frame
-    static previousMouseButtons = new Set(); // Mouse buttons from previous frame
-    static mousePosition = { x: 0, y: 0 }; // Current mouse position
-    static lastMousePosition = { x: 0, y: 0 }; // Previous mouse position
+    // Device registry for extensibility
+    static devices = new Map();
+    static deviceMappings = new Map(); // Custom device key mappings
     
-    // Event callbacks
-    static onKeyDown = new Map(); // key -> callback
-    static onKeyStay = new Map(); // key -> callback  
-    static onKeyUp = new Map(); // key -> callback
-    
-    // Mouse event callbacks
-    static onMouseDown = new Map(); // button -> callback
-    static onMouseStay = new Map(); // button -> callback
-    static onMouseUp = new Map(); // button -> callback
-    static onMouseMove = new Set(); // Set of callbacks for mouse movement
-    
-    static canvas = null; // Reference to canvas for mouse coordinate calculation
-
-    static initialize(canvas = null) {
-        Input.canvas = canvas;
-        
-        // Keyboard events
-        window.addEventListener('keydown', e => {
-            const key = e.key.toLowerCase();
-            if (!Input.keys.has(key)) {
-                Input.pressedKeys.add(key);
-                // Fire onKeyDown callback if registered
-                const callback = Input.onKeyDown.get(key);
-                if (callback) callback(key);
-            }
-            Input.keys.add(key);
-        });
-        
-        window.addEventListener('keyup', e => {
-            const key = e.key.toLowerCase();
-            Input.keys.delete(key);
-            Input.releasedKeys.add(key);
-            // Fire onKeyUp callback if registered
-            const callback = Input.onKeyUp.get(key);
-            if (callback) callback(key);
-        });
-
-        // Mouse events
-        const target = canvas || window;
-        
-        target.addEventListener('mousedown', e => {
-            const button = e.button;
-            if (!Input.mouseButtons.has(button)) {
-                Input.pressedMouseButtons.add(button);
-                // Fire onMouseDown callback if registered
-                const callback = Input.onMouseDown.get(button);
-                if (callback) callback(button, Input.mousePosition);
-            }
-            Input.mouseButtons.add(button);
-            Input.updateMousePosition(e);
-        });
-        
-        target.addEventListener('mouseup', e => {
-            const button = e.button;
-            Input.mouseButtons.delete(button);
-            Input.releasedMouseButtons.add(button);
-            // Fire onMouseUp callback if registered
-            const callback = Input.onMouseUp.get(button);
-            if (callback) callback(button, Input.mousePosition);
-            Input.updateMousePosition(e);
-        });
-        
-        target.addEventListener('mousemove', e => {
-            Input.updateMousePosition(e);
-            // Fire mouse move callbacks
-            for (const callback of Input.onMouseMove) {
-                callback(Input.mousePosition, Input.lastMousePosition);
-            }
-        });
-
-        // Context menu prevention for right-click
-        if (canvas) {
-            canvas.addEventListener('contextmenu', e => e.preventDefault());
-        }
-    }
+    static initialized = false;
 
     /**
-     * Update mouse position relative to canvas
-     * @param {MouseEvent} e - Mouse event
+     * Initialize the input system with all devices
+     * @param {HTMLCanvasElement} canvas - Canvas for mouse coordinate calculations
+     * @param {Object} options - Configuration options
      */
-    static updateMousePosition(e) {
-        Input.lastMousePosition = { ...Input.mousePosition };
+    static initialize(canvas = null, options = {}) {
+        if (Input.initialized) return;
         
-        if (Input.canvas) {
-            const rect = Input.canvas.getBoundingClientRect();
-            Input.mousePosition.x = e.clientX - rect.left;
-            Input.mousePosition.y = e.clientY - rect.top;
-        } else {
-            Input.mousePosition.x = e.clientX;
-            Input.mousePosition.y = e.clientY;
-        }
+        // Register core devices
+        Input.registerDevice('keyboard', Input.keyboard);
+        Input.registerDevice('mouse', Input.mouse);
+        Input.registerDevice('gamepad', Input.gamepad);
+        
+        // Initialize core devices
+        Input.keyboard.initialize();
+        Input.mouse.initialize(canvas);
+        Input.gamepad.initialize(options.gamepadIndex || 0);
+        
+        Input.initialized = true;
+        console.log('🎮 Input system initialized with devices:', [...Input.devices.keys()]);
     }
 
     /**
-     * Updates the input state - should be called each frame
+     * Update all registered input devices - called each frame
      */
     static update() {
-        // Fire onKeyStay callbacks for keys that are held
-        for (const key of Input.keys) {
-            if (Input.previousKeys.has(key)) {
-                const callback = Input.onKeyStay.get(key);
-                if (callback) callback(key);
-            }
-        }
-
-        // Fire onMouseStay callbacks for mouse buttons that are held
-        for (const button of Input.mouseButtons) {
-            if (Input.previousMouseButtons.has(button)) {
-                const callback = Input.onMouseStay.get(button);
-                if (callback) callback(button, Input.mousePosition);
-            }
-        }
-
-        // Clear frame-specific sets
-        Input.pressedKeys.clear();
-        Input.releasedKeys.clear();
-        Input.pressedMouseButtons.clear();
-        Input.releasedMouseButtons.clear();
+        if (!Input.initialized) return;
         
-        // Update previous states for next frame
-        Input.previousKeys = new Set(Input.keys);
-        Input.previousMouseButtons = new Set(Input.mouseButtons);
+        for (const device of Input.devices.values()) {
+            device.update();
+        }
     }
 
     /**
-     * Check if key is currently being held down
-     * @param {string} key - The key to check
+     * Register a new input device
+     * @param {string} name - Device name (e.g., 'keyboard', 'mouse', 'customController')
+     * @param {InputDevice} device - Device instance
+     */
+    static registerDevice(name, device) {
+        Input.devices.set(name, device);
+        
+        // Make device accessible as Input.deviceName
+        if (!Input.hasOwnProperty(name)) {
+            Input[name] = device;
+        }
+        
+        console.log(`📥 Registered input device: ${name}`);
+    }
+
+    /**
+     * Unregister an input device
+     * @param {string} name - Device name to remove
+     */
+    static unregisterDevice(name) {
+        if (Input.devices.has(name)) {
+            const device = Input.devices.get(name);
+            if (device.initialized) {
+                device.clearAllEvents();
+            }
+            
+            Input.devices.delete(name);
+            
+            // Remove from Input class if it was a direct property
+            if (Input.hasOwnProperty(name)) {
+                delete Input[name];
+            }
+            
+            console.log(`📤 Unregistered input device: ${name}`);
+        }
+    }
+
+    /**
+     * Register custom key mappings for a device
+     * Allows extending device mappings without modifying device classes
+     * @param {string} deviceName - Name of the device
+     * @param {Object} mappings - Key mappings object
+     */
+    static registerMapping(deviceName, mappings) {
+        if (!Input.deviceMappings.has(deviceName)) {
+            Input.deviceMappings.set(deviceName, new Map());
+        }
+        
+        const deviceMap = Input.deviceMappings.get(deviceName);
+        
+        for (const [key, values] of Object.entries(mappings)) {
+            deviceMap.set(key, Array.isArray(values) ? values : [values]);
+        }
+        
+        console.log(`🗂️ Registered custom mappings for ${deviceName}:`, Object.keys(mappings));
+    }
+
+    /**
+     * Get a specific input device
+     * @param {string} name - Device name
+     * @returns {InputDevice|null} - The device instance or null
+     */
+    static getDevice(name) {
+        return Input.devices.get(name) || null;
+    }
+
+    /**
+     * Get all registered device names
+     * @returns {Array<string>} - Array of device names
+     */
+    static getDeviceNames() {
+        return [...Input.devices.keys()];
+    }
+
+    /**
+     * Check if a device is registered and initialized
+     * @param {string} name - Device name
      * @returns {boolean}
      */
-    static isKeyDown(key) {
-        return Input.keys.has(key.toLowerCase());
+    static isDeviceReady(name) {
+        const device = Input.devices.get(name);
+        return device && device.initialized;
     }
 
     /**
-     * Check if key was pressed this frame (click-like, only fires once)
-     * @param {string} key - The key to check
-     * @returns {boolean}
+     * Get input system status and information
+     * @returns {Object} - System status information
      */
-    static isKeyPressed(key) {
-        return Input.pressedKeys.has(key.toLowerCase());
-    }
-
-    /**
-     * Check if key was released this frame
-     * @param {string} key - The key to check
-     * @returns {boolean}
-     */
-    static isKeyReleased(key) {
-        return Input.releasedKeys.has(key.toLowerCase());
-    }
-
-    // === MOUSE/POINTER METHODS ===
-
-    /**
-     * Check if mouse button is currently being held down
-     * @param {number} button - Mouse button (0=left, 1=middle, 2=right)
-     * @returns {boolean}
-     */
-    static isMouseDown(button = 0) {
-        return Input.mouseButtons.has(button);
-    }
-
-    /**
-     * Check if mouse button was pressed this frame (click-like, only fires once)
-     * @param {number} button - Mouse button (0=left, 1=middle, 2=right)
-     * @returns {boolean}
-     */
-    static isMousePressed(button = 0) {
-        return Input.pressedMouseButtons.has(button);
-    }
-
-    /**
-     * Check if mouse button was released this frame
-     * @param {number} button - Mouse button (0=left, 1=middle, 2=right)
-     * @returns {boolean}
-     */
-    static isMouseReleased(button = 0) {
-        return Input.releasedMouseButtons.has(button);
-    }
-
-    /**
-     * Get current mouse position
-     * @returns {Object} {x, y} coordinates
-     */
-    static getMousePosition() {
-        return { ...Input.mousePosition };
-    }
-
-    /**
-     * Get mouse movement delta from last frame
-     * @returns {Object} {x, y} movement delta
-     */
-    static getMouseDelta() {
+    static getSystemInfo() {
+        const deviceInfo = {};
+        
+        for (const [name, device] of Input.devices.entries()) {
+            deviceInfo[name] = device.getInfo();
+        }
+        
         return {
-            x: Input.mousePosition.x - Input.lastMousePosition.x,
-            y: Input.mousePosition.y - Input.lastMousePosition.y
+            initialized: Input.initialized,
+            totalDevices: Input.devices.size,
+            customMappings: Input.deviceMappings.size,
+            devices: deviceInfo
         };
     }
 
-    // === CONVENIENCE METHODS ===
+    /**
+     * Clear all input state and events for all devices
+     */
+    static clearAll() {
+        for (const device of Input.devices.values()) {
+            if (device.clearAllEvents) {
+                device.clearAllEvents();
+            }
+        }
+        console.log('🧹 Cleared all input events and state');
+    }
 
     /**
-     * Check if left mouse button is down
-     * @returns {boolean}
+     * Shutdown the input system
      */
+    static shutdown() {
+        Input.clearAll();
+        Input.devices.clear();
+        Input.deviceMappings.clear();
+        
+        // Remove device references
+        delete Input.keyboard;
+        delete Input.mouse;
+        delete Input.gamepad;
+        
+        Input.initialized = false;
+        console.log('🔌 Input system shutdown');
+    }
+
+    // ============================================
+    // LEGACY COMPATIBILITY METHODS (DEPRECATED)
+    // These methods maintain backward compatibility
+    // but should be replaced with device-specific calls
+    // ============================================
+
+    /**
+     * @deprecated Use Input.keyboard.isDown(key) instead
+     */
+    static isDown(key) {
+        console.warn('⚠️ Input.isDown() is deprecated. Use Input.keyboard.isDown(key) instead.');
+        return Input.keyboard.isDown(key);
+    }
+
+    /**
+     * @deprecated Use Input.keyboard.isPressed(key) instead
+     */
+    static isPressed(key) {
+        console.warn('⚠️ Input.isPressed() is deprecated. Use Input.keyboard.isPressed(key) instead.');
+        return Input.keyboard.isPressed(key);
+    }
+
+    /**
+     * @deprecated Use Input.keyboard.isReleased(key) instead
+     */
+    static isReleased(key) {
+        console.warn('⚠️ Input.isReleased() is deprecated. Use Input.keyboard.isReleased(key) instead.');
+        return Input.keyboard.isReleased(key);
+    }
+
+    /**
+     * @deprecated Use Input.mouse.isDown(button) instead
+     */
+    static isMouseDown(button) {
+        console.warn('⚠️ Input.isMouseDown() is deprecated. Use Input.mouse.isDown(button) instead.');
+        return Input.mouse.isDown(button);
+    }
+
+    /**
+     * @deprecated Use Input.mouse.getPosition() instead
+     */
+    static getMousePosition() {
+        console.warn('⚠️ Input.getMousePosition() is deprecated. Use Input.mouse.getPosition() instead.');
+        return Input.mouse.getPosition();
+    }
+
+    /**
+     * @deprecated Use Input.keyboard.onEvent() instead
+     */
+    static onEvent(event, key, callback) {
+        console.warn('⚠️ Input.onEvent() is deprecated. Use Input.keyboard.onEvent() or Input.mouse.onEvent() instead.');
+        Input.keyboard.onEvent(event, key, callback);
+    }
+
+    // Additional legacy methods for compatibility
+    static isKeyDown(key) {
+        console.warn('⚠️ Input.isKeyDown() is deprecated. Use Input.keyboard.isDown(key) instead.');
+        return Input.keyboard.isDown(key);
+    }
+
+    static isKeyPressed(key) {
+        console.warn('⚠️ Input.isKeyPressed() is deprecated. Use Input.keyboard.isPressed(key) instead.');
+        return Input.keyboard.isPressed(key);
+    }
+
+    static isMousePressed(button) {
+        console.warn('⚠️ Input.isMousePressed() is deprecated. Use Input.mouse.isPressed(button) instead.');
+        return Input.mouse.isPressed(button);
+    }
+
     static isLeftMouseDown() {
-        return Input.isMouseDown(0);
+        console.warn('⚠️ Input.isLeftMouseDown() is deprecated. Use Input.mouse.isDown(0) instead.');
+        return Input.mouse.isDown(0);
     }
 
-    /**
-     * Check if left mouse button was clicked this frame
-     * @returns {boolean}
-     */
-    static isLeftMousePressed() {
-        return Input.isMousePressed(0);
-    }
-
-    /**
-     * Check if right mouse button is down
-     * @returns {boolean}
-     */
     static isRightMouseDown() {
-        return Input.isMouseDown(2);
-    }
-
-    /**
-     * Check if right mouse button was clicked this frame
-     * @returns {boolean}
-     */
-    static isRightMousePressed() {
-        return Input.isMousePressed(2);
-    }
-
-    /**
-     * Register a callback for when a key is first pressed (click-like)
-     * @param {string} key - The key to listen for
-     * @param {function} callback - Function to call when key is pressed
-     */
-    static onKeyDownEvent(key, callback) {
-        Input.onKeyDown.set(key.toLowerCase(), callback);
-    }
-
-    /**
-     * Register a callback for when a key is being held down
-     * @param {string} key - The key to listen for
-     * @param {function} callback - Function to call while key is held
-     */
-    static onKeyStayEvent(key, callback) {
-        Input.onKeyStay.set(key.toLowerCase(), callback);
-    }
-
-    /**
-     * Register a callback for when a key is released
-     * @param {string} key - The key to listen for
-     * @param {function} callback - Function to call when key is released
-     */
-    static onKeyUpEvent(key, callback) {
-        Input.onKeyUp.set(key.toLowerCase(), callback);
-    }
-
-    // === MOUSE EVENT CALLBACKS ===
-
-    /**
-     * Register a callback for when a mouse button is first pressed (click-like)
-     * @param {number} button - Mouse button (0=left, 1=middle, 2=right)
-     * @param {function} callback - Function to call when button is pressed
-     */
-    static onMouseDownEvent(button = 0, callback) {
-        Input.onMouseDown.set(button, callback);
-    }
-
-    /**
-     * Register a callback for when a mouse button is being held down
-     * @param {number} button - Mouse button (0=left, 1=middle, 2=right)
-     * @param {function} callback - Function to call while button is held
-     */
-    static onMouseStayEvent(button = 0, callback) {
-        Input.onMouseStay.set(button, callback);
-    }
-
-    /**
-     * Register a callback for when a mouse button is released
-     * @param {number} button - Mouse button (0=left, 1=middle, 2=right)
-     * @param {function} callback - Function to call when button is released
-     */
-    static onMouseUpEvent(button = 0, callback) {
-        Input.onMouseUp.set(button, callback);
-    }
-
-    /**
-     * Register a callback for mouse movement
-     * @param {function} callback - Function to call when mouse moves
-     */
-    static onMouseMoveEvent(callback) {
-        Input.onMouseMove.add(callback);
-    }
-
-    // === CONVENIENCE EVENT METHODS ===
-
-    /**
-     * Register a callback for left mouse button click
-     * @param {function} callback - Function to call when left button is clicked
-     */
-    static onLeftClickEvent(callback) {
-        Input.onMouseDownEvent(0, callback);
-    }
-
-    /**
-     * Register a callback for right mouse button click
-     * @param {function} callback - Function to call when right button is clicked
-     */
-    static onRightClickEvent(callback) {
-        Input.onMouseDownEvent(2, callback);
-    }
-
-    /**
-     * Remove a key event callback
-     * @param {string} event - 'down', 'stay', or 'up'
-     * @param {string} key - The key to remove callback for
-     */
-    static removeKeyEvent(event, key) {
-        const keyLower = key.toLowerCase();
-        switch(event) {
-            case 'down':
-                Input.onKeyDown.delete(keyLower);
-                break;
-            case 'stay':
-                Input.onKeyStay.delete(keyLower);
-                break;
-            case 'up':
-                Input.onKeyUp.delete(keyLower);
-                break;
-        }
-    }
-
-    /**
-     * Remove a mouse event callback
-     * @param {string} event - 'down', 'stay', 'up', or 'move'
-     * @param {number|function} buttonOrCallback - Button number for click events, or callback function for move events
-     */
-    static removeMouseEvent(event, buttonOrCallback) {
-        switch(event) {
-            case 'down':
-                Input.onMouseDown.delete(buttonOrCallback);
-                break;
-            case 'stay':
-                Input.onMouseStay.delete(buttonOrCallback);
-                break;
-            case 'up':
-                Input.onMouseUp.delete(buttonOrCallback);
-                break;
-            case 'move':
-                Input.onMouseMove.delete(buttonOrCallback);
-                break;
-        }
-    }
-
-    /**
-     * Clear all event callbacks
-     */
-    static clearAllEvents() {
-        Input.onKeyDown.clear();
-        Input.onKeyStay.clear();
-        Input.onKeyUp.clear();
-        Input.onMouseDown.clear();
-        Input.onMouseStay.clear();
-        Input.onMouseUp.clear();
-        Input.onMouseMove.clear();
+        console.warn('⚠️ Input.isRightMouseDown() is deprecated. Use Input.mouse.isDown(2) instead.');
+        return Input.mouse.isDown(2);
     }
 }

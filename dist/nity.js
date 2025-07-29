@@ -20,6 +20,719 @@ var Nity = (() => {
   };
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
+  // src/audio/AudioClip.js
+  var AudioClip;
+  var init_AudioClip = __esm({
+    "src/audio/AudioClip.js"() {
+      AudioClip = class _AudioClip {
+        /**
+         * Creates a new AudioClip with the specified name and URL.
+         * 
+         * Initializes the audio clip with basic properties and prepares it for loading.
+         * The audio data is not loaded immediately - call load() to begin the loading
+         * and decoding process. This allows for better control over when audio resources
+         * are loaded and reduces initial page load time.
+         * 
+         * @param {string} name - Unique identifier for this audio clip
+         * @param {string} url - Path to the audio file (relative or absolute)
+         * 
+         * @example
+         * // Create clips for different audio types
+         * const music = new AudioClip("background_music", "assets/music/theme.mp3");
+         * const sfx = new AudioClip("explosion", "assets/sounds/explosion.wav");
+         * const voice = new AudioClip("dialog_01", "assets/voice/intro.ogg");
+         */
+        constructor(name, url) {
+          this.name = name;
+          this.url = url;
+          this.audioBuffer = null;
+          this.length = 0;
+          this.channels = 0;
+          this.frequency = 0;
+          this.isLoaded = false;
+          this.isLoading = false;
+          this.loadError = null;
+          this.audioContext = _AudioClip.getAudioContext();
+        }
+        /**
+         * Gets or creates the global Web Audio API context.
+         * 
+         * Creates a singleton AudioContext that all audio clips share. This ensures
+         * optimal resource usage and prevents the creation of multiple audio contexts
+         * which can cause performance issues. Handles browser compatibility for
+         * AudioContext creation.
+         * 
+         * @static
+         * @returns {AudioContext} The global audio context instance
+         * 
+         * @example
+         * // Access global audio context
+         * const context = AudioClip.getAudioContext();
+         * console.log('Sample Rate:', context.sampleRate);
+         */
+        static getAudioContext() {
+          if (!_AudioClip._audioContext) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) {
+              throw new Error("Web Audio API not supported in this browser");
+            }
+            _AudioClip._audioContext = new AudioContextClass();
+            if (_AudioClip._audioContext.state === "suspended") {
+              document.addEventListener("click", () => {
+                if (_AudioClip._audioContext.state === "suspended") {
+                  _AudioClip._audioContext.resume();
+                }
+              }, { once: true });
+            }
+          }
+          return _AudioClip._audioContext;
+        }
+        /**
+         * Loads and decodes the audio file.
+         * 
+         * Fetches the audio file from the specified URL and decodes it using the Web
+         * Audio API. This is an asynchronous operation that should be awaited. Once
+         * loaded, the audio clip can be used by AudioSource components for playback.
+         * 
+         * @async
+         * @returns {Promise<boolean>} True if loading succeeded, false if failed
+         * 
+         * @example
+         * // Load audio with error handling
+         * const clip = new AudioClip("jump", "assets/jump.wav");
+         * const success = await clip.load();
+         * if (success) {
+         *     console.log("Audio loaded successfully");
+         * } else {
+         *     console.error("Failed to load audio:", clip.loadError);
+         * }
+         */
+        async load() {
+          if (this.isLoaded) return true;
+          if (this.isLoading) {
+            return new Promise((resolve) => {
+              const checkLoaded = () => {
+                if (!this.isLoading) {
+                  resolve(this.isLoaded);
+                } else {
+                  setTimeout(checkLoaded, 10);
+                }
+              };
+              checkLoaded();
+            });
+          }
+          this.isLoading = true;
+          this.loadError = null;
+          try {
+            const response = await fetch(this.url);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch audio: ${response.status} ${response.statusText}`);
+            }
+            const arrayBuffer = await response.arrayBuffer();
+            this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+            this.length = this.audioBuffer.length / this.audioBuffer.sampleRate;
+            this.channels = this.audioBuffer.numberOfChannels;
+            this.frequency = this.audioBuffer.sampleRate;
+            this.isLoaded = true;
+            this.isLoading = false;
+            console.log(`\u2705 Audio clip loaded: ${this.name} (${this.length.toFixed(2)}s, ${this.channels}ch, ${this.frequency}Hz)`);
+            return true;
+          } catch (error) {
+            this.loadError = error.message;
+            this.isLoading = false;
+            this.isLoaded = false;
+            console.error(`\u274C Failed to load audio clip '${this.name}':`, error);
+            return false;
+          }
+        }
+        /**
+         * Creates an audio buffer source node for playback.
+         * 
+         * Generates a new AudioBufferSourceNode connected to the audio context. This
+         * node can be configured and connected to other audio nodes (like gain nodes
+         * or panners) before starting playback. Each playback requires a new source
+         * node as they are single-use.
+         * 
+         * @returns {AudioBufferSourceNode|null} Audio source node or null if not loaded
+         * 
+         * @internal Used by AudioSource components for audio playback
+         */
+        createSourceNode() {
+          if (!this.isLoaded || !this.audioBuffer) {
+            console.warn(`Cannot create source node: Audio clip '${this.name}' not loaded`);
+            return null;
+          }
+          const sourceNode = this.audioContext.createBufferSource();
+          sourceNode.buffer = this.audioBuffer;
+          return sourceNode;
+        }
+        /**
+         * Checks if the audio clip is ready for playback.
+         * 
+         * @returns {boolean} True if the clip is loaded and ready to play
+         */
+        get isReady() {
+          return this.isLoaded && this.audioBuffer !== null;
+        }
+        /**
+         * Gets the current state of the audio clip.
+         * 
+         * @returns {string} Current state: 'unloaded', 'loading', 'loaded', or 'error'
+         */
+        get state() {
+          if (this.loadError) return "error";
+          if (this.isLoading) return "loading";
+          if (this.isLoaded) return "loaded";
+          return "unloaded";
+        }
+        /**
+         * Preloads all audio clips in the provided array.
+         * 
+         * @static
+         * @param {AudioClip[]} clips - Array of audio clips to preload
+         * @returns {Promise<boolean[]>} Array of success states for each clip
+         * 
+         * @example
+         * // Preload multiple clips
+         * const clips = [jumpSound, shootSound, musicClip];
+         * const results = await AudioClip.preloadAll(clips);
+         * console.log(`${results.filter(r => r).length}/${clips.length} clips loaded`);
+         */
+        static async preloadAll(clips) {
+          const loadPromises = clips.map((clip) => clip.load());
+          return Promise.all(loadPromises);
+        }
+      };
+      AudioClip._audioContext = null;
+    }
+  });
+
+  // src/asset/AudioAsset.js
+  var AudioAsset_exports = {};
+  __export(AudioAsset_exports, {
+    AudioAsset: () => AudioAsset
+  });
+  var AudioAsset;
+  var init_AudioAsset = __esm({
+    "src/asset/AudioAsset.js"() {
+      init_AudioRegistry();
+      init_AudioClip();
+      AudioAsset = class _AudioAsset extends AudioClip {
+        /**
+         * Create a new audio asset and automatically register it
+         * @param {string} name - Name to register the audio under
+         * @param {string} audioPath - Path to the audio file
+         * @param {Object} [config] - Optional configuration
+         * @param {number} [config.volume=1.0] - Default volume (0.0 to 1.0)
+         * @param {boolean} [config.loop=false] - Default loop setting
+         * @param {string} [config.format] - Audio format hint (mp3, wav, ogg, etc.)
+         */
+        constructor(name, audioPath, config = {}) {
+          super(name, audioPath);
+          this.audioPath = audioPath;
+          this.volume = config.volume !== void 0 ? config.volume : 1;
+          this.loop = config.loop || false;
+          this.format = config.format || this.#detectFormat(audioPath);
+          this.#_registerSelf();
+          this.load();
+        }
+        /**
+         * Automatically register this audio asset
+         * @private
+         */
+        #_registerSelf() {
+          AudioRegistry._addAudio(this.name, this);
+        }
+        /**
+         * Detect audio format from file extension
+         * @param {string} path - Audio file path
+         * @returns {string} Detected format
+         * @private
+         */
+        #detectFormat(path) {
+          const extension = path.split(".").pop().toLowerCase();
+          return extension;
+        }
+        /**
+         * Create a copy of this audio asset with different settings
+         * @param {Object} config - Configuration overrides
+         * @returns {AudioAsset} New audio asset instance
+         */
+        clone(config = {}) {
+          return new _AudioAsset(this.name + "_copy", this.audioPath, {
+            volume: config.volume !== void 0 ? config.volume : this.volume,
+            loop: config.loop !== void 0 ? config.loop : this.loop,
+            format: config.format || this.format,
+            ...config
+          });
+        }
+        /**
+         * Get audio information as an object
+         * @returns {Object} Audio information
+         */
+        getInfo() {
+          return {
+            name: this.name,
+            path: this.audioPath,
+            format: this.format,
+            isLoaded: this.isLoaded,
+            duration: this.length,
+            // Use inherited property
+            sampleRate: this.frequency,
+            // Use inherited property  
+            channels: this.channels,
+            // Use inherited property
+            volume: this.volume,
+            loop: this.loop
+          };
+        }
+        /**
+         * Dispose of the audio asset and free memory
+         */
+        dispose() {
+          this.audioBuffer = null;
+          this.audioContext = null;
+          this.isLoaded = false;
+          AudioRegistry._removeAudio(this.name);
+          console.log(`AudioAsset "${this.name}" disposed`);
+        }
+        /** 
+         * Static method to create and load an audio asset
+         * @param {string} name - Name to register the audio under
+         * @param {string} audioPath - Path to the audio file
+         * @param {Object} config - Optional configuration
+         * @returns {Promise<AudioAsset>} Promise that resolves to the loaded audio asset
+         */
+        static async create(name, audioPath, config = {}) {
+          const asset = new _AudioAsset(name, audioPath, config);
+          await asset.load();
+          return asset;
+        }
+        /**
+         * Static method to preload multiple audio assets
+         * @param {Array<Object>} audioList - Array of {name, path, config} objects
+         * @returns {Promise<Array<AudioAsset>>} Promise that resolves to array of loaded assets
+         */
+        static async preloadMultiple(audioList) {
+          const promises = audioList.map(
+            (audio) => _AudioAsset.create(audio.name, audio.path, audio.config || {})
+          );
+          try {
+            const assets = await Promise.all(promises);
+            console.log(`Preloaded ${assets.length} audio assets`);
+            return assets;
+          } catch (error) {
+            console.error("Failed to preload some audio assets:", error);
+            throw error;
+          }
+        }
+      };
+    }
+  });
+
+  // src/asset/AudioRegistry.js
+  var AudioRegistry;
+  var init_AudioRegistry = __esm({
+    "src/asset/AudioRegistry.js"() {
+      AudioRegistry = class {
+        static audioAssets = /* @__PURE__ */ new Map();
+        // Storage for all audio assets
+        /**
+         * Internal method to add an audio asset (used by AudioAsset constructor)
+         * @param {string} name - Name to register the audio under
+         * @param {AudioAsset} audioAsset - The audio asset to register
+         * @private
+         */
+        static _addAudio(name, audioAsset) {
+          this.audioAssets.set(name, audioAsset);
+          console.log(`AudioRegistry: Registered audio "${name}"`);
+        }
+        /**
+         * Internal method to remove an audio asset
+         * @param {string} name - Name of the audio to remove
+         * @private
+         */
+        static _removeAudio(name) {
+          const removed = this.audioAssets.delete(name);
+          if (removed) {
+            console.log(`AudioRegistry: Removed audio "${name}"`);
+          }
+        }
+        /**
+         * Get a registered audio asset
+         * @param {string} name - Name of the audio asset
+         * @returns {AudioAsset|null} The audio asset or null if not found
+         */
+        static getAudio(name) {
+          const audio = this.audioAssets.get(name);
+          if (!audio) {
+            console.warn(`AudioRegistry: Audio "${name}" not found. Available audio:`, [...this.audioAssets.keys()]);
+            return null;
+          }
+          return audio;
+        }
+        /**
+         * Get an audio asset as an AudioClip (for compatibility with AudioSourceComponent)
+         * @param {string} name - Name of the audio asset
+         * @returns {Object|null} AudioClip-compatible object or null if not found
+         */
+        static getAudioClip(name) {
+          const audio = this.getAudio(name);
+          return audio ? audio.toAudioClip() : null;
+        }
+        /**
+         * Check if an audio asset exists in the registry
+         * @param {string} name - Name of the audio asset
+         * @returns {boolean} True if the audio exists, false otherwise
+         */
+        static hasAudio(name) {
+          return this.audioAssets.has(name);
+        }
+        /**
+         * Get all registered audio asset names
+         * @returns {Array<string>} Array of all registered audio names
+         */
+        static getAllAudioNames() {
+          return [...this.audioAssets.keys()];
+        }
+        /**
+         * Get all registered audio assets
+         * @returns {Array<AudioAsset>} Array of all registered audio assets
+         */
+        static getAllAudio() {
+          return [...this.audioAssets.values()];
+        }
+        /**
+         * Get information about all registered audio assets
+         * @returns {Array<Object>} Array of audio information objects
+         */
+        static getAllAudioInfo() {
+          return this.getAllAudio().map((audio) => audio.getInfo());
+        }
+        /**
+         * Check loading status of all audio assets
+         * @returns {Object} Loading status summary
+         */
+        static getLoadingStatus() {
+          const allAudio = this.getAllAudio();
+          const loaded = allAudio.filter((audio) => audio.isReady());
+          const loading = allAudio.filter((audio) => !audio.isReady());
+          return {
+            total: allAudio.length,
+            loaded: loaded.length,
+            loading: loading.length,
+            progress: allAudio.length > 0 ? loaded.length / allAudio.length : 1,
+            loadedAssets: loaded.map((audio) => audio.name),
+            loadingAssets: loading.map((audio) => audio.name)
+          };
+        }
+        /**
+         * Preload all registered audio assets
+         * This method is called internally by the Game class during initialization
+         * @returns {Promise<void>} Promise that resolves when all audio assets are loaded
+         * @private
+         */
+        static async preloadAll() {
+          const allAudio = this.getAllAudio();
+          const promises = allAudio.map((audio) => audio.load());
+          try {
+            await Promise.all(promises);
+            console.log("AudioRegistry: All audio assets loaded successfully");
+          } catch (error) {
+            console.error("AudioRegistry: Some audio assets failed to load:", error);
+            throw error;
+          }
+        }
+        /**
+         * Wait for all audio assets to finish loading (legacy method)
+         * @returns {Promise} Promise that resolves when all audio is loaded
+         * @deprecated Use preloadAll() instead
+         */
+        static async waitForAllToLoad() {
+          return this.preloadAll();
+        }
+        /**
+         * Load all registered audio assets (legacy method)
+         * @returns {Promise} Promise that resolves when all audio is loaded
+         * @deprecated Use preloadAll() instead
+         */
+        static async loadAll() {
+          return this.preloadAll();
+        }
+        /**
+         * Preload a list of audio files
+         * @param {Array<Object>} audioList - Array of {name, path, config} objects
+         * @returns {Promise<Array<AudioAsset>>} Promise that resolves to loaded assets
+         */
+        static async preloadAudio(audioList) {
+          const { AudioAsset: AudioAsset2 } = await Promise.resolve().then(() => (init_AudioAsset(), AudioAsset_exports));
+          return AudioAsset2.preloadMultiple(audioList);
+        }
+        /**
+         * Clear all registered audio assets and free memory
+         */
+        static clear() {
+          const allAudio = this.getAllAudio();
+          allAudio.forEach((audio) => audio.dispose());
+          this.audioAssets.clear();
+          console.log("AudioRegistry: Cleared all audio assets");
+        }
+        /**
+         * Remove a specific audio asset from the registry
+         * @param {string} name - Name of the audio asset to remove
+         * @returns {boolean} True if removed, false if not found
+         */
+        static removeAudio(name) {
+          const audio = this.getAudio(name);
+          if (audio) {
+            audio.dispose();
+            return true;
+          }
+          return false;
+        }
+        /**
+         * Get memory usage information for all audio assets
+         * @returns {Object} Memory usage information
+         */
+        static getMemoryUsage() {
+          const allAudio = this.getAllAudio();
+          let totalDuration = 0;
+          let totalChannels = 0;
+          let estimatedMemoryMB = 0;
+          allAudio.forEach((audio) => {
+            if (audio.isReady()) {
+              const duration = audio.getDuration();
+              const sampleRate = audio.getSampleRate();
+              const channels = audio.getChannelCount();
+              totalDuration += duration;
+              totalChannels += channels;
+              estimatedMemoryMB += sampleRate * channels * duration * 4 / (1024 * 1024);
+            }
+          });
+          return {
+            totalAssets: allAudio.length,
+            loadedAssets: allAudio.filter((audio) => audio.isReady()).length,
+            totalDurationSeconds: Math.round(totalDuration),
+            averageChannels: allAudio.length > 0 ? totalChannels / allAudio.length : 0,
+            estimatedMemoryMB: Math.round(estimatedMemoryMB * 100) / 100
+          };
+        }
+        /**
+         * Create a batch operation for loading multiple audio files
+         * @param {Array<Object>} audioList - Array of {name, path, config} objects
+         * @param {Function} onProgress - Optional progress callback (loaded, total)
+         * @returns {Promise<Array<AudioAsset>>} Promise that resolves to loaded assets
+         */
+        static async loadBatch(audioList, onProgress = null) {
+          const results = [];
+          let loaded = 0;
+          for (const audioInfo of audioList) {
+            try {
+              const { AudioAsset: AudioAsset2 } = await Promise.resolve().then(() => (init_AudioAsset(), AudioAsset_exports));
+              const asset = await AudioAsset2.create(audioInfo.name, audioInfo.path, audioInfo.config || {});
+              results.push(asset);
+              loaded++;
+              if (onProgress) {
+                onProgress(loaded, audioList.length);
+              }
+            } catch (error) {
+              console.error(`Failed to load audio "${audioInfo.name}":`, error);
+              results.push(null);
+            }
+          }
+          console.log(`AudioRegistry: Batch loaded ${results.filter((r) => r).length}/${audioList.length} audio assets`);
+          return results;
+        }
+        /**
+         * Debug method to log all registered audio information
+         */
+        static debug() {
+          console.group("AudioRegistry Debug Information");
+          console.log("Registered Audio Assets:", this.getAllAudioNames());
+          console.log("Loading Status:", this.getLoadingStatus());
+          console.log("Memory Usage:", this.getMemoryUsage());
+          console.log("Detailed Info:", this.getAllAudioInfo());
+          console.groupEnd();
+        }
+      };
+    }
+  });
+
+  // src/input/mappings/Keyboard.js
+  var Keyboard_exports = {};
+  __export(Keyboard_exports, {
+    Keyboard: () => Keyboard
+  });
+  var Keyboard;
+  var init_Keyboard = __esm({
+    "src/input/mappings/Keyboard.js"() {
+      Keyboard = class _Keyboard {
+        // Common keys with their possible representations
+        static Space = ["Space", " "];
+        static Enter = ["Enter"];
+        static Escape = ["Escape"];
+        static Tab = ["Tab"];
+        static Backspace = ["Backspace"];
+        static Delete = ["Delete"];
+        static Insert = ["Insert"];
+        static Home = ["Home"];
+        static End = ["End"];
+        static PageUp = ["PageUp"];
+        static PageDown = ["PageDown"];
+        // Arrow keys
+        static ArrowUp = ["ArrowUp"];
+        static ArrowDown = ["ArrowDown"];
+        static ArrowLeft = ["ArrowLeft"];
+        static ArrowRight = ["ArrowRight"];
+        // Number keys (top row)
+        static Digit0 = ["Digit0", "0"];
+        static Digit1 = ["Digit1", "1"];
+        static Digit2 = ["Digit2", "2"];
+        static Digit3 = ["Digit3", "3"];
+        static Digit4 = ["Digit4", "4"];
+        static Digit5 = ["Digit5", "5"];
+        static Digit6 = ["Digit6", "6"];
+        static Digit7 = ["Digit7", "7"];
+        static Digit8 = ["Digit8", "8"];
+        static Digit9 = ["Digit9", "9"];
+        // Letter keys
+        static KeyA = ["KeyA", "a", "A"];
+        static KeyB = ["KeyB", "b", "B"];
+        static KeyC = ["KeyC", "c", "C"];
+        static KeyD = ["KeyD", "d", "D"];
+        static KeyE = ["KeyE", "e", "E"];
+        static KeyF = ["KeyF", "f", "F"];
+        static KeyG = ["KeyG", "g", "G"];
+        static KeyH = ["KeyH", "h", "H"];
+        static KeyI = ["KeyI", "i", "I"];
+        static KeyJ = ["KeyJ", "j", "J"];
+        static KeyK = ["KeyK", "k", "K"];
+        static KeyL = ["KeyL", "l", "L"];
+        static KeyM = ["KeyM", "m", "M"];
+        static KeyN = ["KeyN", "n", "N"];
+        static KeyO = ["KeyO", "o", "O"];
+        static KeyP = ["KeyP", "p", "P"];
+        static KeyQ = ["KeyQ", "q", "Q"];
+        static KeyR = ["KeyR", "r", "R"];
+        static KeyS = ["KeyS", "s", "S"];
+        static KeyT = ["KeyT", "t", "T"];
+        static KeyU = ["KeyU", "u", "U"];
+        static KeyV = ["KeyV", "v", "V"];
+        static KeyW = ["KeyW", "w", "W"];
+        static KeyX = ["KeyX", "x", "X"];
+        static KeyY = ["KeyY", "y", "Y"];
+        static KeyZ = ["KeyZ", "z", "Z"];
+        // Function keys
+        static F1 = ["F1"];
+        static F2 = ["F2"];
+        static F3 = ["F3"];
+        static F4 = ["F4"];
+        static F5 = ["F5"];
+        static F6 = ["F6"];
+        static F7 = ["F7"];
+        static F8 = ["F8"];
+        static F9 = ["F9"];
+        static F10 = ["F10"];
+        static F11 = ["F11"];
+        static F12 = ["F12"];
+        // Modifier keys
+        static ShiftLeft = ["ShiftLeft", "Shift"];
+        static ShiftRight = ["ShiftRight", "Shift"];
+        static ControlLeft = ["ControlLeft", "Control"];
+        static ControlRight = ["ControlRight", "Control"];
+        static AltLeft = ["AltLeft", "Alt"];
+        static AltRight = ["AltRight", "Alt"];
+        static MetaLeft = ["MetaLeft", "Meta"];
+        static MetaRight = ["MetaRight", "Meta"];
+        // Special characters
+        static Minus = ["Minus", "-"];
+        static Equal = ["Equal", "="];
+        static BracketLeft = ["BracketLeft", "["];
+        static BracketRight = ["BracketRight", "]"];
+        static Backslash = ["Backslash", "\\"];
+        static Semicolon = ["Semicolon", ";"];
+        static Quote = ["Quote", "'"];
+        static Comma = ["Comma", ","];
+        static Period = ["Period", "."];
+        static Slash = ["Slash", "/"];
+        // Numpad keys
+        static Numpad0 = ["Numpad0"];
+        static Numpad1 = ["Numpad1"];
+        static Numpad2 = ["Numpad2"];
+        static Numpad3 = ["Numpad3"];
+        static Numpad4 = ["Numpad4"];
+        static Numpad5 = ["Numpad5"];
+        static Numpad6 = ["Numpad6"];
+        static Numpad7 = ["Numpad7"];
+        static Numpad8 = ["Numpad8"];
+        static Numpad9 = ["Numpad9"];
+        static NumpadAdd = ["NumpadAdd", "+"];
+        static NumpadSubtract = ["NumpadSubtract", "-"];
+        static NumpadMultiply = ["NumpadMultiply", "*"];
+        static NumpadDivide = ["NumpadDivide", "/"];
+        static NumpadDecimal = ["NumpadDecimal", "."];
+        static NumpadEnter = ["NumpadEnter"];
+        /**
+         * Map from physical key values to logical key names
+         * This is built automatically from the above mappings
+         */
+        static _keyMapping = null;
+        /**
+         * Initialize the key mapping system
+         */
+        static initialize() {
+          if (_Keyboard._keyMapping) return;
+          _Keyboard._keyMapping = /* @__PURE__ */ new Map();
+          for (const [logicalKey, physicalKeys] of Object.entries(_Keyboard)) {
+            if (Array.isArray(physicalKeys)) {
+              for (const physicalKey of physicalKeys) {
+                _Keyboard._keyMapping.set(physicalKey.toLowerCase(), logicalKey);
+              }
+            }
+          }
+        }
+        /**
+         * Get the logical key name from a physical key
+         * @param {string} physicalKey - The physical key from the event
+         * @returns {string} The logical key name, or the original key if not mapped
+         */
+        static getLogicalKey(physicalKey) {
+          if (!_Keyboard._keyMapping) _Keyboard.initialize();
+          const logical = _Keyboard._keyMapping.get(physicalKey.toLowerCase());
+          return logical || physicalKey;
+        }
+        /**
+         * Check if a logical key matches any of its physical representations
+         * @param {string} logicalKey - The logical key name (e.g., "Space", "KeyA")
+         * @param {string} physicalKey - The physical key from the event
+         * @returns {boolean} True if they match
+         */
+        static matches(logicalKey, physicalKey) {
+          const physicalKeys = _Keyboard[logicalKey];
+          if (!physicalKeys || !Array.isArray(physicalKeys)) return false;
+          return physicalKeys.some((key) => key.toLowerCase() === physicalKey.toLowerCase());
+        }
+        /**
+         * Get all physical representations of a logical key
+         * @param {string} logicalKey - The logical key name
+         * @returns {Array<string>} Array of physical key representations
+         */
+        static getPhysicalKeys(logicalKey) {
+          return _Keyboard[logicalKey] || [];
+        }
+        /**
+         * Get all available logical key names
+         * @returns {Array<string>} Array of logical key names
+         */
+        static getAllLogicalKeys() {
+          return Object.keys(_Keyboard).filter(
+            (key) => Array.isArray(_Keyboard[key]) && !key.startsWith("_")
+          );
+        }
+      };
+    }
+  });
+
   // src/asset/Tile.js
   var Tile;
   var init_Tile = __esm({
@@ -831,6 +1544,7 @@ var Nity = (() => {
   // src/index.js
   var index_exports = {};
   __export(index_exports, {
+    AudioAsset: () => AudioAsset,
     AudioClip: () => AudioClip,
     AudioListenerComponent: () => AudioListenerComponent,
     AudioSourceComponent: () => AudioSourceComponent,
@@ -844,11 +1558,15 @@ var Nity = (() => {
     FollowTarget: () => FollowTarget,
     Game: () => Game,
     GameObject: () => GameObject,
+    GamepadInput: () => GamepadInput,
     ImageComponent: () => ImageComponent,
-    Input: () => Input,
     Instantiate: () => Instantiate,
+    Keyboard: () => Keyboard,
+    KeyboardInput: () => KeyboardInput,
     LayerManager: () => LayerManager,
     MonoBehaviour: () => MonoBehaviour,
+    Mouse: () => Mouse,
+    MouseInput: () => MouseInput,
     MovementComponent: () => MovementComponent,
     MovementController: () => MovementController,
     ProceduralAudioClip: () => ProceduralAudioClip,
@@ -1033,6 +1751,9 @@ var Nity = (() => {
       return this.sheets.get(name);
     }
   };
+
+  // src/core/Game.js
+  init_AudioRegistry();
 
   // src/common/Component.js
   var Component = class {
@@ -1593,349 +2314,1053 @@ var Nity = (() => {
     }
   };
 
-  // src/input/Input.js
-  var Input = class _Input {
-    static keys = /* @__PURE__ */ new Set();
-    // Currently held keys
-    static pressedKeys = /* @__PURE__ */ new Set();
-    // Keys pressed this frame (click-like)
-    static releasedKeys = /* @__PURE__ */ new Set();
-    // Keys released this frame
-    static previousKeys = /* @__PURE__ */ new Set();
-    // Keys from previous frame
-    // Mouse/Pointer state
-    static mouseButtons = /* @__PURE__ */ new Set();
-    // Currently held mouse buttons
-    static pressedMouseButtons = /* @__PURE__ */ new Set();
-    // Mouse buttons pressed this frame
-    static releasedMouseButtons = /* @__PURE__ */ new Set();
-    // Mouse buttons released this frame
-    static previousMouseButtons = /* @__PURE__ */ new Set();
-    // Mouse buttons from previous frame
-    static mousePosition = { x: 0, y: 0 };
-    // Current mouse position
-    static lastMousePosition = { x: 0, y: 0 };
-    // Previous mouse position
-    // Event callbacks
-    static onKeyDown = /* @__PURE__ */ new Map();
-    // key -> callback
-    static onKeyStay = /* @__PURE__ */ new Map();
-    // key -> callback  
-    static onKeyUp = /* @__PURE__ */ new Map();
-    // key -> callback
-    // Mouse event callbacks
-    static onMouseDown = /* @__PURE__ */ new Map();
-    // button -> callback
-    static onMouseStay = /* @__PURE__ */ new Map();
-    // button -> callback
-    static onMouseUp = /* @__PURE__ */ new Map();
-    // button -> callback
-    static onMouseMove = /* @__PURE__ */ new Set();
-    // Set of callbacks for mouse movement
-    static canvas = null;
-    // Reference to canvas for mouse coordinate calculation
-    static initialize(canvas = null) {
-      _Input.canvas = canvas;
-      window.addEventListener("keydown", (e) => {
-        const key = e.key.toLowerCase();
-        if (!_Input.keys.has(key)) {
-          _Input.pressedKeys.add(key);
-          const callback = _Input.onKeyDown.get(key);
-          if (callback) callback(key);
-        }
-        _Input.keys.add(key);
-      });
-      window.addEventListener("keyup", (e) => {
-        const key = e.key.toLowerCase();
-        _Input.keys.delete(key);
-        _Input.releasedKeys.add(key);
-        const callback = _Input.onKeyUp.get(key);
-        if (callback) callback(key);
-      });
-      const target = canvas || window;
-      target.addEventListener("mousedown", (e) => {
-        const button = e.button;
-        if (!_Input.mouseButtons.has(button)) {
-          _Input.pressedMouseButtons.add(button);
-          const callback = _Input.onMouseDown.get(button);
-          if (callback) callback(button, _Input.mousePosition);
-        }
-        _Input.mouseButtons.add(button);
-        _Input.updateMousePosition(e);
-      });
-      target.addEventListener("mouseup", (e) => {
-        const button = e.button;
-        _Input.mouseButtons.delete(button);
-        _Input.releasedMouseButtons.add(button);
-        const callback = _Input.onMouseUp.get(button);
-        if (callback) callback(button, _Input.mousePosition);
-        _Input.updateMousePosition(e);
-      });
-      target.addEventListener("mousemove", (e) => {
-        _Input.updateMousePosition(e);
-        for (const callback of _Input.onMouseMove) {
-          callback(_Input.mousePosition, _Input.lastMousePosition);
-        }
-      });
-      if (canvas) {
-        canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  // src/input/AbstractInputDevice.js
+  var AbstractInputDevice = class {
+    /**
+     * Create a new input device
+     * @param {string} name - The name of this input device (e.g., 'keyboard', 'mouse', 'gamepad')
+     */
+    constructor(name) {
+      this.name = name;
+      this.initialized = false;
+    }
+    /**
+     * Initialize the input device - override in subclasses
+     * @param {HTMLCanvasElement} canvas - Optional canvas for coordinate calculations
+     */
+    initialize(canvas = null) {
+      throw new Error(`InputDevice '${this.name}' must implement initialize() method`);
+    }
+    /**
+     * Update the input device state - called each frame
+     * Override in subclasses to handle device-specific updates
+     */
+    update() {
+      throw new Error(`InputDevice '${this.name}' must implement update() method`);
+    }
+    /**
+     * Check if a key/button is currently being held down
+     * @param {any} key - The key/button to check (device-specific format)
+     * @returns {boolean}
+     */
+    isDown(key) {
+      throw new Error(`InputDevice '${this.name}' must implement isDown() method`);
+    }
+    /**
+     * Check if a key/button was pressed this frame (click-like, only fires once)
+     * @param {any} key - The key/button to check (device-specific format)
+     * @returns {boolean}
+     */
+    isPressed(key) {
+      throw new Error(`InputDevice '${this.name}' must implement isPressed() method`);
+    }
+    /**
+     * Check if a key/button was released this frame
+     * @param {any} key - The key/button to check (device-specific format)
+     * @returns {boolean}
+     */
+    isReleased(key) {
+      throw new Error(`InputDevice '${this.name}' must implement isReleased() method`);
+    }
+    /**
+     * Register an event callback for this device
+     * @param {string} event - Event type ('down', 'up', 'stay')
+     * @param {any} key - The key/button to listen for
+     * @param {function} callback - Callback function
+     */
+    onEvent(event, key, callback) {
+      console.warn(`InputDevice '${this.name}' does not support event callbacks`);
+    }
+    /**
+     * Remove an event callback
+     * @param {string} event - Event type ('down', 'up', 'stay')
+     * @param {any} key - The key/button to remove callback for
+     */
+    removeEvent(event, key) {
+      console.warn(`InputDevice '${this.name}' does not support event callbacks`);
+    }
+    /**
+     * Resolve a key value to its canonical form
+     * Handles multi-value keys (e.g., Space = [" ", "Space", " "])
+     * @param {any} key - The key to resolve
+     * @returns {string|number} Canonical key value
+     */
+    resolveKey(key) {
+      if (Array.isArray(key)) {
+        return key[0];
       }
+      return key;
     }
     /**
-     * Update mouse position relative to canvas
-     * @param {MouseEvent} e - Mouse event
+     * Check if a physical input matches a logical key definition
+     * Supports multi-value keys
+     * @param {any} physicalInput - The actual input received
+     * @param {any} logicalKey - The logical key definition (may be array)
+     * @returns {boolean}
      */
-    static updateMousePosition(e) {
-      _Input.lastMousePosition = { ..._Input.mousePosition };
-      if (_Input.canvas) {
-        const rect = _Input.canvas.getBoundingClientRect();
-        _Input.mousePosition.x = e.clientX - rect.left;
-        _Input.mousePosition.y = e.clientY - rect.top;
-      } else {
-        _Input.mousePosition.x = e.clientX;
-        _Input.mousePosition.y = e.clientY;
+    matchesKey(physicalInput, logicalKey) {
+      if (Array.isArray(logicalKey)) {
+        return logicalKey.includes(physicalInput);
       }
+      return physicalInput === logicalKey;
     }
     /**
-     * Updates the input state - should be called each frame
+     * Get device-specific information
+     * @returns {Object}
      */
-    static update() {
-      for (const key of _Input.keys) {
-        if (_Input.previousKeys.has(key)) {
-          const callback = _Input.onKeyStay.get(key);
-          if (callback) callback(key);
-        }
-      }
-      for (const button of _Input.mouseButtons) {
-        if (_Input.previousMouseButtons.has(button)) {
-          const callback = _Input.onMouseStay.get(button);
-          if (callback) callback(button, _Input.mousePosition);
-        }
-      }
-      _Input.pressedKeys.clear();
-      _Input.releasedKeys.clear();
-      _Input.pressedMouseButtons.clear();
-      _Input.releasedMouseButtons.clear();
-      _Input.previousKeys = new Set(_Input.keys);
-      _Input.previousMouseButtons = new Set(_Input.mouseButtons);
-    }
-    /**
-     * Check if key is currently being held down
-     * @param {string} key - The key to check
-     * @returns {boolean}
-     */
-    static isKeyDown(key) {
-      return _Input.keys.has(key.toLowerCase());
-    }
-    /**
-     * Check if key was pressed this frame (click-like, only fires once)
-     * @param {string} key - The key to check
-     * @returns {boolean}
-     */
-    static isKeyPressed(key) {
-      return _Input.pressedKeys.has(key.toLowerCase());
-    }
-    /**
-     * Check if key was released this frame
-     * @param {string} key - The key to check
-     * @returns {boolean}
-     */
-    static isKeyReleased(key) {
-      return _Input.releasedKeys.has(key.toLowerCase());
-    }
-    // === MOUSE/POINTER METHODS ===
-    /**
-     * Check if mouse button is currently being held down
-     * @param {number} button - Mouse button (0=left, 1=middle, 2=right)
-     * @returns {boolean}
-     */
-    static isMouseDown(button = 0) {
-      return _Input.mouseButtons.has(button);
-    }
-    /**
-     * Check if mouse button was pressed this frame (click-like, only fires once)
-     * @param {number} button - Mouse button (0=left, 1=middle, 2=right)
-     * @returns {boolean}
-     */
-    static isMousePressed(button = 0) {
-      return _Input.pressedMouseButtons.has(button);
-    }
-    /**
-     * Check if mouse button was released this frame
-     * @param {number} button - Mouse button (0=left, 1=middle, 2=right)
-     * @returns {boolean}
-     */
-    static isMouseReleased(button = 0) {
-      return _Input.releasedMouseButtons.has(button);
-    }
-    /**
-     * Get current mouse position
-     * @returns {Object} {x, y} coordinates
-     */
-    static getMousePosition() {
-      return { ..._Input.mousePosition };
-    }
-    /**
-     * Get mouse movement delta from last frame
-     * @returns {Object} {x, y} movement delta
-     */
-    static getMouseDelta() {
+    getInfo() {
       return {
-        x: _Input.mousePosition.x - _Input.lastMousePosition.x,
-        y: _Input.mousePosition.y - _Input.lastMousePosition.y
+        name: this.name,
+        initialized: this.initialized,
+        type: this.constructor.name
       };
     }
-    // === CONVENIENCE METHODS ===
-    /**
-     * Check if left mouse button is down
-     * @returns {boolean}
-     */
-    static isLeftMouseDown() {
-      return _Input.isMouseDown(0);
+  };
+
+  // src/input/KeyboardInput.js
+  var KeyboardInput = class extends AbstractInputDevice {
+    constructor() {
+      super("keyboard");
+      this.keys = /* @__PURE__ */ new Set();
+      this.pressedKeys = /* @__PURE__ */ new Set();
+      this.releasedKeys = /* @__PURE__ */ new Set();
+      this.previousKeys = /* @__PURE__ */ new Set();
+      this.onKeyDown = /* @__PURE__ */ new Map();
+      this.onKeyStay = /* @__PURE__ */ new Map();
+      this.onKeyUp = /* @__PURE__ */ new Map();
+      this.keyMapping = null;
     }
     /**
-     * Check if left mouse button was clicked this frame
-     * @returns {boolean}
+     * Initialize keyboard input
+     * @param {HTMLCanvasElement} canvas - Optional canvas (not used for keyboard)
      */
-    static isLeftMousePressed() {
-      return _Input.isMousePressed(0);
-    }
-    /**
-     * Check if right mouse button is down
-     * @returns {boolean}
-     */
-    static isRightMouseDown() {
-      return _Input.isMouseDown(2);
-    }
-    /**
-     * Check if right mouse button was clicked this frame
-     * @returns {boolean}
-     */
-    static isRightMousePressed() {
-      return _Input.isMousePressed(2);
-    }
-    /**
-     * Register a callback for when a key is first pressed (click-like)
-     * @param {string} key - The key to listen for
-     * @param {function} callback - Function to call when key is pressed
-     */
-    static onKeyDownEvent(key, callback) {
-      _Input.onKeyDown.set(key.toLowerCase(), callback);
-    }
-    /**
-     * Register a callback for when a key is being held down
-     * @param {string} key - The key to listen for
-     * @param {function} callback - Function to call while key is held
-     */
-    static onKeyStayEvent(key, callback) {
-      _Input.onKeyStay.set(key.toLowerCase(), callback);
-    }
-    /**
-     * Register a callback for when a key is released
-     * @param {string} key - The key to listen for
-     * @param {function} callback - Function to call when key is released
-     */
-    static onKeyUpEvent(key, callback) {
-      _Input.onKeyUp.set(key.toLowerCase(), callback);
-    }
-    // === MOUSE EVENT CALLBACKS ===
-    /**
-     * Register a callback for when a mouse button is first pressed (click-like)
-     * @param {number} button - Mouse button (0=left, 1=middle, 2=right)
-     * @param {function} callback - Function to call when button is pressed
-     */
-    static onMouseDownEvent(button = 0, callback) {
-      _Input.onMouseDown.set(button, callback);
-    }
-    /**
-     * Register a callback for when a mouse button is being held down
-     * @param {number} button - Mouse button (0=left, 1=middle, 2=right)
-     * @param {function} callback - Function to call while button is held
-     */
-    static onMouseStayEvent(button = 0, callback) {
-      _Input.onMouseStay.set(button, callback);
-    }
-    /**
-     * Register a callback for when a mouse button is released
-     * @param {number} button - Mouse button (0=left, 1=middle, 2=right)
-     * @param {function} callback - Function to call when button is released
-     */
-    static onMouseUpEvent(button = 0, callback) {
-      _Input.onMouseUp.set(button, callback);
-    }
-    /**
-     * Register a callback for mouse movement
-     * @param {function} callback - Function to call when mouse moves
-     */
-    static onMouseMoveEvent(callback) {
-      _Input.onMouseMove.add(callback);
-    }
-    // === CONVENIENCE EVENT METHODS ===
-    /**
-     * Register a callback for left mouse button click
-     * @param {function} callback - Function to call when left button is clicked
-     */
-    static onLeftClickEvent(callback) {
-      _Input.onMouseDownEvent(0, callback);
-    }
-    /**
-     * Register a callback for right mouse button click
-     * @param {function} callback - Function to call when right button is clicked
-     */
-    static onRightClickEvent(callback) {
-      _Input.onMouseDownEvent(2, callback);
-    }
-    /**
-     * Remove a key event callback
-     * @param {string} event - 'down', 'stay', or 'up'
-     * @param {string} key - The key to remove callback for
-     */
-    static removeKeyEvent(event, key) {
-      const keyLower = key.toLowerCase();
-      switch (event) {
-        case "down":
-          _Input.onKeyDown.delete(keyLower);
-          break;
-        case "stay":
-          _Input.onKeyStay.delete(keyLower);
-          break;
-        case "up":
-          _Input.onKeyUp.delete(keyLower);
-          break;
+    async initialize(canvas = null) {
+      if (this.initialized) return;
+      try {
+        const { Keyboard: Keyboard2 } = await Promise.resolve().then(() => (init_Keyboard(), Keyboard_exports));
+        this.keyMapping = Keyboard2;
+        if (Keyboard2.initialize) {
+          Keyboard2.initialize();
+        }
+        this.setupEventListeners();
+        this.initialized = true;
+        console.log("\u{1F3B9} Keyboard input initialized");
+      } catch (error) {
+        console.error("Failed to initialize keyboard input:", error);
       }
     }
     /**
-     * Remove a mouse event callback
-     * @param {string} event - 'down', 'stay', 'up', or 'move'
-     * @param {number|function} buttonOrCallback - Button number for click events, or callback function for move events
+     * Set up keyboard event listeners
      */
-    static removeMouseEvent(event, buttonOrCallback) {
+    setupEventListeners() {
+      window.addEventListener("keydown", (e) => {
+        const logicalKey = this.getLogicalKey(e.key);
+        if (!this.keys.has(logicalKey)) {
+          this.pressedKeys.add(logicalKey);
+          const callback = this.onKeyDown.get(logicalKey);
+          if (callback) callback(logicalKey);
+        }
+        this.keys.add(logicalKey);
+      });
+      window.addEventListener("keyup", (e) => {
+        const logicalKey = this.getLogicalKey(e.key);
+        this.keys.delete(logicalKey);
+        this.releasedKeys.add(logicalKey);
+        const callback = this.onKeyUp.get(logicalKey);
+        if (callback) callback(logicalKey);
+      });
+    }
+    /**
+     * Update keyboard state - called each frame
+     */
+    update() {
+      if (!this.initialized) return;
+      for (const key of this.keys) {
+        if (this.previousKeys.has(key)) {
+          const callback = this.onKeyStay.get(key);
+          if (callback) callback(key);
+        }
+      }
+      this.pressedKeys.clear();
+      this.releasedKeys.clear();
+      this.previousKeys = new Set(this.keys);
+    }
+    /**
+     * Get logical key name from physical key input
+     * @param {string} physicalKey - The physical key pressed
+     * @returns {string} Logical key name
+     */
+    getLogicalKey(physicalKey) {
+      if (this.keyMapping && this.keyMapping.getLogicalKey) {
+        return this.keyMapping.getLogicalKey(physicalKey);
+      }
+      return physicalKey;
+    }
+    /**
+     * Check if a key is currently being held down
+     * Supports multi-value keys
+     * @param {string|Array} key - The key to check
+     * @returns {boolean}
+     */
+    isDown(key) {
+      const canonicalKey = this.resolveKey(key);
+      return this.keys.has(canonicalKey);
+    }
+    /**
+     * Check if a key was pressed this frame
+     * Supports multi-value keys
+     * @param {string|Array} key - The key to check
+     * @returns {boolean}
+     */
+    isPressed(key) {
+      const canonicalKey = this.resolveKey(key);
+      return this.pressedKeys.has(canonicalKey);
+    }
+    /**
+     * Check if a key was released this frame
+     * Supports multi-value keys
+     * @param {string|Array} key - The key to check
+     * @returns {boolean}
+     */
+    isReleased(key) {
+      const canonicalKey = this.resolveKey(key);
+      return this.releasedKeys.has(canonicalKey);
+    }
+    /**
+     * Register an event callback for keyboard input
+     * @param {string} event - Event type ('down', 'up', 'stay')
+     * @param {string|Array} key - The key to listen for
+     * @param {function} callback - Callback function
+     */
+    onEvent(event, key, callback) {
+      const canonicalKey = this.resolveKey(key);
       switch (event) {
         case "down":
-          _Input.onMouseDown.delete(buttonOrCallback);
+          this.onKeyDown.set(canonicalKey, callback);
           break;
         case "stay":
-          _Input.onMouseStay.delete(buttonOrCallback);
+          this.onKeyStay.set(canonicalKey, callback);
           break;
         case "up":
-          _Input.onMouseUp.delete(buttonOrCallback);
+          this.onKeyUp.set(canonicalKey, callback);
           break;
-        case "move":
-          _Input.onMouseMove.delete(buttonOrCallback);
+        default:
+          console.warn(`Unknown keyboard event: ${event}`);
+      }
+    }
+    /**
+     * Remove an event callback
+     * @param {string} event - Event type ('down', 'up', 'stay')
+     * @param {string|Array} key - The key to remove callback for
+     */
+    removeEvent(event, key) {
+      const canonicalKey = this.resolveKey(key);
+      switch (event) {
+        case "down":
+          this.onKeyDown.delete(canonicalKey);
+          break;
+        case "stay":
+          this.onKeyStay.delete(canonicalKey);
+          break;
+        case "up":
+          this.onKeyUp.delete(canonicalKey);
           break;
       }
     }
     /**
      * Clear all event callbacks
      */
-    static clearAllEvents() {
-      _Input.onKeyDown.clear();
-      _Input.onKeyStay.clear();
-      _Input.onKeyUp.clear();
-      _Input.onMouseDown.clear();
-      _Input.onMouseStay.clear();
-      _Input.onMouseUp.clear();
-      _Input.onMouseMove.clear();
+    clearAllEvents() {
+      this.onKeyDown.clear();
+      this.onKeyStay.clear();
+      this.onKeyUp.clear();
+    }
+    /**
+     * Get keyboard device information
+     * @returns {Object}
+     */
+    getInfo() {
+      return {
+        ...super.getInfo(),
+        keysHeld: this.keys.size,
+        mappingSystem: this.keyMapping ? "Loaded" : "Not available",
+        events: {
+          down: this.onKeyDown.size,
+          stay: this.onKeyStay.size,
+          up: this.onKeyUp.size
+        }
+      };
+    }
+  };
+
+  // src/input/MouseInput.js
+  var MouseInput = class extends AbstractInputDevice {
+    constructor() {
+      super("mouse");
+      this.buttons = /* @__PURE__ */ new Set();
+      this.pressedButtons = /* @__PURE__ */ new Set();
+      this.releasedButtons = /* @__PURE__ */ new Set();
+      this.previousButtons = /* @__PURE__ */ new Set();
+      this.position = { x: 0, y: 0 };
+      this.lastPosition = { x: 0, y: 0 };
+      this.onButtonDown = /* @__PURE__ */ new Map();
+      this.onButtonStay = /* @__PURE__ */ new Map();
+      this.onButtonUp = /* @__PURE__ */ new Map();
+      this.onMove = /* @__PURE__ */ new Set();
+      this.canvas = null;
+    }
+    /**
+     * Initialize mouse input
+     * @param {HTMLCanvasElement} canvas - Canvas for coordinate calculations
+     */
+    initialize(canvas = null) {
+      if (this.initialized) return;
+      this.canvas = canvas;
+      this.setupEventListeners();
+      this.initialized = true;
+      console.log("\u{1F5B1}\uFE0F Mouse input initialized");
+    }
+    /**
+     * Set up mouse event listeners
+     */
+    setupEventListeners() {
+      const target = this.canvas || window;
+      target.addEventListener("mousedown", (e) => {
+        const button = e.button;
+        if (!this.buttons.has(button)) {
+          this.pressedButtons.add(button);
+          const callback = this.onButtonDown.get(button);
+          if (callback) callback(button, this.position);
+        }
+        this.buttons.add(button);
+        this.updatePosition(e);
+      });
+      target.addEventListener("mouseup", (e) => {
+        const button = e.button;
+        this.buttons.delete(button);
+        this.releasedButtons.add(button);
+        const callback = this.onButtonUp.get(button);
+        if (callback) callback(button, this.position);
+        this.updatePosition(e);
+      });
+      target.addEventListener("mousemove", (e) => {
+        this.updatePosition(e);
+        for (const callback of this.onMove) {
+          callback(this.position, this.lastPosition);
+        }
+      });
+      if (this.canvas) {
+        this.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+      }
+    }
+    /**
+     * Update mouse position relative to canvas
+     * @param {MouseEvent} e - Mouse event
+     */
+    updatePosition(e) {
+      this.lastPosition = { ...this.position };
+      if (this.canvas) {
+        const rect = this.canvas.getBoundingClientRect();
+        this.position.x = e.clientX - rect.left;
+        this.position.y = e.clientY - rect.top;
+      } else {
+        this.position.x = e.clientX;
+        this.position.y = e.clientY;
+      }
+    }
+    /**
+     * Update mouse state - called each frame
+     */
+    update() {
+      if (!this.initialized) return;
+      for (const button of this.buttons) {
+        if (this.previousButtons.has(button)) {
+          const callback = this.onButtonStay.get(button);
+          if (callback) callback(button, this.position);
+        }
+      }
+      this.pressedButtons.clear();
+      this.releasedButtons.clear();
+      this.previousButtons = new Set(this.buttons);
+    }
+    /**
+     * Check if a mouse button is currently being held down
+     * @param {number|Array} button - Button index (0=left, 1=middle, 2=right) or array of buttons
+     * @returns {boolean}
+     */
+    isDown(button) {
+      const canonicalButton = this.resolveKey(button);
+      return this.buttons.has(canonicalButton);
+    }
+    /**
+     * Check if a mouse button was pressed this frame
+     * @param {number|Array} button - Button index or array of buttons
+     * @returns {boolean}
+     */
+    isPressed(button) {
+      const canonicalButton = this.resolveKey(button);
+      return this.pressedButtons.has(canonicalButton);
+    }
+    /**
+     * Check if a mouse button was released this frame
+     * @param {number|Array} button - Button index or array of buttons
+     * @returns {boolean}
+     */
+    isReleased(button) {
+      const canonicalButton = this.resolveKey(button);
+      return this.releasedButtons.has(canonicalButton);
+    }
+    /**
+     * Get current mouse position
+     * @returns {Object} {x, y} coordinates
+     */
+    getPosition() {
+      return { ...this.position };
+    }
+    /**
+     * Get mouse movement delta from last frame
+     * @returns {Object} {x, y} movement delta
+     */
+    getDelta() {
+      return {
+        x: this.position.x - this.lastPosition.x,
+        y: this.position.y - this.lastPosition.y
+      };
+    }
+    /**
+     * Register an event callback for mouse input
+     * @param {string} event - Event type ('down', 'up', 'stay', 'move')
+     * @param {number|function} buttonOrCallback - Button index for button events, or callback for move events
+     * @param {function} callback - Callback function (for button events)
+     */
+    onEvent(event, buttonOrCallback, callback = null) {
+      if (event === "move") {
+        this.onMove.add(buttonOrCallback);
+        return;
+      }
+      const button = buttonOrCallback;
+      const canonicalButton = this.resolveKey(button);
+      switch (event) {
+        case "down":
+          this.onButtonDown.set(canonicalButton, callback);
+          break;
+        case "stay":
+          this.onButtonStay.set(canonicalButton, callback);
+          break;
+        case "up":
+          this.onButtonUp.set(canonicalButton, callback);
+          break;
+        default:
+          console.warn(`Unknown mouse event: ${event}`);
+      }
+    }
+    /**
+     * Remove an event callback
+     * @param {string} event - Event type ('down', 'up', 'stay', 'move')
+     * @param {number|function} buttonOrCallback - Button index for button events, or callback for move events
+     */
+    removeEvent(event, buttonOrCallback) {
+      if (event === "move") {
+        this.onMove.delete(buttonOrCallback);
+        return;
+      }
+      const button = buttonOrCallback;
+      const canonicalButton = this.resolveKey(button);
+      switch (event) {
+        case "down":
+          this.onButtonDown.delete(canonicalButton);
+          break;
+        case "stay":
+          this.onButtonStay.delete(canonicalButton);
+          break;
+        case "up":
+          this.onButtonUp.delete(canonicalButton);
+          break;
+      }
+    }
+    /**
+     * Clear all event callbacks
+     */
+    clearAllEvents() {
+      this.onButtonDown.clear();
+      this.onButtonStay.clear();
+      this.onButtonUp.clear();
+      this.onMove.clear();
+    }
+    /**
+     * Get mouse device information
+     * @returns {Object}
+     */
+    getInfo() {
+      return {
+        ...super.getInfo(),
+        position: this.position,
+        buttonsHeld: this.buttons.size,
+        canvas: this.canvas ? "Connected" : "Global",
+        events: {
+          down: this.onButtonDown.size,
+          stay: this.onButtonStay.size,
+          up: this.onButtonUp.size,
+          move: this.onMove.size
+        }
+      };
+    }
+  };
+  var Mouse = {
+    Left: [0, "left", "primary"],
+    Middle: [1, "middle", "auxiliary"],
+    Right: [2, "right", "secondary"],
+    Back: [3, "back"],
+    Forward: [4, "forward"]
+  };
+
+  // src/input/GamepadInput.js
+  var GamepadInput = class extends AbstractInputDevice {
+    constructor() {
+      super("gamepad");
+      this.gamepad = null;
+      this.gamepadIndex = 0;
+      this.buttons = /* @__PURE__ */ new Set();
+      this.pressedButtons = /* @__PURE__ */ new Set();
+      this.releasedButtons = /* @__PURE__ */ new Set();
+      this.previousButtons = /* @__PURE__ */ new Set();
+      this.leftStick = { x: 0, y: 0 };
+      this.rightStick = { x: 0, y: 0 };
+      this.deadzone = 0.1;
+      this.triggers = { left: 0, right: 0 };
+      this.onButtonDown = /* @__PURE__ */ new Map();
+      this.onButtonStay = /* @__PURE__ */ new Map();
+      this.onButtonUp = /* @__PURE__ */ new Map();
+      this.onStickMove = /* @__PURE__ */ new Map();
+      this.onTriggerMove = /* @__PURE__ */ new Map();
+      this.onConnected = /* @__PURE__ */ new Set();
+      this.onDisconnected = /* @__PURE__ */ new Set();
+    }
+    /**
+     * Initialize gamepad input
+     * @param {number} gamepadIndex - Which gamepad to use (default: 0)
+     */
+    initialize(gamepadIndex = 0) {
+      if (this.initialized) return;
+      this.gamepadIndex = gamepadIndex;
+      this.setupEventListeners();
+      this.updateGamepadState();
+      this.initialized = true;
+      console.log(`\u{1F3AE} Gamepad input initialized (index: ${gamepadIndex})`);
+    }
+    /**
+     * Set up gamepad event listeners
+     */
+    setupEventListeners() {
+      window.addEventListener("gamepadconnected", (e) => {
+        if (e.gamepad.index === this.gamepadIndex) {
+          this.gamepad = e.gamepad;
+          console.log(`\u{1F3AE} Gamepad connected: ${e.gamepad.id}`);
+          for (const callback of this.onConnected) {
+            callback(e.gamepad);
+          }
+        }
+      });
+      window.addEventListener("gamepaddisconnected", (e) => {
+        if (e.gamepad.index === this.gamepadIndex) {
+          this.gamepad = null;
+          console.log(`\u{1F3AE} Gamepad disconnected: ${e.gamepad.id}`);
+          for (const callback of this.onDisconnected) {
+            callback(e.gamepad);
+          }
+          this.buttons.clear();
+          this.pressedButtons.clear();
+          this.releasedButtons.clear();
+          this.previousButtons.clear();
+        }
+      });
+    }
+    /**
+     * Update gamepad state - called each frame
+     */
+    update() {
+      if (!this.initialized) return;
+      this.updateGamepadState();
+      if (!this.gamepad) return;
+      this.updateButtonStates();
+      this.updateAnalogSticks();
+      this.updateTriggers();
+      for (const button of this.buttons) {
+        if (this.previousButtons.has(button)) {
+          const callback = this.onButtonStay.get(button);
+          if (callback) callback(button);
+        }
+      }
+      this.pressedButtons.clear();
+      this.releasedButtons.clear();
+      this.previousButtons = new Set(this.buttons);
+    }
+    /**
+     * Update gamepad object from navigator.getGamepads()
+     */
+    updateGamepadState() {
+      const gamepads = navigator.getGamepads();
+      if (gamepads[this.gamepadIndex]) {
+        this.gamepad = gamepads[this.gamepadIndex];
+      }
+    }
+    /**
+     * Update button states from gamepad
+     */
+    updateButtonStates() {
+      if (!this.gamepad) return;
+      for (let i = 0; i < this.gamepad.buttons.length; i++) {
+        const isPressed = this.gamepad.buttons[i].pressed;
+        if (isPressed && !this.buttons.has(i)) {
+          this.pressedButtons.add(i);
+          this.buttons.add(i);
+          const callback = this.onButtonDown.get(i);
+          if (callback) callback(i);
+        } else if (!isPressed && this.buttons.has(i)) {
+          this.releasedButtons.add(i);
+          this.buttons.delete(i);
+          const callback = this.onButtonUp.get(i);
+          if (callback) callback(i);
+        }
+      }
+    }
+    /**
+     * Update analog stick states
+     */
+    updateAnalogSticks() {
+      if (!this.gamepad || this.gamepad.axes.length < 4) return;
+      const newLeftStick = {
+        x: this.applyDeadzone(this.gamepad.axes[0]),
+        y: this.applyDeadzone(this.gamepad.axes[1])
+      };
+      const newRightStick = {
+        x: this.applyDeadzone(this.gamepad.axes[2]),
+        y: this.applyDeadzone(this.gamepad.axes[3])
+      };
+      if (this.stickMoved(this.leftStick, newLeftStick)) {
+        this.leftStick = newLeftStick;
+        const callback = this.onStickMove.get("left");
+        if (callback) callback("left", this.leftStick);
+      }
+      if (this.stickMoved(this.rightStick, newRightStick)) {
+        this.rightStick = newRightStick;
+        const callback = this.onStickMove.get("right");
+        if (callback) callback("right", this.rightStick);
+      }
+    }
+    /**
+     * Update trigger states
+     */
+    updateTriggers() {
+      if (!this.gamepad) return;
+      if (this.gamepad.buttons[6]) {
+        const newLeftTrigger = this.gamepad.buttons[6].value;
+        if (Math.abs(this.triggers.left - newLeftTrigger) > 0.01) {
+          this.triggers.left = newLeftTrigger;
+          const callback = this.onTriggerMove.get("left");
+          if (callback) callback("left", newLeftTrigger);
+        }
+      }
+      if (this.gamepad.buttons[7]) {
+        const newRightTrigger = this.gamepad.buttons[7].value;
+        if (Math.abs(this.triggers.right - newRightTrigger) > 0.01) {
+          this.triggers.right = newRightTrigger;
+          const callback = this.onTriggerMove.get("right");
+          if (callback) callback("right", newRightTrigger);
+        }
+      }
+    }
+    /**
+     * Apply deadzone to analog input
+     * @param {number} value - Raw analog value
+     * @returns {number} - Deadzone-adjusted value
+     */
+    applyDeadzone(value) {
+      return Math.abs(value) < this.deadzone ? 0 : value;
+    }
+    /**
+     * Check if analog stick has moved significantly
+     * @param {Object} oldStick - Previous stick position
+     * @param {Object} newStick - New stick position
+     * @returns {boolean}
+     */
+    stickMoved(oldStick, newStick) {
+      const threshold = 0.01;
+      return Math.abs(oldStick.x - newStick.x) > threshold || Math.abs(oldStick.y - newStick.y) > threshold;
+    }
+    /**
+     * Check if a gamepad button is currently being held down
+     * @param {number|string|Array} button - Button index, name, or array of buttons
+     * @returns {boolean}
+     */
+    isDown(button) {
+      const canonicalButton = this.resolveKey(button);
+      return this.buttons.has(canonicalButton);
+    }
+    /**
+     * Check if a gamepad button was pressed this frame
+     * @param {number|string|Array} button - Button index, name, or array of buttons
+     * @returns {boolean}
+     */
+    isPressed(button) {
+      const canonicalButton = this.resolveKey(button);
+      return this.pressedButtons.has(canonicalButton);
+    }
+    /**
+     * Check if a gamepad button was released this frame
+     * @param {number|string|Array} button - Button index, name, or array of buttons
+     * @returns {boolean}
+     */
+    isReleased(button) {
+      const canonicalButton = this.resolveKey(button);
+      return this.releasedButtons.has(canonicalButton);
+    }
+    /**
+     * Get analog stick position
+     * @param {string} stick - 'left' or 'right'
+     * @returns {Object} {x, y} stick position (-1 to 1)
+     */
+    getStick(stick) {
+      return stick === "left" ? { ...this.leftStick } : { ...this.rightStick };
+    }
+    /**
+     * Get trigger value
+     * @param {string} trigger - 'left' or 'right'
+     * @returns {number} Trigger value (0 to 1)
+     */
+    getTrigger(trigger) {
+      return this.triggers[trigger] || 0;
+    }
+    /**
+     * Check if gamepad is connected
+     * @returns {boolean}
+     */
+    isConnected() {
+      return this.gamepad !== null;
+    }
+    /**
+     * Set analog stick deadzone
+     * @param {number} deadzone - Deadzone value (0 to 1)
+     */
+    setDeadzone(deadzone) {
+      this.deadzone = Math.max(0, Math.min(1, deadzone));
+    }
+    /**
+     * Register an event callback for gamepad input
+     * @param {string} event - Event type ('down', 'up', 'stay', 'stick', 'trigger', 'connected', 'disconnected')
+     * @param {number|string|function} buttonOrCallback - Button/stick/trigger identifier or callback
+     * @param {function} callback - Callback function
+     */
+    onEvent(event, buttonOrCallback, callback = null) {
+      if (event === "connected" || event === "disconnected") {
+        const callbackSet = event === "connected" ? this.onConnected : this.onDisconnected;
+        callbackSet.add(buttonOrCallback);
+        return;
+      }
+      const identifier = buttonOrCallback;
+      const canonicalIdentifier = this.resolveKey(identifier);
+      switch (event) {
+        case "down":
+          this.onButtonDown.set(canonicalIdentifier, callback);
+          break;
+        case "stay":
+          this.onButtonStay.set(canonicalIdentifier, callback);
+          break;
+        case "up":
+          this.onButtonUp.set(canonicalIdentifier, callback);
+          break;
+        case "stick":
+          this.onStickMove.set(canonicalIdentifier, callback);
+          break;
+        case "trigger":
+          this.onTriggerMove.set(canonicalIdentifier, callback);
+          break;
+        default:
+          console.warn(`Unknown gamepad event: ${event}`);
+      }
+    }
+    /**
+     * Remove an event callback
+     * @param {string} event - Event type
+     * @param {number|string|function} buttonOrCallback - Button/stick/trigger identifier or callback
+     */
+    removeEvent(event, buttonOrCallback) {
+      if (event === "connected" || event === "disconnected") {
+        const callbackSet = event === "connected" ? this.onConnected : this.onDisconnected;
+        callbackSet.delete(buttonOrCallback);
+        return;
+      }
+      const identifier = buttonOrCallback;
+      const canonicalIdentifier = this.resolveKey(identifier);
+      switch (event) {
+        case "down":
+          this.onButtonDown.delete(canonicalIdentifier);
+          break;
+        case "stay":
+          this.onButtonStay.delete(canonicalIdentifier);
+          break;
+        case "up":
+          this.onButtonUp.delete(canonicalIdentifier);
+          break;
+        case "stick":
+          this.onStickMove.delete(canonicalIdentifier);
+          break;
+        case "trigger":
+          this.onTriggerMove.delete(canonicalIdentifier);
+          break;
+      }
+    }
+    /**
+     * Clear all event callbacks
+     */
+    clearAllEvents() {
+      this.onButtonDown.clear();
+      this.onButtonStay.clear();
+      this.onButtonUp.clear();
+      this.onStickMove.clear();
+      this.onTriggerMove.clear();
+      this.onConnected.clear();
+      this.onDisconnected.clear();
+    }
+    /**
+     * Get gamepad device information
+     * @returns {Object}
+     */
+    getInfo() {
+      return {
+        ...super.getInfo(),
+        connected: this.isConnected(),
+        gamepadId: this.gamepad ? this.gamepad.id : "None",
+        buttonsHeld: this.buttons.size,
+        leftStick: this.leftStick,
+        rightStick: this.rightStick,
+        triggers: this.triggers,
+        deadzone: this.deadzone,
+        events: {
+          down: this.onButtonDown.size,
+          stay: this.onButtonStay.size,
+          up: this.onButtonUp.size,
+          stick: this.onStickMove.size,
+          trigger: this.onTriggerMove.size,
+          connected: this.onConnected.size,
+          disconnected: this.onDisconnected.size
+        }
+      };
+    }
+  };
+
+  // src/input/Input.js
+  var Input = class _Input {
+    // Device instances - accessible as Input.keyboard, Input.mouse, Input.gamepad
+    static keyboard = new KeyboardInput();
+    static mouse = new MouseInput();
+    static gamepad = new GamepadInput();
+    // Device registry for extensibility
+    static devices = /* @__PURE__ */ new Map();
+    static deviceMappings = /* @__PURE__ */ new Map();
+    // Custom device key mappings
+    static initialized = false;
+    /**
+     * Initialize the input system with all devices
+     * @param {HTMLCanvasElement} canvas - Canvas for mouse coordinate calculations
+     * @param {Object} options - Configuration options
+     */
+    static initialize(canvas = null, options = {}) {
+      if (_Input.initialized) return;
+      _Input.registerDevice("keyboard", _Input.keyboard);
+      _Input.registerDevice("mouse", _Input.mouse);
+      _Input.registerDevice("gamepad", _Input.gamepad);
+      _Input.keyboard.initialize();
+      _Input.mouse.initialize(canvas);
+      _Input.gamepad.initialize(options.gamepadIndex || 0);
+      _Input.initialized = true;
+      console.log("\u{1F3AE} Input system initialized with devices:", [..._Input.devices.keys()]);
+    }
+    /**
+     * Update all registered input devices - called each frame
+     */
+    static update() {
+      if (!_Input.initialized) return;
+      for (const device of _Input.devices.values()) {
+        device.update();
+      }
+    }
+    /**
+     * Register a new input device
+     * @param {string} name - Device name (e.g., 'keyboard', 'mouse', 'customController')
+     * @param {InputDevice} device - Device instance
+     */
+    static registerDevice(name, device) {
+      _Input.devices.set(name, device);
+      if (!_Input.hasOwnProperty(name)) {
+        _Input[name] = device;
+      }
+      console.log(`\u{1F4E5} Registered input device: ${name}`);
+    }
+    /**
+     * Unregister an input device
+     * @param {string} name - Device name to remove
+     */
+    static unregisterDevice(name) {
+      if (_Input.devices.has(name)) {
+        const device = _Input.devices.get(name);
+        if (device.initialized) {
+          device.clearAllEvents();
+        }
+        _Input.devices.delete(name);
+        if (_Input.hasOwnProperty(name)) {
+          delete _Input[name];
+        }
+        console.log(`\u{1F4E4} Unregistered input device: ${name}`);
+      }
+    }
+    /**
+     * Register custom key mappings for a device
+     * Allows extending device mappings without modifying device classes
+     * @param {string} deviceName - Name of the device
+     * @param {Object} mappings - Key mappings object
+     */
+    static registerMapping(deviceName, mappings) {
+      if (!_Input.deviceMappings.has(deviceName)) {
+        _Input.deviceMappings.set(deviceName, /* @__PURE__ */ new Map());
+      }
+      const deviceMap = _Input.deviceMappings.get(deviceName);
+      for (const [key, values] of Object.entries(mappings)) {
+        deviceMap.set(key, Array.isArray(values) ? values : [values]);
+      }
+      console.log(`\u{1F5C2}\uFE0F Registered custom mappings for ${deviceName}:`, Object.keys(mappings));
+    }
+    /**
+     * Get a specific input device
+     * @param {string} name - Device name
+     * @returns {InputDevice|null} - The device instance or null
+     */
+    static getDevice(name) {
+      return _Input.devices.get(name) || null;
+    }
+    /**
+     * Get all registered device names
+     * @returns {Array<string>} - Array of device names
+     */
+    static getDeviceNames() {
+      return [..._Input.devices.keys()];
+    }
+    /**
+     * Check if a device is registered and initialized
+     * @param {string} name - Device name
+     * @returns {boolean}
+     */
+    static isDeviceReady(name) {
+      const device = _Input.devices.get(name);
+      return device && device.initialized;
+    }
+    /**
+     * Get input system status and information
+     * @returns {Object} - System status information
+     */
+    static getSystemInfo() {
+      const deviceInfo = {};
+      for (const [name, device] of _Input.devices.entries()) {
+        deviceInfo[name] = device.getInfo();
+      }
+      return {
+        initialized: _Input.initialized,
+        totalDevices: _Input.devices.size,
+        customMappings: _Input.deviceMappings.size,
+        devices: deviceInfo
+      };
+    }
+    /**
+     * Clear all input state and events for all devices
+     */
+    static clearAll() {
+      for (const device of _Input.devices.values()) {
+        if (device.clearAllEvents) {
+          device.clearAllEvents();
+        }
+      }
+      console.log("\u{1F9F9} Cleared all input events and state");
+    }
+    /**
+     * Shutdown the input system
+     */
+    static shutdown() {
+      _Input.clearAll();
+      _Input.devices.clear();
+      _Input.deviceMappings.clear();
+      delete _Input.keyboard;
+      delete _Input.mouse;
+      delete _Input.gamepad;
+      _Input.initialized = false;
+      console.log("\u{1F50C} Input system shutdown");
+    }
+    // ============================================
+    // LEGACY COMPATIBILITY METHODS (DEPRECATED)
+    // These methods maintain backward compatibility
+    // but should be replaced with device-specific calls
+    // ============================================
+    /**
+     * @deprecated Use Input.keyboard.isDown(key) instead
+     */
+    static isDown(key) {
+      console.warn("\u26A0\uFE0F Input.isDown() is deprecated. Use Input.keyboard.isDown(key) instead.");
+      return _Input.keyboard.isDown(key);
+    }
+    /**
+     * @deprecated Use Input.keyboard.isPressed(key) instead
+     */
+    static isPressed(key) {
+      console.warn("\u26A0\uFE0F Input.isPressed() is deprecated. Use Input.keyboard.isPressed(key) instead.");
+      return _Input.keyboard.isPressed(key);
+    }
+    /**
+     * @deprecated Use Input.keyboard.isReleased(key) instead
+     */
+    static isReleased(key) {
+      console.warn("\u26A0\uFE0F Input.isReleased() is deprecated. Use Input.keyboard.isReleased(key) instead.");
+      return _Input.keyboard.isReleased(key);
+    }
+    /**
+     * @deprecated Use Input.mouse.isDown(button) instead
+     */
+    static isMouseDown(button) {
+      console.warn("\u26A0\uFE0F Input.isMouseDown() is deprecated. Use Input.mouse.isDown(button) instead.");
+      return _Input.mouse.isDown(button);
+    }
+    /**
+     * @deprecated Use Input.mouse.getPosition() instead
+     */
+    static getMousePosition() {
+      console.warn("\u26A0\uFE0F Input.getMousePosition() is deprecated. Use Input.mouse.getPosition() instead.");
+      return _Input.mouse.getPosition();
+    }
+    /**
+     * @deprecated Use Input.keyboard.onEvent() instead
+     */
+    static onEvent(event, key, callback) {
+      console.warn("\u26A0\uFE0F Input.onEvent() is deprecated. Use Input.keyboard.onEvent() or Input.mouse.onEvent() instead.");
+      _Input.keyboard.onEvent(event, key, callback);
+    }
+    // Additional legacy methods for compatibility
+    static isKeyDown(key) {
+      console.warn("\u26A0\uFE0F Input.isKeyDown() is deprecated. Use Input.keyboard.isDown(key) instead.");
+      return _Input.keyboard.isDown(key);
+    }
+    static isKeyPressed(key) {
+      console.warn("\u26A0\uFE0F Input.isKeyPressed() is deprecated. Use Input.keyboard.isPressed(key) instead.");
+      return _Input.keyboard.isPressed(key);
+    }
+    static isMousePressed(button) {
+      console.warn("\u26A0\uFE0F Input.isMousePressed() is deprecated. Use Input.mouse.isPressed(button) instead.");
+      return _Input.mouse.isPressed(button);
+    }
+    static isLeftMouseDown() {
+      console.warn("\u26A0\uFE0F Input.isLeftMouseDown() is deprecated. Use Input.mouse.isDown(0) instead.");
+      return _Input.mouse.isDown(0);
+    }
+    static isRightMouseDown() {
+      console.warn("\u26A0\uFE0F Input.isRightMouseDown() is deprecated. Use Input.mouse.isDown(2) instead.");
+      return _Input.mouse.isDown(2);
     }
   };
 
@@ -3218,7 +4643,10 @@ var Nity = (() => {
       if (!scene) throw new Error("No scene provided.");
       this.scene = scene;
       this.currentScene = scene;
-      await SpriteRegistry.preloadAll();
+      await Promise.all([
+        SpriteRegistry.preloadAll(),
+        AudioRegistry.preloadAll()
+      ]);
       await this.scene.preload();
       await this.scene.start();
     }
@@ -5036,10 +6464,10 @@ var Nity = (() => {
     }
     update() {
       const movement = new Vector2(0, 0);
-      if (Input.isKeyDown("ArrowRight") || Input.isKeyDown("d") || Input.isKeyDown("D")) movement.x += this.speed * Time.deltaTime;
-      if (Input.isKeyDown("ArrowLeft") || Input.isKeyDown("a") || Input.isKeyDown("A")) movement.x -= this.speed * Time.deltaTime;
-      if (Input.isKeyDown("ArrowDown") || Input.isKeyDown("s") || Input.isKeyDown("S")) movement.y += this.speed * Time.deltaTime;
-      if (Input.isKeyDown("ArrowUp") || Input.isKeyDown("w") || Input.isKeyDown("W")) movement.y -= this.speed * Time.deltaTime;
+      if (Input.keyboard.isDown("ArrowRight") || Input.keyboard.isDown("d") || Input.keyboard.isDown("D")) movement.x += this.speed * Time.deltaTime;
+      if (Input.keyboard.isDown("ArrowLeft") || Input.keyboard.isDown("a") || Input.keyboard.isDown("A")) movement.x -= this.speed * Time.deltaTime;
+      if (Input.keyboard.isDown("ArrowDown") || Input.keyboard.isDown("s") || Input.keyboard.isDown("S")) movement.y += this.speed * Time.deltaTime;
+      if (Input.keyboard.isDown("ArrowUp") || Input.keyboard.isDown("w") || Input.keyboard.isDown("W")) movement.y -= this.speed * Time.deltaTime;
       if (movement.magnitude > 0) {
         this.rigidbody.move(movement);
       }
@@ -5047,6 +6475,9 @@ var Nity = (() => {
   };
   var MovementController = class extends MovementComponent {
   };
+
+  // src/index.js
+  init_Keyboard();
 
   // src/asset/SpriteAsset.js
   var SpriteAsset = class _SpriteAsset {
@@ -5382,6 +6813,9 @@ var Nity = (() => {
       );
     }
   };
+
+  // src/index.js
+  init_AudioAsset();
 
   // src/renderer/components/ImageComponent.js
   var ImageComponent = class extends Component {
@@ -7171,187 +8605,8 @@ var Nity = (() => {
     }
   };
 
-  // src/audio/AudioClip.js
-  var AudioClip = class _AudioClip {
-    /**
-     * Creates a new AudioClip with the specified name and URL.
-     * 
-     * Initializes the audio clip with basic properties and prepares it for loading.
-     * The audio data is not loaded immediately - call load() to begin the loading
-     * and decoding process. This allows for better control over when audio resources
-     * are loaded and reduces initial page load time.
-     * 
-     * @param {string} name - Unique identifier for this audio clip
-     * @param {string} url - Path to the audio file (relative or absolute)
-     * 
-     * @example
-     * // Create clips for different audio types
-     * const music = new AudioClip("background_music", "assets/music/theme.mp3");
-     * const sfx = new AudioClip("explosion", "assets/sounds/explosion.wav");
-     * const voice = new AudioClip("dialog_01", "assets/voice/intro.ogg");
-     */
-    constructor(name, url) {
-      this.name = name;
-      this.url = url;
-      this.audioBuffer = null;
-      this.length = 0;
-      this.channels = 0;
-      this.frequency = 0;
-      this.isLoaded = false;
-      this.isLoading = false;
-      this.loadError = null;
-      this.audioContext = _AudioClip.getAudioContext();
-    }
-    /**
-     * Gets or creates the global Web Audio API context.
-     * 
-     * Creates a singleton AudioContext that all audio clips share. This ensures
-     * optimal resource usage and prevents the creation of multiple audio contexts
-     * which can cause performance issues. Handles browser compatibility for
-     * AudioContext creation.
-     * 
-     * @static
-     * @returns {AudioContext} The global audio context instance
-     * 
-     * @example
-     * // Access global audio context
-     * const context = AudioClip.getAudioContext();
-     * console.log('Sample Rate:', context.sampleRate);
-     */
-    static getAudioContext() {
-      if (!_AudioClip._audioContext) {
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextClass) {
-          throw new Error("Web Audio API not supported in this browser");
-        }
-        _AudioClip._audioContext = new AudioContextClass();
-        if (_AudioClip._audioContext.state === "suspended") {
-          document.addEventListener("click", () => {
-            if (_AudioClip._audioContext.state === "suspended") {
-              _AudioClip._audioContext.resume();
-            }
-          }, { once: true });
-        }
-      }
-      return _AudioClip._audioContext;
-    }
-    /**
-     * Loads and decodes the audio file.
-     * 
-     * Fetches the audio file from the specified URL and decodes it using the Web
-     * Audio API. This is an asynchronous operation that should be awaited. Once
-     * loaded, the audio clip can be used by AudioSource components for playback.
-     * 
-     * @async
-     * @returns {Promise<boolean>} True if loading succeeded, false if failed
-     * 
-     * @example
-     * // Load audio with error handling
-     * const clip = new AudioClip("jump", "assets/jump.wav");
-     * const success = await clip.load();
-     * if (success) {
-     *     console.log("Audio loaded successfully");
-     * } else {
-     *     console.error("Failed to load audio:", clip.loadError);
-     * }
-     */
-    async load() {
-      if (this.isLoaded) return true;
-      if (this.isLoading) {
-        return new Promise((resolve) => {
-          const checkLoaded = () => {
-            if (!this.isLoading) {
-              resolve(this.isLoaded);
-            } else {
-              setTimeout(checkLoaded, 10);
-            }
-          };
-          checkLoaded();
-        });
-      }
-      this.isLoading = true;
-      this.loadError = null;
-      try {
-        const response = await fetch(this.url);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch audio: ${response.status} ${response.statusText}`);
-        }
-        const arrayBuffer = await response.arrayBuffer();
-        this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-        this.length = this.audioBuffer.length / this.audioBuffer.sampleRate;
-        this.channels = this.audioBuffer.numberOfChannels;
-        this.frequency = this.audioBuffer.sampleRate;
-        this.isLoaded = true;
-        this.isLoading = false;
-        console.log(`\u2705 Audio clip loaded: ${this.name} (${this.length.toFixed(2)}s, ${this.channels}ch, ${this.frequency}Hz)`);
-        return true;
-      } catch (error) {
-        this.loadError = error.message;
-        this.isLoading = false;
-        this.isLoaded = false;
-        console.error(`\u274C Failed to load audio clip '${this.name}':`, error);
-        return false;
-      }
-    }
-    /**
-     * Creates an audio buffer source node for playback.
-     * 
-     * Generates a new AudioBufferSourceNode connected to the audio context. This
-     * node can be configured and connected to other audio nodes (like gain nodes
-     * or panners) before starting playback. Each playback requires a new source
-     * node as they are single-use.
-     * 
-     * @returns {AudioBufferSourceNode|null} Audio source node or null if not loaded
-     * 
-     * @internal Used by AudioSource components for audio playback
-     */
-    createSourceNode() {
-      if (!this.isLoaded || !this.audioBuffer) {
-        console.warn(`Cannot create source node: Audio clip '${this.name}' not loaded`);
-        return null;
-      }
-      const sourceNode = this.audioContext.createBufferSource();
-      sourceNode.buffer = this.audioBuffer;
-      return sourceNode;
-    }
-    /**
-     * Checks if the audio clip is ready for playback.
-     * 
-     * @returns {boolean} True if the clip is loaded and ready to play
-     */
-    get isReady() {
-      return this.isLoaded && this.audioBuffer !== null;
-    }
-    /**
-     * Gets the current state of the audio clip.
-     * 
-     * @returns {string} Current state: 'unloaded', 'loading', 'loaded', or 'error'
-     */
-    get state() {
-      if (this.loadError) return "error";
-      if (this.isLoading) return "loading";
-      if (this.isLoaded) return "loaded";
-      return "unloaded";
-    }
-    /**
-     * Preloads all audio clips in the provided array.
-     * 
-     * @static
-     * @param {AudioClip[]} clips - Array of audio clips to preload
-     * @returns {Promise<boolean[]>} Array of success states for each clip
-     * 
-     * @example
-     * // Preload multiple clips
-     * const clips = [jumpSound, shootSound, musicClip];
-     * const results = await AudioClip.preloadAll(clips);
-     * console.log(`${results.filter(r => r).length}/${clips.length} clips loaded`);
-     */
-    static async preloadAll(clips) {
-      const loadPromises = clips.map((clip) => clip.load());
-      return Promise.all(loadPromises);
-    }
-  };
-  AudioClip._audioContext = null;
+  // src/index.js
+  init_AudioClip();
 
   // src/audio/components/AudioListenerComponent.js
   var AudioListenerComponent = class _AudioListenerComponent extends Component {
@@ -7536,6 +8791,7 @@ var Nity = (() => {
   AudioListenerComponent.main = null;
 
   // src/audio/components/AudioSourceComponent.js
+  init_AudioRegistry();
   var AudioSourceComponent = class extends Component {
     /**
      * Creates a new AudioSource component.
@@ -7617,7 +8873,7 @@ var Nity = (() => {
      * @private
      */
     _updatePropertiesFromMeta() {
-      this.clip = this.__meta.clip;
+      this._setClip(this.__meta.clip);
       this.spatial = this.__meta.spatial;
       this.autoPlay = this.__meta.autoPlay;
       this.loop = this.__meta.loop;
@@ -7649,6 +8905,58 @@ var Nity = (() => {
       if (!validRolloffModes.includes(this.__meta.rolloffMode)) {
         throw new Error(`AudioSource rolloffMode must be one of: ${validRolloffModes.join(", ")}`);
       }
+    }
+    /**
+     * Set the audio clip for this source.
+     * Supports both direct clip objects and string names (looks up in AudioRegistry).
+     * 
+     * @param {Object|string|null} clipOrName - Audio clip object or name to lookup
+     * @private
+     */
+    _setClip(clipOrName) {
+      if (!clipOrName) {
+        this.clip = null;
+        return;
+      }
+      if (typeof clipOrName === "string") {
+        const audioAsset = AudioRegistry.getAudio(clipOrName);
+        if (audioAsset) {
+          this.clip = audioAsset;
+          this.clipName = clipOrName;
+        } else {
+          console.warn(`AudioSourceComponent: Audio "${clipOrName}" not found in AudioRegistry`);
+          this.clip = null;
+          this.clipName = null;
+        }
+      } else {
+        this.clip = clipOrName;
+        this.clipName = clipOrName.name || "unknown";
+      }
+    }
+    /**
+     * Set the audio clip for this audio source.
+     * Supports both direct AudioClip objects and string names from AudioRegistry.
+     * 
+     * @param {Object|string|null} clipOrName - Audio clip object or registry name
+     * 
+     * @example
+     * // Using AudioRegistry name
+     * audioSource.setClip("jump_sound");
+     * 
+     * @example
+     * // Using direct clip object
+     * audioSource.setClip(myAudioClip);
+     */
+    setClip(clipOrName) {
+      this._setClip(clipOrName);
+      this.__meta.clip = clipOrName;
+    }
+    /**
+     * Get the current audio clip name (if available)
+     * @returns {string|null} The clip name or null if no clip
+     */
+    getClipName() {
+      return this.clipName || (this.clip ? this.clip.name : null);
     }
     /**
      * Starts playback of the assigned audio clip.
@@ -8201,6 +9509,107 @@ var Nity = (() => {
       };
     }
     /**
+     * Download the generated audio as a WAV file
+     * @param {string} filename - Optional filename (defaults to clip name)
+     */
+    downloadAsWAV(filename = null) {
+      if (!this.isLoaded()) {
+        console.error("Cannot download audio: ProceduralAudioClip not loaded");
+        return;
+      }
+      const actualFilename = filename || `${this.name}.wav`;
+      const wavBlob = this.audioBufferToWAV(this.audioBuffer);
+      this.downloadBlob(wavBlob, actualFilename);
+    }
+    /**
+     * Convert AudioBuffer to WAV format
+     * @param {AudioBuffer} buffer - Audio buffer to convert
+     * @returns {Blob} WAV file blob
+     */
+    audioBufferToWAV(buffer) {
+      const length = buffer.length;
+      const numberOfChannels = buffer.numberOfChannels;
+      const sampleRate = buffer.sampleRate;
+      const bytesPerSample = 2;
+      const blockAlign = numberOfChannels * bytesPerSample;
+      const byteRate = sampleRate * blockAlign;
+      const dataSize = length * blockAlign;
+      const bufferSize = 44 + dataSize;
+      const arrayBuffer = new ArrayBuffer(bufferSize);
+      const view = new DataView(arrayBuffer);
+      const writeString = (offset2, string) => {
+        for (let i = 0; i < string.length; i++) {
+          view.setUint8(offset2 + i, string.charCodeAt(i));
+        }
+      };
+      writeString(0, "RIFF");
+      view.setUint32(4, bufferSize - 8, true);
+      writeString(8, "WAVE");
+      writeString(12, "fmt ");
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, numberOfChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, byteRate, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, 16, true);
+      writeString(36, "data");
+      view.setUint32(40, dataSize, true);
+      let offset = 44;
+      for (let i = 0; i < length; i++) {
+        for (let channel = 0; channel < numberOfChannels; channel++) {
+          const sample = buffer.getChannelData(channel)[i];
+          const intSample = Math.max(-1, Math.min(1, sample));
+          view.setInt16(offset, intSample * 32767, true);
+          offset += 2;
+        }
+      }
+      return new Blob([arrayBuffer], { type: "audio/wav" });
+    }
+    /**
+     * Download a blob as a file
+     * @param {Blob} blob - Blob to download
+     * @param {string} filename - Filename for download
+     */
+    downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+      console.log(`\u{1F4E5} Downloaded: ${filename}`);
+    }
+    /**
+     * Get the audio data as a WAV blob (without downloading)
+     * @returns {Blob|null} WAV blob or null if not loaded
+     */
+    getWAVBlob() {
+      if (!this.isLoaded()) {
+        return null;
+      }
+      return this.audioBufferToWAV(this.audioBuffer);
+    }
+    /**
+     * Get audio data as Base64 encoded WAV
+     * @returns {Promise<string>} Base64 encoded WAV data
+     */
+    async getAsBase64WAV() {
+      if (!this.isLoaded()) {
+        throw new Error("Audio must be loaded before converting to Base64");
+      }
+      const wavBlob = this.audioBufferToWAV(this.audioBuffer);
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(wavBlob);
+      });
+    }
+    /**
      * Static factory methods for common sound types
      */
     static createBeep(frequency = 800, duration = 0.2) {
@@ -8255,6 +9664,118 @@ var Nity = (() => {
 
   // src/audio/RandomAudioGenerator.js
   var RandomAudioGenerator = class {
+    /**
+     * Generate a simple beep sound
+     * @param {Object} options - Generation options
+     * @returns {ProceduralAudioClip}
+     */
+    static generateBeep(options = {}) {
+      const frequency = options.frequency || 800;
+      const duration = options.duration || 0.3;
+      const volume = options.volume || 0.5;
+      return new ProceduralAudioClip(`beep_${Date.now()}`, {
+        type: "tone",
+        frequency,
+        duration,
+        waveType: "sine",
+        volume,
+        fadeIn: 0.01,
+        fadeOut: 0.05
+      });
+    }
+    /**
+     * Generate a simple tone
+     * @param {Object} options - Generation options
+     * @returns {ProceduralAudioClip}
+     */
+    static generateTone(options = {}) {
+      const frequency = options.frequency || 440;
+      const duration = options.duration || 1;
+      const volume = options.volume || 0.4;
+      const waveType = options.waveType || "sine";
+      return new ProceduralAudioClip(`tone_${Date.now()}`, {
+        type: "tone",
+        frequency,
+        duration,
+        waveType,
+        volume,
+        fadeIn: 0.05,
+        fadeOut: 0.1
+      });
+    }
+    /**
+     * Generate white/pink noise
+     * @param {Object} options - Generation options
+     * @returns {ProceduralAudioClip}
+     */
+    static generateNoise(options = {}) {
+      const duration = options.duration || 0.5;
+      const volume = options.volume || 0.3;
+      const type = options.type || "white";
+      return new ProceduralAudioClip(`noise_${Date.now()}`, {
+        type: "noise",
+        noiseType: type,
+        duration,
+        volume,
+        fadeIn: 0.02,
+        fadeOut: 0.1
+      });
+    }
+    /**
+     * Generate a frequency sweep (chirp)
+     * @param {Object} options - Generation options
+     * @returns {ProceduralAudioClip}
+     */
+    static generateChirp(options = {}) {
+      const startFreq = options.startFreq || 200;
+      const endFreq = options.endFreq || 800;
+      const duration = options.duration || 1;
+      const volume = options.volume || 0.5;
+      return new ProceduralAudioClip(`chirp_${Date.now()}`, {
+        type: "sweep",
+        startFreq,
+        endFreq,
+        duration,
+        volume,
+        fadeIn: 0.02,
+        fadeOut: 0.1
+      });
+    }
+    /**
+     * Generate a completely random sound
+     * @param {Object} options - Generation options
+     * @returns {ProceduralAudioClip}
+     */
+    static generateRandom(options = {}) {
+      const duration = options.duration || 0.5 + Math.random() * 1.5;
+      const volume = options.volume || 0.3 + Math.random() * 0.4;
+      const soundTypes = ["tone", "noise", "sweep"];
+      const randomType = soundTypes[Math.floor(Math.random() * soundTypes.length)];
+      switch (randomType) {
+        case "tone":
+          return this.generateTone({
+            frequency: 200 + Math.random() * 600,
+            duration,
+            volume,
+            waveType: ["sine", "square", "triangle", "sawtooth"][Math.floor(Math.random() * 4)]
+          });
+        case "noise":
+          return this.generateNoise({
+            duration,
+            volume,
+            type: ["white", "pink"][Math.floor(Math.random() * 2)]
+          });
+        case "sweep":
+          return this.generateChirp({
+            startFreq: 100 + Math.random() * 400,
+            endFreq: 400 + Math.random() * 800,
+            duration,
+            volume
+          });
+        default:
+          return this.generateBeep({ duration, volume });
+      }
+    }
     /**
      * Generate a random beep sound
      * @param {Object} options - Generation options
@@ -8507,6 +10028,67 @@ var Nity = (() => {
         for (let i = 0; i < variations; i++) {
           sounds.push(this.randomAny(baseOptions));
         }
+      }
+      return sounds;
+    }
+    /**
+     * Generate and download a random sound effect
+     * @param {string} type - Sound type to generate
+     * @param {Object} options - Generation options
+     * @param {string} filename - Optional filename
+     */
+    static async generateAndDownload(type, options = {}, filename) {
+      let sound;
+      switch (type) {
+        case "beep":
+          sound = this.randomBeep(options);
+          break;
+        case "sweep":
+          sound = this.randomSweep(options);
+          break;
+        case "harmonic":
+          sound = this.randomHarmonic(options);
+          break;
+        case "percussion":
+          sound = this.randomPercussion(options);
+          break;
+        case "note":
+          sound = this.randomNote(options);
+          break;
+        case "laser":
+          sound = this.randomLaser(options);
+          break;
+        case "pickup":
+          sound = this.randomPickup(options);
+          break;
+        case "explosion":
+          sound = this.randomExplosion(options);
+          break;
+        case "ambient":
+          sound = this.randomAmbient(options);
+          break;
+        default:
+          sound = this.randomAny(options);
+      }
+      await sound.load();
+      const downloadName = filename || `${type}_${Date.now()}.wav`;
+      sound.downloadAsWAV(downloadName);
+      return sound;
+    }
+    /**
+     * Download multiple sound variations as a zip-like collection
+     * @param {string} type - Base sound type
+     * @param {number} count - Number of variations
+     * @param {Object} options - Generation options
+     */
+    static async downloadVariations(type, count = 3, options = {}) {
+      const sounds = this.createVariations(type, count, options);
+      for (let i = 0; i < sounds.length; i++) {
+        await sounds[i].load();
+        const filename = `${type}_variation_${i + 1}_${Date.now()}.wav`;
+        setTimeout(() => {
+          sounds[i].downloadAsWAV(filename);
+        }, i * 500);
       }
       return sounds;
     }

@@ -8,6 +8,129 @@ import { ProceduralAudioClip } from './ProceduralAudioClip.js';
 
 export class RandomAudioGenerator {
     /**
+     * Generate a simple beep sound
+     * @param {Object} options - Generation options
+     * @returns {ProceduralAudioClip}
+     */
+    static generateBeep(options = {}) {
+        const frequency = options.frequency || 800;
+        const duration = options.duration || 0.3;
+        const volume = options.volume || 0.5;
+        
+        return new ProceduralAudioClip(`beep_${Date.now()}`, {
+            type: 'tone',
+            frequency,
+            duration,
+            waveType: 'sine',
+            volume,
+            fadeIn: 0.01,
+            fadeOut: 0.05
+        });
+    }
+
+    /**
+     * Generate a simple tone
+     * @param {Object} options - Generation options
+     * @returns {ProceduralAudioClip}
+     */
+    static generateTone(options = {}) {
+        const frequency = options.frequency || 440;
+        const duration = options.duration || 1.0;
+        const volume = options.volume || 0.4;
+        const waveType = options.waveType || 'sine';
+        
+        return new ProceduralAudioClip(`tone_${Date.now()}`, {
+            type: 'tone',
+            frequency,
+            duration,
+            waveType,
+            volume,
+            fadeIn: 0.05,
+            fadeOut: 0.1
+        });
+    }
+
+    /**
+     * Generate white/pink noise
+     * @param {Object} options - Generation options
+     * @returns {ProceduralAudioClip}
+     */
+    static generateNoise(options = {}) {
+        const duration = options.duration || 0.5;
+        const volume = options.volume || 0.3;
+        const type = options.type || 'white';
+        
+        return new ProceduralAudioClip(`noise_${Date.now()}`, {
+            type: 'noise',
+            noiseType: type,
+            duration,
+            volume,
+            fadeIn: 0.02,
+            fadeOut: 0.1
+        });
+    }
+
+    /**
+     * Generate a frequency sweep (chirp)
+     * @param {Object} options - Generation options
+     * @returns {ProceduralAudioClip}
+     */
+    static generateChirp(options = {}) {
+        const startFreq = options.startFreq || 200;
+        const endFreq = options.endFreq || 800;
+        const duration = options.duration || 1.0;
+        const volume = options.volume || 0.5;
+        
+        return new ProceduralAudioClip(`chirp_${Date.now()}`, {
+            type: 'sweep',
+            startFreq,
+            endFreq,
+            duration,
+            volume,
+            fadeIn: 0.02,
+            fadeOut: 0.1
+        });
+    }
+
+    /**
+     * Generate a completely random sound
+     * @param {Object} options - Generation options
+     * @returns {ProceduralAudioClip}
+     */
+    static generateRandom(options = {}) {
+        const duration = options.duration || (0.5 + Math.random() * 1.5);
+        const volume = options.volume || (0.3 + Math.random() * 0.4);
+        
+        const soundTypes = ['tone', 'noise', 'sweep'];
+        const randomType = soundTypes[Math.floor(Math.random() * soundTypes.length)];
+        
+        switch (randomType) {
+            case 'tone':
+                return this.generateTone({
+                    frequency: 200 + Math.random() * 600,
+                    duration,
+                    volume,
+                    waveType: ['sine', 'square', 'triangle', 'sawtooth'][Math.floor(Math.random() * 4)]
+                });
+            case 'noise':
+                return this.generateNoise({
+                    duration,
+                    volume,
+                    type: ['white', 'pink'][Math.floor(Math.random() * 2)]
+                });
+            case 'sweep':
+                return this.generateChirp({
+                    startFreq: 100 + Math.random() * 400,
+                    endFreq: 400 + Math.random() * 800,
+                    duration,
+                    volume
+                });
+            default:
+                return this.generateBeep({ duration, volume });
+        }
+    }
+
+    /**
      * Generate a random beep sound
      * @param {Object} options - Generation options
      * @returns {ProceduralAudioClip}
