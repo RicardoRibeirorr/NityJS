@@ -18,9 +18,10 @@ export * from './common/Scene.js';
 export * from './common/components/CameraComponent.js';
 export * from './extensions/movement/MovementController.js';
 // Input System - New extensible device-based architecture
-export * from './input/KeyboardInput.js';
-export * from './input/MouseInput.js';
-export * from './input/GamepadInput.js';
+// export * from './input/KeyboardInput.js';
+// export * from './input/MouseInput.js';
+// export * from './input/GamepadInput.js';
+export * from './input/Input.js';
 // Legacy input support (for compatibility)
 export * from './input/mappings/Keyboard.js';
 export * from './input/mappings/Gamepad.js';

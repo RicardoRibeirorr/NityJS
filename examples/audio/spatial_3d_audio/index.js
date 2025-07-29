@@ -54,21 +54,25 @@ class SpatialAudioScene extends Scene {
         const coinAudio = this.coin.getComponent(AudioSourceComponent);
 
         // Move player (and audio listener)
-        if (Input.isKeyPressed(Keyboard.ArrowLeft)) {
+        if (Input.keyboard.isDown(Keyboard.ArrowLeft)) {
+             console.log("moving");
             this.player.position.x -= moveSpeed * Time.deltaTime;
         }
-        if (Input.isKeyPressed(Keyboard.ArrowRight)) {
+        if (Input.keyboard.isDown(Keyboard.ArrowRight)) {
+             console.log("moving");
             this.player.position.x += moveSpeed * Time.deltaTime;
         }
-        if (Input.isKeyPressed(Keyboard.ArrowUp)) {
+        if (Input.keyboard.isDown(Keyboard.ArrowUp)) {
+             console.log("moving");
             this.player.position.y -= moveSpeed * Time.deltaTime;
         }
-        if (Input.isKeyPressed(Keyboard.ArrowDown)) {
+        if (Input.keyboard.isDown(Keyboard.ArrowDown)) {
+             console.log("moving");
             this.player.position.y += moveSpeed * Time.deltaTime;
         }
 
         // Play 3D positioned sound
-        if (Input.isKeyDown('Space')) {
+        if (Input.keyboard.isDown(Keyboard.Space)) {
             coinAudio.play();
             console.log('🎵 Playing 3D positioned coin sound');
         }

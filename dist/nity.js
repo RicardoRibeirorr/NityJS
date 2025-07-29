@@ -1558,15 +1558,13 @@ var Nity = (() => {
     FollowTarget: () => FollowTarget,
     Game: () => Game,
     GameObject: () => GameObject,
-    GamepadInput: () => GamepadInput,
+    Gamepad: () => Gamepad,
     ImageComponent: () => ImageComponent,
+    Input: () => Input,
     Instantiate: () => Instantiate,
     Keyboard: () => Keyboard,
-    KeyboardInput: () => KeyboardInput,
     LayerManager: () => LayerManager,
     MonoBehaviour: () => MonoBehaviour,
-    Mouse: () => Mouse,
-    MouseInput: () => MouseInput,
     MovementComponent: () => MovementComponent,
     MovementController: () => MovementController,
     ProceduralAudioClip: () => ProceduralAudioClip,
@@ -2805,13 +2803,6 @@ var Nity = (() => {
         }
       };
     }
-  };
-  var Mouse = {
-    Left: [0, "left", "primary"],
-    Middle: [1, "middle", "auxiliary"],
-    Right: [2, "right", "secondary"],
-    Back: [3, "back"],
-    Forward: [4, "forward"]
   };
 
   // src/input/GamepadInput.js
@@ -6478,6 +6469,379 @@ var Nity = (() => {
 
   // src/index.js
   init_Keyboard();
+
+  // src/input/mappings/Gamepad.js
+  var Gamepad = class _Gamepad {
+    // === BUTTON CONSTANTS ===
+    // PlayStation names (most common)
+    static Cross = 0;
+    static Circle = 1;
+    static Square = 2;
+    static Triangle = 3;
+    static L1 = 4;
+    static R1 = 5;
+    static L2 = 6;
+    static R2 = 7;
+    static Share = 8;
+    static Options = 9;
+    static L3 = 10;
+    // Left stick click
+    static R3 = 11;
+    // Right stick click
+    static DPadUp = 12;
+    static DPadDown = 13;
+    static DPadLeft = 14;
+    static DPadRight = 15;
+    static PSButton = 16;
+    // Xbox equivalents (aliases)
+    static A = 0;
+    // Cross
+    static B = 1;
+    // Circle
+    static X = 2;
+    // Square
+    static Y = 3;
+    // Triangle
+    static LB = 4;
+    // L1
+    static RB = 5;
+    // R1
+    static LT = 6;
+    // L2
+    static RT = 7;
+    // R2
+    static Back = 8;
+    // Share
+    static Start = 9;
+    // Options
+    static LeftStick = 10;
+    // L3
+    static RightStick = 11;
+    // R3
+    static XboxButton = 16;
+    // PS Button
+    // === AXIS CONSTANTS ===
+    static LeftStickX = 0;
+    static LeftStickY = 1;
+    static RightStickX = 2;
+    static RightStickY = 3;
+    // === GAMEPAD STATE ===
+    static connectedGamepads = /* @__PURE__ */ new Map();
+    // gamepadIndex -> gamepad info
+    static deadZone = 0.1;
+    // Stick dead zone threshold
+    static initialized = false;
+    // Button mappings for different controller types
+    static controllerMappings = {
+      // Standard mapping (PlayStation-style)
+      "standard": {
+        name: "PlayStation Controller",
+        buttons: {
+          0: "Cross",
+          1: "Circle",
+          2: "Square",
+          3: "Triangle",
+          4: "L1",
+          5: "R1",
+          6: "L2",
+          7: "R2",
+          8: "Share",
+          9: "Options",
+          10: "L3",
+          11: "R3",
+          12: "DPadUp",
+          13: "DPadDown",
+          14: "DPadLeft",
+          15: "DPadRight",
+          16: "PSButton"
+        }
+      },
+      // Xbox controller mapping
+      "xbox": {
+        name: "Xbox Controller",
+        buttons: {
+          0: "A",
+          1: "B",
+          2: "X",
+          3: "Y",
+          4: "LB",
+          5: "RB",
+          6: "LT",
+          7: "RT",
+          8: "Back",
+          9: "Start",
+          10: "LeftStick",
+          11: "RightStick",
+          12: "DPadUp",
+          13: "DPadDown",
+          14: "DPadLeft",
+          15: "DPadRight",
+          16: "XboxButton"
+        }
+      }
+    };
+    /**
+     * Initialize gamepad system
+     */
+    static initialize() {
+      if (_Gamepad.initialized) return;
+      if (!navigator.getGamepads) {
+        console.warn("\u26A0\uFE0F Gamepad API not supported in this browser");
+        return;
+      }
+      window.addEventListener("gamepadconnected", (e) => {
+        _Gamepad.onGamepadConnected(e.gamepad);
+      });
+      window.addEventListener("gamepaddisconnected", (e) => {
+        _Gamepad.onGamepadDisconnected(e.gamepad);
+      });
+      _Gamepad.scanForGamepads();
+      _Gamepad.initialized = true;
+      console.log("\u{1F3AE} Gamepad system initialized");
+    }
+    /**
+     * Scan for already connected gamepads
+     */
+    static scanForGamepads() {
+      const gamepads = navigator.getGamepads();
+      for (let i = 0; i < gamepads.length; i++) {
+        if (gamepads[i]) {
+          _Gamepad.onGamepadConnected(gamepads[i]);
+        }
+      }
+    }
+    /**
+     * Handle gamepad connection
+     * @param {Gamepad} gamepad - Connected gamepad
+     */
+    static onGamepadConnected(gamepad) {
+      console.log(`\u{1F3AE} Gamepad connected: ${gamepad.id} (Index: ${gamepad.index})`);
+      const controllerType = _Gamepad.detectControllerType(gamepad.id);
+      _Gamepad.connectedGamepads.set(gamepad.index, {
+        gamepad,
+        type: controllerType,
+        mapping: _Gamepad.controllerMappings[controllerType] || _Gamepad.controllerMappings.standard,
+        buttonStates: new Array(gamepad.buttons.length).fill(false),
+        previousButtonStates: new Array(gamepad.buttons.length).fill(false)
+      });
+    }
+    /**
+     * Handle gamepad disconnection
+     * @param {Gamepad} gamepad - Disconnected gamepad
+     */
+    static onGamepadDisconnected(gamepad) {
+      console.log(`\u{1F3AE} Gamepad disconnected: ${gamepad.id} (Index: ${gamepad.index})`);
+      _Gamepad.connectedGamepads.delete(gamepad.index);
+    }
+    /**
+     * Detect controller type from gamepad ID
+     * @param {string} gamepadId - Gamepad ID string
+     * @returns {string} Controller type
+     */
+    static detectControllerType(gamepadId) {
+      const id = gamepadId.toLowerCase();
+      if (id.includes("xbox") || id.includes("microsoft")) {
+        return "xbox";
+      } else if (id.includes("playstation") || id.includes("sony") || id.includes("dualshock") || id.includes("dualsense")) {
+        return "standard";
+      }
+      return "standard";
+    }
+    /**
+     * Update gamepad states - call this each frame
+     */
+    static update() {
+      if (!_Gamepad.initialized) return;
+      const gamepads = navigator.getGamepads();
+      for (const [index, gamepadInfo] of _Gamepad.connectedGamepads) {
+        const gamepad = gamepads[index];
+        if (!gamepad) continue;
+        gamepadInfo.previousButtonStates = [...gamepadInfo.buttonStates];
+        for (let i = 0; i < gamepad.buttons.length; i++) {
+          gamepadInfo.buttonStates[i] = gamepad.buttons[i].pressed;
+        }
+        gamepadInfo.gamepad = gamepad;
+      }
+    }
+    /**
+     * Check if a button is currently pressed on any gamepad
+     * @param {number} buttonIndex - Button index (use Gamepad constants)
+     * @param {number} gamepadIndex - Specific gamepad index (optional, defaults to any)
+     * @returns {boolean}
+     */
+    static isButtonDown(buttonIndex, gamepadIndex = null) {
+      if (gamepadIndex !== null) {
+        const gamepadInfo = _Gamepad.connectedGamepads.get(gamepadIndex);
+        return gamepadInfo ? gamepadInfo.buttonStates[buttonIndex] === true : false;
+      }
+      for (const gamepadInfo of _Gamepad.connectedGamepads.values()) {
+        if (gamepadInfo.buttonStates[buttonIndex] === true) {
+          return true;
+        }
+      }
+      return false;
+    }
+    /**
+     * Check if a button was pressed this frame (click-like)
+     * @param {number} buttonIndex - Button index (use Gamepad constants)
+     * @param {number} gamepadIndex - Specific gamepad index (optional, defaults to any)
+     * @returns {boolean}
+     */
+    static isButtonPressed(buttonIndex, gamepadIndex = null) {
+      if (gamepadIndex !== null) {
+        const gamepadInfo = _Gamepad.connectedGamepads.get(gamepadIndex);
+        if (!gamepadInfo) return false;
+        return gamepadInfo.buttonStates[buttonIndex] === true && gamepadInfo.previousButtonStates[buttonIndex] === false;
+      }
+      for (const gamepadInfo of _Gamepad.connectedGamepads.values()) {
+        if (gamepadInfo.buttonStates[buttonIndex] === true && gamepadInfo.previousButtonStates[buttonIndex] === false) {
+          return true;
+        }
+      }
+      return false;
+    }
+    /**
+     * Check if a button was released this frame
+     * @param {number} buttonIndex - Button index (use Gamepad constants)
+     * @param {number} gamepadIndex - Specific gamepad index (optional, defaults to any)
+     * @returns {boolean}
+     */
+    static isButtonReleased(buttonIndex, gamepadIndex = null) {
+      if (gamepadIndex !== null) {
+        const gamepadInfo = _Gamepad.connectedGamepads.get(gamepadIndex);
+        if (!gamepadInfo) return false;
+        return gamepadInfo.buttonStates[buttonIndex] === false && gamepadInfo.previousButtonStates[buttonIndex] === true;
+      }
+      for (const gamepadInfo of _Gamepad.connectedGamepads.values()) {
+        if (gamepadInfo.buttonStates[buttonIndex] === false && gamepadInfo.previousButtonStates[buttonIndex] === true) {
+          return true;
+        }
+      }
+      return false;
+    }
+    /**
+     * Get axis value from gamepad
+     * @param {number} axisIndex - Axis index (use Gamepad constants)
+     * @param {number} gamepadIndex - Specific gamepad index (optional, defaults to first connected)
+     * @returns {number} Axis value (-1 to 1, with dead zone applied)
+     */
+    static getAxis(axisIndex, gamepadIndex = null) {
+      let gamepadInfo;
+      if (gamepadIndex !== null) {
+        gamepadInfo = _Gamepad.connectedGamepads.get(gamepadIndex);
+      } else {
+        gamepadInfo = _Gamepad.connectedGamepads.values().next().value;
+      }
+      if (!gamepadInfo || !gamepadInfo.gamepad.axes[axisIndex]) {
+        return 0;
+      }
+      let value = gamepadInfo.gamepad.axes[axisIndex];
+      if (Math.abs(value) < _Gamepad.deadZone) {
+        value = 0;
+      }
+      return value;
+    }
+    /**
+     * Get left stick input as Vector2-like object
+     * @param {number} gamepadIndex - Specific gamepad index (optional)
+     * @returns {Object} {x, y} stick input
+     */
+    static getLeftStick(gamepadIndex = null) {
+      return {
+        x: _Gamepad.getAxis(_Gamepad.LeftStickX, gamepadIndex),
+        y: _Gamepad.getAxis(_Gamepad.LeftStickY, gamepadIndex)
+      };
+    }
+    /**
+     * Get right stick input as Vector2-like object
+     * @param {number} gamepadIndex - Specific gamepad index (optional)
+     * @returns {Object} {x, y} stick input
+     */
+    static getRightStick(gamepadIndex = null) {
+      return {
+        x: _Gamepad.getAxis(_Gamepad.RightStickX, gamepadIndex),
+        y: _Gamepad.getAxis(_Gamepad.RightStickY, gamepadIndex)
+      };
+    }
+    /**
+     * Get all connected gamepads info
+     * @returns {Array} Array of gamepad info objects
+     */
+    static getConnectedGamepads() {
+      return Array.from(_Gamepad.connectedGamepads.values());
+    }
+    /**
+     * Get number of connected gamepads
+     * @returns {number}
+     */
+    static getGamepadCount() {
+      return _Gamepad.connectedGamepads.size;
+    }
+    /**
+     * Set dead zone for analog sticks
+     * @param {number} deadZone - Dead zone value (0 to 1)
+     */
+    static setDeadZone(deadZone) {
+      _Gamepad.deadZone = Math.max(0, Math.min(1, deadZone));
+    }
+    // === CONVENIENCE METHODS ===
+    /**
+     * Check if Cross/A button is pressed
+     * @param {number} gamepadIndex - Specific gamepad (optional)
+     * @returns {boolean}
+     */
+    static isCrossPressed(gamepadIndex = null) {
+      return _Gamepad.isButtonPressed(_Gamepad.Cross, gamepadIndex);
+    }
+    /**
+     * Check if Circle/B button is pressed
+     * @param {number} gamepadIndex - Specific gamepad (optional)
+     * @returns {boolean}
+     */
+    static isCirclePressed(gamepadIndex = null) {
+      return _Gamepad.isButtonPressed(_Gamepad.Circle, gamepadIndex);
+    }
+    /**
+     * Check if Square/X button is pressed
+     * @param {number} gamepadIndex - Specific gamepad (optional)
+     * @returns {boolean}
+     */
+    static isSquarePressed(gamepadIndex = null) {
+      return _Gamepad.isButtonPressed(_Gamepad.Square, gamepadIndex);
+    }
+    /**
+     * Check if Triangle/Y button is pressed
+     * @param {number} gamepadIndex - Specific gamepad (optional)
+     * @returns {boolean}
+     */
+    static isTrianglePressed(gamepadIndex = null) {
+      return _Gamepad.isButtonPressed(_Gamepad.Triangle, gamepadIndex);
+    }
+    /**
+     * Vibrate gamepad (if supported)
+     * @param {number} weakMagnitude - Weak motor magnitude (0-1)
+     * @param {number} strongMagnitude - Strong motor magnitude (0-1)
+     * @param {number} duration - Duration in milliseconds
+     * @param {number} gamepadIndex - Specific gamepad (optional)
+     */
+    static vibrate(weakMagnitude = 0.5, strongMagnitude = 0.5, duration = 100, gamepadIndex = null) {
+      let gamepadInfo;
+      if (gamepadIndex !== null) {
+        gamepadInfo = _Gamepad.connectedGamepads.get(gamepadIndex);
+      } else {
+        gamepadInfo = _Gamepad.connectedGamepads.values().next().value;
+      }
+      if (!gamepadInfo || !gamepadInfo.gamepad.vibrationActuator) {
+        console.warn("\u26A0\uFE0F Gamepad vibration not supported");
+        return;
+      }
+      gamepadInfo.gamepad.vibrationActuator.playEffect("dual-rumble", {
+        duration,
+        weakMagnitude: Math.max(0, Math.min(1, weakMagnitude)),
+        strongMagnitude: Math.max(0, Math.min(1, strongMagnitude))
+      });
+    }
+  };
 
   // src/asset/SpriteAsset.js
   var SpriteAsset = class _SpriteAsset {

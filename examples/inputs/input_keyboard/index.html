@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NityJS - Keyboard Input Example</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #4a90e2;
+            margin-bottom: 10px;
+        }
+
+        .info {
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .controls {
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            max-width: 600px;
+        }
+
+        .controls h3 {
+            color: #ffd700;
+            margin-top: 0;
+        }
+
+        .key-display {
+            background-color: #3d3d3d;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #canvas {
+            border: 2px solid #4a90e2;
+            border-radius: 8px;
+            background-color: #000000;
+        }
+
+        .status {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .key-indicator {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 2px;
+            background-color: #555;
+            border-radius: 4px;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .key-indicator.pressed {
+            background-color: #4a90e2;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 NityJS Keyboard Input Example</h1>
+    
+    <div class="info">
+        <p>This example demonstrates the new device-based Input system using <strong>Input.keyboard</strong></p>
+        <p>Watch the blue player move and see keyboard input feedback in real-time!</p>
+    </div>
+
+    <div class="controls">
+        <h3>🎯 Controls:</h3>
+        <p><strong>WASD / Arrow Keys:</strong> Move the player</p>
+        <p><strong>Space:</strong> Jump (changes color temporarily)</p>
+        <p><strong>Enter:</strong> Reset position</p>
+        <p><strong>Shift:</strong> Sprint mode (faster movement)</p>
+        <p><strong>Ctrl:</strong> Slow mode (slower movement)</p>
+    </div>
+
+    <div class="key-display">
+        <h3>📊 Keyboard State Monitor:</h3>
+        <div id="keyStatus">Press any key to see input feedback...</div>
+        <div id="currentKeys"></div>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    
+    <div class="status">
+        <p>Using Input.keyboard.isDown(), Input.keyboard.isPressed(), and Input.keyboard.onEvent()</p>
+        <p>Position: <span id="position">400, 200</span> | Speed: <span id="speed">Normal</span> | State: <span id="state">Idle</span></p>
+    </div>
+
+    <script type="module" src="index.js"></script>
+</body>
+</html>
