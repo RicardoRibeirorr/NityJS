@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NityJS Random Audio Generator Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #4a90e2;
+            margin-bottom: 30px;
+        }
+        
+        .demo-section {
+            background: #16213e;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 2px solid #4a90e2;
+        }
+        
+        .demo-section h2 {
+            color: #4a90e2;
+            margin-top: 0;
+        }
+        
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .sound-button {
+            background: linear-gradient(145deg, #2a4d7a, #1e3a5f);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .download-button {
+            background: linear-gradient(145deg, #2a7a4d, #1e5f3a);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .download-button:hover {
+            background: linear-gradient(145deg, #3a8a5d, #2e6f4a);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(42, 122, 77, 0.3);
+        }
+        
+        .sound-button:hover {
+            background: linear-gradient(145deg, #3a5d8a, #2e4a6f);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(74, 144, 226, 0.3);
+        }
+        
+        .sound-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .controls {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .control-group label {
+            color: #4a90e2;
+            font-weight: bold;
+            min-width: 120px;
+        }
+        
+        .control-group input, .control-group select {
+            background: #16213e;
+            border: 1px solid #4a90e2;
+            border-radius: 4px;
+            color: white;
+            padding: 8px 12px;
+            min-width: 120px;
+        }
+        
+        .info-panel {
+            background: #0a2346;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #4a90e2;
+        }
+        
+        .status {
+            background: #2d5016;
+            color: #90ee90;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        
+        .error {
+            background: #5d1616;
+            color: #ff9090;
+        }
+        
+        code {
+            background: #0f3460;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 NityJS Random Audio Generator</h1>
+        
+        <div class="info-panel">
+            <h3>🎮 Procedural Audio Generation</h3>
+            <p>Generate random audio clips in real-time using Web Audio API. Perfect for games that need dynamic sound effects without audio files!</p>
+            <p><strong>Features:</strong> Tones, Noise, Sweeps, Complex Harmonics, Musical Notes, Game SFX, and <strong>WAV Download</strong></p>
+            <p><strong>💾 Download:</strong> Generate unique sounds and save them as WAV files for use in your projects!</p>
+        </div>
+
+        <div class="demo-section">
+            <h2>🎯 Quick Random Sounds</h2>
+            <p style="text-align: center; color: #aaa; margin-bottom: 15px;">
+                Click to play • Right-click or long-press for download menu
+            </p>
+            <div class="button-grid">
+                <div style="display: flex; gap: 5px;">
+                    <button class="sound-button" onclick="playRandomSound('beep')" style="flex: 1;">🔊 Random Beep</button>
+                    <button class="sound-button" onclick="downloadRandomSound('beep')" style="background: linear-gradient(145deg, #2a7a4d, #1e5f3a); width: 50px;">💾</button>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <button class="sound-button" onclick="playRandomSound('sweep')" style="flex: 1;">💨 Random Sweep</button>
+                    <button class="sound-button" onclick="downloadRandomSound('sweep')" style="background: linear-gradient(145deg, #2a7a4d, #1e5f3a); width: 50px;">💾</button>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <button class="sound-button" onclick="playRandomSound('harmonic')" style="flex: 1;">🎼 Random Harmonic</button>
+                    <button class="sound-button" onclick="downloadRandomSound('harmonic')" style="background: linear-gradient(145deg, #2a7a4d, #1e5f3a); width: 50px;">💾</button>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <button class="sound-button" onclick="playRandomSound('percussion')" style="flex: 1;">🥁 Random Percussion</button>
+                    <button class="sound-button" onclick="downloadRandomSound('percussion')" style="background: linear-gradient(145deg, #2a7a4d, #1e5f3a); width: 50px;">💾</button>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <button class="sound-button" onclick="playRandomSound('note')" style="flex: 1;">🎵 Random Note</button>
+                    <button class="sound-button" onclick="downloadRandomSound('note')" style="background: linear-gradient(145deg, #2a7a4d, #1e5f3a); width: 50px;">💾</button>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <button class="sound-button" onclick="playRandomSound('laser')" style="flex: 1;">⚡ Random Laser</button>
+                    <button class="sound-button" onclick="downloadRandomSound('laser')" style="background: linear-gradient(145deg, #2a7a4d, #1e5f3a); width: 50px;">💾</button>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <button class="sound-button" onclick="playRandomSound('pickup')" style="flex: 1;">💰 Random Pickup</button>
+                    <button class="sound-button" onclick="downloadRandomSound('pickup')" style="background: linear-gradient(145deg, #2a7a4d, #1e5f3a); width: 50px;">💾</button>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <button class="sound-button" onclick="playRandomSound('explosion')" style="flex: 1;">💥 Random Explosion</button>
+                    <button class="sound-button" onclick="downloadRandomSound('explosion')" style="background: linear-gradient(145deg, #2a7a4d, #1e5f3a); width: 50px;">💾</button>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <button class="sound-button" onclick="playRandomSound('ambient')" style="flex: 1;">🌊 Random Ambient</button>
+                    <button class="sound-button" onclick="downloadRandomSound('ambient')" style="background: linear-gradient(145deg, #2a7a4d, #1e5f3a); width: 50px;">💾</button>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <button class="sound-button" onclick="playRandomSound('any')" style="flex: 1;">🎲 Completely Random</button>
+                    <button class="sound-button" onclick="downloadRandomSound('any')" style="background: linear-gradient(145deg, #2a7a4d, #1e5f3a); width: 50px;">💾</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>🎛️ Custom Audio Generation</h2>
+            <div class="controls">
+                <div class="control-group">
+                    <label>Type:</label>
+                    <select id="audioType">
+                        <option value="tone">Tone</option>
+                        <option value="noise">Noise</option>
+                        <option value="sweep">Frequency Sweep</option>
+                        <option value="complex">Complex Harmonic</option>
+                        <option value="random">Random</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label>Frequency:</label>
+                    <input type="range" id="frequency" min="50" max="1000" value="440">
+                    <span id="freqValue">440 Hz</span>
+                </div>
+                
+                <div class="control-group">
+                    <label>Duration:</label>
+                    <input type="range" id="duration" min="0.1" max="3" step="0.1" value="1">
+                    <span id="durValue">1.0 s</span>
+                </div>
+                
+                <div class="control-group">
+                    <label>Volume:</label>
+                    <input type="range" id="volume" min="0.1" max="1" step="0.1" value="0.5">
+                    <span id="volValue">0.5</span>
+                </div>
+                
+                <div class="control-group">
+                    <label>Wave Type:</label>
+                    <select id="waveType">
+                        <option value="sine">Sine</option>
+                        <option value="square">Square</option>
+                        <option value="sawtooth">Sawtooth</option>
+                        <option value="triangle">Triangle</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <button class="sound-button" onclick="playCustomAudio()" style="margin-left: auto;">🎵 Generate & Play</button>
+                    <button class="sound-button" onclick="downloadCustomAudio()" style="background: linear-gradient(145deg, #2a7a4d, #1e5f3a);">💾 Download WAV</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>🎼 Musical & Game Sequences</h2>
+            <div class="button-grid">
+                <button class="sound-button" onclick="playSequence('musical')">🎵 Musical Sequence</button>
+                <button class="sound-button" onclick="playSequence('sfx')">🎮 Game SFX Sequence</button>
+                <button class="sound-button" onclick="playSequence('random')">🎲 Random Sequence</button>
+                <button class="sound-button" onclick="createVariations('beep')">🔊 Beep Variations</button>
+                <button class="sound-button" onclick="createVariations('laser')">⚡ Laser Variations</button>
+                <button class="sound-button" onclick="stopAllAudio()">⏹️ Stop All Audio</button>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>📋 Generated Audio Info</h2>
+            <div id="statusPanel" class="status">
+                Ready to generate audio! Click any button above to start.
+            </div>
+            
+            <div class="controls">
+                <h3>📥 Download Options</h3>
+                <div class="control-group">
+                    <button class="sound-button" onclick="downloadLastPlayed()" style="background: linear-gradient(145deg, #2a7a4d, #1e5f3a);">💾 Download Last Played</button>
+                    <button class="sound-button" onclick="generateAndDownload()" style="background: linear-gradient(145deg, #7a4d2a, #5f3a1e);">🎲 Random + Download</button>
+                </div>
+            </div>
+            
+            <div class="info-panel">
+                <h4>💡 Usage in Your Game:</h4>
+                <p><code>import { RandomAudioGenerator, ProceduralAudioClip } from 'nityjs';</code></p>
+                <p><code>const beep = RandomAudioGenerator.randomBeep();</code></p>
+                <p><code>await beep.load(); // Generate the audio</code></p>
+                <p><code>beep.downloadAsWAV(); // Download as WAV file</code></p>
+                <p><code>audioSource.clip = beep; audioSource.play();</code></p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { 
+            Game, 
+            Scene, 
+            GameObject, 
+            Vector2,
+            AudioListenerComponent, 
+            AudioSourceComponent,
+            ProceduralAudioClip,
+            RandomAudioGenerator
+        } from '../../dist/nity.module.min.js';
+
+        // Simple audio playback system
+        let audioContext;
+        let currentAudioSources = [];
+        let lastPlayedClip = null; // Store the last played clip for download
+
+        // Initialize audio context
+        async function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioContext.state === 'suspended') {
+                await audioContext.resume();
+            }
+        }
+
+        // Play a procedural audio clip
+        async function playProceduralAudio(clip) {
+            try {
+                await initAudio();
+                await clip.load();
+                
+                if (clip.isLoaded()) {
+                    const source = audioContext.createBufferSource();
+                    const gainNode = audioContext.createGain();
+                    
+                    source.buffer = clip.audioBuffer;
+                    source.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    source.start();
+                    currentAudioSources.push(source);
+                    
+                    // Clean up finished sources
+                    source.onended = () => {
+                        const index = currentAudioSources.indexOf(source);
+                        if (index > -1) {
+                            currentAudioSources.splice(index, 1);
+                        }
+                    };
+                    
+                    updateStatus(`🎵 Playing: ${clip.name} (${clip.options.type}, ${clip.options.duration}s)`);
+                    lastPlayedClip = clip; // Store for potential download
+                } else {
+                    updateStatus(`❌ Failed to load audio: ${clip.name}`, true);
+                }
+            } catch (error) {
+                updateStatus(`❌ Audio error: ${error.message}`, true);
+                console.error('Audio playback error:', error);
+            }
+        }
+
+        // Update status panel
+        function updateStatus(message, isError = false) {
+            const panel = document.getElementById('statusPanel');
+            panel.textContent = message;
+            panel.className = `status ${isError ? 'error' : ''}`;
+        }
+
+        // Play random sound by type
+        window.playRandomSound = async function(type) {
+            let clip;
+            
+            switch(type) {
+                case 'beep':
+                    clip = RandomAudioGenerator.randomBeep();
+                    break;
+                case 'sweep':
+                    clip = RandomAudioGenerator.randomSweep();
+                    break;
+                case 'harmonic':
+                    clip = RandomAudioGenerator.randomHarmonic();
+                    break;
+                case 'percussion':
+                    clip = RandomAudioGenerator.randomPercussion();
+                    break;
+                case 'note':
+                    clip = RandomAudioGenerator.randomNote();
+                    break;
+                case 'laser':
+                    clip = RandomAudioGenerator.randomLaser();
+                    break;
+                case 'pickup':
+                    clip = RandomAudioGenerator.randomPickup();
+                    break;
+                case 'explosion':
+                    clip = RandomAudioGenerator.randomExplosion();
+                    break;
+                case 'ambient':
+                    clip = RandomAudioGenerator.randomAmbient();
+                    break;
+                case 'any':
+                default:
+                    clip = RandomAudioGenerator.randomAny();
+                    break;
+            }
+            
+            await playProceduralAudio(clip);
+        };
+
+        // Download random sound by type without playing
+        window.downloadRandomSound = async function(type) {
+            let clip;
+            
+            switch(type) {
+                case 'beep':
+                    clip = RandomAudioGenerator.randomBeep();
+                    break;
+                case 'sweep':
+                    clip = RandomAudioGenerator.randomSweep();
+                    break;
+                case 'harmonic':
+                    clip = RandomAudioGenerator.randomHarmonic();
+                    break;
+                case 'percussion':
+                    clip = RandomAudioGenerator.randomPercussion();
+                    break;
+                case 'note':
+                    clip = RandomAudioGenerator.randomNote();
+                    break;
+                case 'laser':
+                    clip = RandomAudioGenerator.randomLaser();
+                    break;
+                case 'pickup':
+                    clip = RandomAudioGenerator.randomPickup();
+                    break;
+                case 'explosion':
+                    clip = RandomAudioGenerator.randomExplosion();
+                    break;
+                case 'ambient':
+                    clip = RandomAudioGenerator.randomAmbient();
+                    break;
+                case 'any':
+                default:
+                    clip = RandomAudioGenerator.randomAny();
+                    break;
+            }
+            
+            try {
+                await clip.load();
+                clip.downloadAsWAV();
+                updateStatus(`💾 Downloaded: ${clip.name}.wav (${type} sound, ${clip.options.duration}s)`);
+            } catch (error) {
+                updateStatus(`❌ Download failed: ${error.message}`, true);
+            }
+        };
+
+        // Play custom audio with current settings
+        window.playCustomAudio = async function() {
+            const type = document.getElementById('audioType').value;
+            const frequency = parseInt(document.getElementById('frequency').value);
+            const duration = parseFloat(document.getElementById('duration').value);
+            const volume = parseFloat(document.getElementById('volume').value);
+            const waveType = document.getElementById('waveType').value;
+            
+            const clip = ProceduralAudioClip.meta({
+                name: `custom_${type}_${Date.now()}`,
+                type,
+                frequency,
+                duration,
+                volume,
+                waveType
+            });
+            
+            await playProceduralAudio(clip);
+        };
+
+        // Play sequences
+        window.playSequence = async function(type) {
+            let clips = [];
+            
+            switch(type) {
+                case 'musical':
+                    for(let i = 0; i < 5; i++) {
+                        clips.push(RandomAudioGenerator.randomNote({ duration: 0.5 }));
+                    }
+                    break;
+                case 'sfx':
+                    clips = [
+                        RandomAudioGenerator.randomPickup(),
+                        RandomAudioGenerator.randomBeep(),
+                        RandomAudioGenerator.randomLaser(),
+                        RandomAudioGenerator.randomExplosion()
+                    ];
+                    break;
+                case 'random':
+                    clips = RandomAudioGenerator.randomSequence(4);
+                    break;
+            }
+            
+            // Play sequence with delays
+            for(let i = 0; i < clips.length; i++) {
+                setTimeout(async () => {
+                    await playProceduralAudio(clips[i]);
+                }, i * 600);
+            }
+            
+            updateStatus(`🎵 Playing ${type} sequence (${clips.length} sounds)`);
+        };
+
+        // Create variations
+        window.createVariations = async function(type) {
+            const variations = RandomAudioGenerator.createVariations(type, 3);
+            
+            for(let i = 0; i < variations.length; i++) {
+                setTimeout(async () => {
+                    await playProceduralAudio(variations[i]);
+                }, i * 400);
+            }
+            
+            updateStatus(`🎵 Playing ${type} variations (${variations.length} sounds)`);
+        };
+
+        // Stop all audio
+        window.stopAllAudio = function() {
+            currentAudioSources.forEach(source => {
+                try {
+                    source.stop();
+                } catch(e) {
+                    // Source might already be stopped
+                }
+            });
+            currentAudioSources = [];
+            updateStatus('⏹️ All audio stopped');
+        };
+
+        // Download custom audio with current settings
+        window.downloadCustomAudio = async function() {
+            const type = document.getElementById('audioType').value;
+            const frequency = parseInt(document.getElementById('frequency').value);
+            const duration = parseFloat(document.getElementById('duration').value);
+            const volume = parseFloat(document.getElementById('volume').value);
+            const waveType = document.getElementById('waveType').value;
+            
+            const clip = ProceduralAudioClip.meta({
+                name: `custom_${type}_${frequency}Hz_${duration}s`,
+                type,
+                frequency,
+                duration,
+                volume,
+                waveType
+            });
+            
+            try {
+                await clip.load();
+                clip.downloadAsWAV();
+                updateStatus(`💾 Downloaded: ${clip.name}.wav`);
+            } catch (error) {
+                updateStatus(`❌ Download failed: ${error.message}`, true);
+            }
+        };
+
+        // Download the last played audio clip
+        window.downloadLastPlayed = function() {
+            if (!lastPlayedClip) {
+                updateStatus('❌ No audio has been played yet!', true);
+                return;
+            }
+            
+            try {
+                lastPlayedClip.downloadAsWAV();
+                updateStatus(`💾 Downloaded: ${lastPlayedClip.name}.wav`);
+            } catch (error) {
+                updateStatus(`❌ Download failed: ${error.message}`, true);
+            }
+        };
+
+        // Generate a random sound and download it
+        window.generateAndDownload = async function() {
+            const clip = RandomAudioGenerator.randomAny();
+            
+            try {
+                await clip.load();
+                clip.downloadAsWAV();
+                updateStatus(`💾 Generated & Downloaded: ${clip.name}.wav (${clip.options.type})`);
+            } catch (error) {
+                updateStatus(`❌ Generation/Download failed: ${error.message}`, true);
+            }
+        };
+
+        // Update slider values
+        document.getElementById('frequency').oninput = function() {
+            document.getElementById('freqValue').textContent = this.value + ' Hz';
+        };
+
+        document.getElementById('duration').oninput = function() {
+            document.getElementById('durValue').textContent = this.value + ' s';
+        };
+
+        document.getElementById('volume').oninput = function() {
+            document.getElementById('volValue').textContent = this.value;
+        };
+
+        // Ready message
+        updateStatus('🎵 Random Audio Generator Ready! Click any button to generate procedural audio.');
+        console.log('🎵 NityJS Random Audio Generator Demo Loaded!');
+    </script>
+</body>
+</html>
