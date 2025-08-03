@@ -376,6 +376,9 @@ Each example includes:
 
 MIT License - Use it anywhere, build anything!
 
+### Disclaimer
+This project is not affiliated with or endorsed by Unity Technologies. “Unity” is a trademark of Unity Technologies. This engine is independently developed and simply follows similar design patterns for familiarity.
+
 ## 🙏 Credits
 
 Built with ❤️ for the game development community. Inspired by Unity's elegance and the web's accessibility.
